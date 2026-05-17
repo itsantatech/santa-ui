@@ -505,6 +505,363 @@ input {
   line-height: 1.6;
 }
 
+.admin-subsection-heading {
+  margin: 28px 0 12px;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.admin-table-shell {
+  margin-top: 28px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+.admin-subsection-heading + .admin-table-shell {
+  margin-top: 0;
+}
+
+.admin-table-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.admin-data-table {
+  width: 100%;
+  min-width: 1440px;
+  border-collapse: collapse;
+  color: #050505;
+  table-layout: auto;
+}
+
+.admin-data-table-wide {
+  width: max-content;
+  min-width: 2360px;
+}
+
+.admin-data-table th {
+  height: 48px;
+  padding: 0 18px;
+  color: #666666;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  text-align: left;
+  white-space: nowrap;
+  background: #f3f3f3;
+  border-bottom: 1px solid #d7d7d7;
+}
+
+.admin-data-table td {
+  height: 92px;
+  padding: 0 18px;
+  color: #050505;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 22px;
+  vertical-align: middle;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.admin-data-table th,
+.admin-data-table td {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.admin-data-table strong {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.admin-table-select-cell {
+  width: 84px;
+  min-width: 84px;
+  text-align: center;
+}
+
+.admin-table-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-table-checkbox-label input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: #f97316;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+}
+
+.admin-table-name-column {
+  width: 14%;
+  min-width: 220px;
+}
+
+.admin-table-code-column {
+  width: 9%;
+  min-width: 130px;
+}
+
+.admin-table-rank-column {
+  width: 7%;
+  min-width: 92px;
+}
+
+.admin-table-slug-column {
+  width: 15%;
+  min-width: 220px;
+}
+
+.admin-table-image-column {
+  width: 10%;
+  min-width: 140px;
+}
+
+.admin-table-model-column,
+.admin-table-price-column {
+  width: 9%;
+  min-width: 130px;
+}
+
+.admin-table-relations-column,
+.admin-table-sub-category-column {
+  width: 14%;
+  min-width: 240px;
+}
+
+.admin-table-brands-column {
+  width: 14%;
+  min-width: 220px;
+}
+
+.admin-table-flags-column {
+  width: 10%;
+  min-width: 150px;
+}
+
+.admin-table-category-column {
+  width: 17%;
+  min-width: 220px;
+}
+
+.admin-table-number-column {
+  width: 15%;
+  min-width: 130px;
+}
+
+.admin-table-status-column {
+  width: 10%;
+  min-width: 150px;
+}
+
+.admin-table-user-column {
+  width: 11%;
+  min-width: 170px;
+}
+
+.admin-table-date-column {
+  width: 13%;
+  min-width: 220px;
+}
+
+.admin-table-actions-column {
+  width: 9%;
+  min-width: 130px;
+}
+
+.admin-category-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 164px;
+  min-height: 48px;
+  padding: 7px 12px;
+  color: #050505;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+  background: #e1e1e3;
+  border-radius: 8px;
+  white-space: normal;
+}
+
+.admin-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 4px 10px;
+  color: #178647;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+  letter-spacing: 0.3px;
+  background: #eefbf4;
+  border-radius: 2px;
+}
+
+.admin-status-badge span {
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 999px;
+}
+
+.admin-status-badge-inactive {
+  color: #667085;
+  background: #f1f5f9;
+}
+
+.admin-status-badge-inactive span {
+  background: #94a3b8;
+}
+
+.admin-table-empty-cell {
+  height: 120px;
+  color: #667085;
+  text-align: center;
+}
+
+.admin-table-muted {
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.admin-table-image-links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.admin-table-image-links a {
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-table-image-links a:hover,
+.admin-table-image-links a:focus-visible {
+  color: #f97316;
+}
+
+.admin-table-relations {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.admin-table-relations div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.admin-table-relations span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-table-relations strong {
+  color: #050505;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 17px;
+  white-space: normal;
+}
+
+.admin-table-flag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-table-flag-list span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 700;
+  background: #fff7ed;
+  border-radius: 999px;
+}
+
+.admin-table-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-table-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: #9ca3af;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.admin-table-icon-button:hover,
+.admin-table-icon-button:focus-visible {
+  color: #f97316;
+}
+
+.admin-table-icon-button .material-symbols-outlined {
+  font-size: 25px;
+  font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
+}
+
+.admin-table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-height: 72px;
+  padding: 16px 30px;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+}
+
+.admin-table-page-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 41px;
+  height: 40px;
+  color: #666666;
+  font-size: 16px;
+  font-weight: 600;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 2px;
+}
+
+.admin-table-page-link:hover,
+.admin-table-page-link:focus-visible,
+.admin-table-page-link-active {
+  color: #ffffff;
+  background: #f97316;
+  border-color: #f97316;
+}
+
+.admin-table-page-link .material-symbols-outlined {
+  font-size: 24px;
+}
+
 .hero-band {
   display: flex;
   align-items: center;

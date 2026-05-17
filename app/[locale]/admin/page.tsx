@@ -12,7 +12,7 @@ import { getDictionary, isLocale, locales } from "@/lib/i18n";
 
 type HomeProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ section?: string | string[] }>;
+  searchParams?: Promise<{ page?: string | string[]; section?: string | string[] }>;
 };
 
 export function generateStaticParams() {
@@ -53,10 +53,12 @@ export default async function Home({ params, searchParams }: HomeProps) {
   const sectionParam = Array.isArray(query?.section)
     ? query?.section[0]
     : query?.section;
+  const pageParam = Array.isArray(query?.page) ? query?.page[0] : query?.page;
   const activeSection =
     typeof sectionParam === "string" && isAdminSection(sectionParam)
       ? sectionParam
       : defaultAdminSection;
+  const page = getPositiveInteger(pageParam);
 
   await requireAdminSession({
     returnTo: `/${locale}/admin?section=${activeSection}`,
@@ -74,9 +76,15 @@ export default async function Home({ params, searchParams }: HomeProps) {
       <div className="admin-layout">
         <AdminSidebar activeSection={activeSection} locale={locale} />
         <section className="admin-content" aria-labelledby="admin-heading">
-          <AdminContent locale={locale} section={activeSection} />
+          <AdminContent locale={locale} page={page} section={activeSection} />
         </section>
       </div>
     </main>
   );
+}
+
+function getPositiveInteger(value: string | undefined) {
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
 }
