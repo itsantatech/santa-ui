@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { SiteNavbar } from "@/components/site-navbar";
+import { requireAdminSession } from "@/lib/auth/keycloak";
 import { getDictionary, isLocale, locales } from "@/lib/i18n";
 
 type HomeProps = {
@@ -41,12 +43,22 @@ export default async function Home({ params }: HomeProps) {
     notFound();
   }
 
-  return (
-    <main className="site-shell">
-      <SiteNavbar locale={locale} variant="admin" />
-      
+  await requireAdminSession({
+    returnTo: `/${locale}/admin`,
+    forbiddenRedirectTo: `/${locale}`,
+  });
+  const dictionary = getDictionary(locale);
 
-      <section className="bg-white" />
+  return (
+    <main className="admin-page">
+      <SiteNavbar locale={locale} variant="admin" />
+
+      <div className="admin-layout">
+        <AdminSidebar locale={locale} />
+        <section className="admin-content" aria-labelledby="admin-heading">
+          <h1 id="admin-heading">{dictionary.adminPageTitle}</h1>
+        </section>
+      </div>
     </main>
   );
 }

@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400..600&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -85,9 +86,20 @@ input {
   padding: 0 clamp(24px, 4.7vw, 88px);
 }
 
+.site-header-inner-admin {
+  width: 100%;
+  max-width: none;
+  padding-inline: 64px;
+}
+
 .site-header-inner-admin .nav-session,
 .site-header-inner-admin .sign-in-link {
   margin-left: auto;
+}
+
+.site-header-inner-admin .admin-language-switch {
+  order: 10;
+  margin-left: 0;
 }
 
 .brand-logo {
@@ -371,39 +383,117 @@ input {
   border-radius: var(--radius-pill);
 }
 
-.admin-shell {
+.admin-page {
   min-height: 100vh;
-  padding: 48px;
-  background: var(--color-page);
+  background: #f3f3f3;
 }
 
-.admin-panel {
-  max-width: 960px;
-  padding: 32px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+.admin-layout {
+  display: block;
+  min-height: calc(100vh - 64px);
 }
 
-.admin-eyebrow {
-  margin: 0 0 8px;
-  color: var(--color-brand);
-  font-size: 13px;
-  font-weight: 700;
+.admin-sidebar {
+  position: fixed;
+  left: 0;
+  top: 64px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  width: 223px;
+  height: calc(100vh - 64px);
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+}
+
+.admin-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 14px;
+}
+
+.admin-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 223px;
+  height: 44px;
+  padding: 12px 24px 12px 20px;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  border-left: 4px solid transparent;
+}
+
+.admin-sidebar-link span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-sidebar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  max-width: 20px;
+  min-width: 20px;
+  overflow: hidden;
+  font-family: "Material Symbols Outlined";
+  font-size: 22px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  flex: 0 0 auto;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
+}
+
+.admin-sidebar-link:hover,
+.admin-sidebar-link:focus-visible,
+.admin-sidebar-link-active {
+  color: #f97316;
+}
+
+.admin-sidebar-link-active {
+  background: #ffffff;
+  border-left-color: #f97316;
+}
+
+.admin-sidebar-version {
+  margin-top: auto;
+  padding: 17px 24px 18px;
+  color: #475569;
+  font-family: var(--font-geist-mono), Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: 1.4px;
   text-transform: uppercase;
+  border-top: 1px solid #e2e8f0;
 }
 
-.admin-panel h1 {
-  margin: 0 0 12px;
-  color: var(--color-text);
-  font-size: 32px;
-  line-height: 1.2;
+.admin-content {
+  min-width: 0;
+  min-height: calc(100vh - 64px);
+  margin-left: 223px;
+  padding: 26px 64px;
+  overflow: auto;
 }
 
-.admin-panel p {
+.admin-content h1 {
   margin: 0;
-  color: var(--color-text-muted);
-  font-size: 16px;
+  color: #000000;
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 56px;
 }
 
 .hero-band {
@@ -457,6 +547,11 @@ input {
     padding-block: 14px;
   }
 
+  .site-header-inner-admin {
+    flex-wrap: nowrap;
+    padding-block: 0;
+  }
+
   .primary-nav {
     order: 5;
     flex-basis: 100%;
@@ -469,6 +564,10 @@ input {
     min-height: 148px;
   }
 
+  .admin-page .site-header {
+    min-height: 64px;
+  }
+
   .hero-band {
     min-height: calc(100vh - 148px);
   }
@@ -478,6 +577,10 @@ input {
   .site-header-inner {
     gap: 12px;
     padding: 12px 16px;
+  }
+
+  .site-header-inner-admin {
+    padding: 0 16px;
   }
 
   .brand-logo {
@@ -506,6 +609,10 @@ input {
     margin-left: auto;
   }
 
+  .site-header-inner-admin .admin-language-switch {
+    margin-left: 0;
+  }
+
   .primary-nav {
     gap: 18px;
   }
@@ -517,16 +624,20 @@ input {
     min-height: 204px;
   }
 
+  .admin-page .site-header {
+    min-height: 64px;
+  }
+
   .hero-band {
     min-height: calc(100vh - 204px);
   }
 
-  .sign-in-link,
-  .nav-session {
+  .site-header-inner:not(.site-header-inner-admin) .sign-in-link,
+  .site-header-inner:not(.site-header-inner-admin) .nav-session {
     width: 100%;
   }
 
-  .nav-session {
+  .site-header-inner:not(.site-header-inner-admin) .nav-session {
     justify-content: space-between;
   }
 }

@@ -21,6 +21,19 @@ export const dictionaries = {
     heroText:
       "ค้นหา เปรียบเทียบ และจัดการสินค้าอุตสาหกรรมด้วยอินเทอร์เฟซที่เร็วและชัดเจน",
     languageLabel: "เปลี่ยนภาษา",
+    adminNavigationLabel: "เมนูผู้ดูแลระบบ",
+    adminPageTitle: "สินค้าและบริการ",
+    adminNav: [
+      "สินค้าและบริการ",
+      "หมวดหมู่",
+      "แบรนด์",
+      "คลังสินค้า",
+      "คำสั่งซื้อ",
+      "ใบเสนอราคา",
+      "ข่าวสารและกิจกรรม",
+      "บทความ",
+      "ตั้งค่า",
+    ],
     newsDropdown: {
       news: "ข่าวสารและกิจกรรม",
       articles: "บทความ",
@@ -45,9 +58,22 @@ export const dictionaries = {
     heroText:
       "Search, compare, and manage industrial products through a fast, clear interface.",
     languageLabel: "Change language",
+    adminNavigationLabel: "Admin navigation",
+    adminPageTitle: "Products & Services",
+    adminNav: [
+      "Products & Services",
+      "Categories",
+      "Brands",
+      "Inventory",
+      "Orders",
+      "Quotations",
+      "News & Activities",
+      "Articles",
+      "Settings",
+    ],
     newsDropdown: {
-      news: "ข่าวสารและกิจกรรม",
-      articles: "บทความ",
+      news: "News & Activities",
+      articles: "Articles",
     },
     metadataTitle: "SantaTech",
     metadataDescription: "Industrial products and services from SantaTech.",
@@ -63,6 +89,9 @@ export const dictionaries = {
     heroTitle: string;
     heroText: string;
     languageLabel: string;
+    adminNavigationLabel: string;
+    adminPageTitle: string;
+    adminNav: string[];
     newsDropdown: {
       news: string;
       articles: string;

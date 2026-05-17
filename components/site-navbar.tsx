@@ -76,6 +76,9 @@ export async function SiteNavbar({
   const session = await getSession();
   const isAdminVariant = variant === "admin";
   const alternateLocale = getAlternateLocale(locale);
+  const alternateLocaleHref = isAdminVariant
+    ? `/${alternateLocale}/admin`
+    : `/${alternateLocale}`;
   const newsNavLabel = content.nav[4];
   const navItems = content.nav.map((label) => ({
     label,
@@ -149,16 +152,28 @@ export async function SiteNavbar({
           </form>
         ) : null}
 
-        {!isAdminVariant ? (
+        {isAdminVariant ? null : (
           <Link
             className="language-switch"
-            href={`/${alternateLocale}`}
+            href={alternateLocaleHref}
             aria-label={content.languageLabel}
             hrefLang={alternateLocale}
           >
             <span>{locale.toUpperCase()}</span>
             <LocaleFlag locale={locale} />
             {/* <ChevronIcon /> */}
+          </Link>
+        )}
+
+        {isAdminVariant ? (
+          <Link
+            className="language-switch admin-language-switch"
+            href={alternateLocaleHref}
+            aria-label={content.languageLabel}
+            hrefLang={alternateLocale}
+          >
+            <span>{locale.toUpperCase()}</span>
+            <LocaleFlag locale={locale} />
           </Link>
         ) : null}
 
