@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { AdminContent } from "@/components/admin/admin-content";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import {
+  defaultAdminSection,
+  isAdminSection,
+} from "@/components/admin/admin-sections";
 import { SiteNavbar } from "@/components/site-navbar";
 import { requireAdminSession } from "@/lib/auth/keycloak";
 import { getDictionary, isLocale, locales } from "@/lib/i18n";
 
 type HomeProps = {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ section?: string | string[] }>;
 };
 
 export function generateStaticParams() {
@@ -36,27 +42,39 @@ export async function generateMetadata({
   };
 }
 
-export default async function Home({ params }: HomeProps) {
+export default async function Home({ params, searchParams }: HomeProps) {
   const { locale } = await params;
+  const query = await searchParams;
 
   if (typeof locale !== "string" || !isLocale(locale)) {
     notFound();
   }
 
+  const sectionParam = Array.isArray(query?.section)
+    ? query?.section[0]
+    : query?.section;
+  const activeSection =
+    typeof sectionParam === "string" && isAdminSection(sectionParam)
+      ? sectionParam
+      : defaultAdminSection;
+
   await requireAdminSession({
-    returnTo: `/${locale}/admin`,
+    returnTo: `/${locale}/admin?section=${activeSection}`,
     forbiddenRedirectTo: `/${locale}`,
   });
-  const dictionary = getDictionary(locale);
 
   return (
     <main className="admin-page">
-      <SiteNavbar locale={locale} variant="admin" />
+      <SiteNavbar
+        adminSection={activeSection}
+        locale={locale}
+        variant="admin"
+      />
 
       <div className="admin-layout">
-        <AdminSidebar locale={locale} />
+        <AdminSidebar activeSection={activeSection} locale={locale} />
         <section className="admin-content" aria-labelledby="admin-heading">
-          <h1 id="admin-heading">{dictionary.adminPageTitle}</h1>
+          <AdminContent locale={locale} section={activeSection} />
         </section>
       </div>
     </main>

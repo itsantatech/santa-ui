@@ -7,10 +7,12 @@ import {
   dictionaries,
 } from "@/lib/i18n";
 import { getSession } from "@/lib/auth/keycloak";
+import type { AdminSection } from "./admin/admin-sections";
 
 type SiteNavbarProps = {
   locale: Locale;
   variant?: "default" | "admin";
+  adminSection?: AdminSection;
 };
 
 function ChevronIcon() {
@@ -71,14 +73,16 @@ function LocaleFlag({ locale }: { locale: Locale }) {
 export async function SiteNavbar({
   locale,
   variant = "default",
+  adminSection,
 }: SiteNavbarProps) {
   const content = getDictionary(locale);
   const session = await getSession();
   const isAdminVariant = variant === "admin";
   const alternateLocale = getAlternateLocale(locale);
-  const alternateLocaleHref = isAdminVariant
-    ? `/${alternateLocale}/admin`
-    : `/${alternateLocale}`;
+  const alternateLocaleHref =
+    isAdminVariant && adminSection
+      ? `/${alternateLocale}/admin?section=${adminSection}`
+      : `/${alternateLocale}`;
   const newsNavLabel = content.nav[4];
   const navItems = content.nav.map((label) => ({
     label,
