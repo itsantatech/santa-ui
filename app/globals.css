@@ -525,6 +525,7 @@ input {
 }
 
 .admin-table-scroll {
+  max-width: 100%;
   overflow-x: auto;
   overscroll-behavior-x: contain;
 }
@@ -538,8 +539,13 @@ input {
 }
 
 .admin-data-table-wide {
-  width: max-content;
+  width: 2360px;
   min-width: 2360px;
+  table-layout: fixed;
+}
+
+.admin-table-select-col {
+  width: 84px;
 }
 
 .admin-data-table th {
@@ -569,6 +575,7 @@ input {
 
 .admin-data-table th,
 .admin-data-table td {
+  min-width: 0;
   overflow-wrap: normal;
   word-break: normal;
 }
@@ -602,16 +609,19 @@ input {
 .admin-table-name-column {
   width: 14%;
   min-width: 220px;
+  white-space: normal;
 }
 
 .admin-table-code-column {
   width: 9%;
   min-width: 130px;
+  white-space: nowrap;
 }
 
 .admin-table-rank-column {
   width: 7%;
   min-width: 92px;
+  white-space: nowrap;
 }
 
 .admin-table-slug-column {
@@ -628,6 +638,7 @@ input {
 .admin-table-price-column {
   width: 9%;
   min-width: 130px;
+  white-space: nowrap;
 }
 
 .admin-table-relations-column,
@@ -644,6 +655,7 @@ input {
 .admin-table-flags-column {
   width: 10%;
   min-width: 150px;
+  white-space: normal;
 }
 
 .admin-table-category-column {
@@ -659,21 +671,25 @@ input {
 .admin-table-status-column {
   width: 10%;
   min-width: 150px;
+  white-space: nowrap;
 }
 
 .admin-table-user-column {
   width: 11%;
   min-width: 170px;
+  white-space: nowrap;
 }
 
 .admin-table-date-column {
   width: 13%;
   min-width: 220px;
+  white-space: nowrap;
 }
 
 .admin-table-actions-column {
   width: 9%;
   min-width: 130px;
+  white-space: nowrap;
 }
 
 .admin-category-chip {

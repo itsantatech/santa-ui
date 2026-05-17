@@ -5,6 +5,7 @@ export type AdminDataTableColumn<Row> = {
   key: string;
   header: ReactNode;
   className?: string;
+  width?: string;
   render: (row: Row) => ReactNode;
 };
 
@@ -89,6 +90,12 @@ export function AdminDataTable<Row>({
               : "admin-data-table"
           }
         >
+          <colgroup>
+            <col className="admin-table-select-col" />
+            {columns.map((column) => (
+              <col key={column.key} style={{ width: column.width }} />
+            ))}
+          </colgroup>
           <thead>
             <tr>
               <th className="admin-table-select-cell" scope="col">

@@ -75,42 +75,49 @@ export async function ProductsServicesSection({
       key: "sku",
       header: table.columns.sku,
       className: "admin-table-code-column",
+      width: "138px",
       render: (row) => <strong>{row.sku}</strong>,
     },
     {
       key: "rank",
       header: table.columns.rank,
       className: "admin-table-rank-column",
+      width: "88px",
       render: (row) => row.rank,
     },
     {
       key: "nameTh",
       header: table.columns.nameTh,
       className: "admin-table-name-column",
+      width: "240px",
       render: (row) => row.nameTh,
     },
     {
       key: "nameEn",
       header: table.columns.nameEn,
       className: "admin-table-name-column",
+      width: "250px",
       render: (row) => row.nameEn,
     },
     {
       key: "model",
       header: table.columns.model,
       className: "admin-table-model-column",
+      width: "130px",
       render: (row) => row.model ?? table.noModel,
     },
     {
       key: "price",
       header: table.columns.price,
       className: "admin-table-price-column",
+      width: "132px",
       render: (row) => formatPrice(row.discountedPrice ?? row.price, locale, table.noPrice),
     },
     {
       key: "category",
       header: table.columns.category,
       className: "admin-table-relations-column",
+      width: "220px",
       render: (row) => (
         <ProductRelationList
           locale={locale}
@@ -123,6 +130,7 @@ export async function ProductsServicesSection({
       key: "subCategory",
       header: table.columns.subCategory,
       className: "admin-table-sub-category-column",
+      width: "230px",
       render: (row) => (
         <ProductRelationList
           locale={locale}
@@ -135,6 +143,7 @@ export async function ProductsServicesSection({
       key: "brands",
       header: table.columns.brands,
       className: "admin-table-brands-column",
+      width: "190px",
       render: (row) => (
         <ProductRelationList
           locale={locale}
@@ -147,6 +156,7 @@ export async function ProductsServicesSection({
       key: "flags",
       header: table.columns.flags,
       className: "admin-table-flags-column",
+      width: "160px",
       render: (row) => (
         <ProductFlags
           bestSellerLabel={table.bestSeller}
@@ -161,6 +171,7 @@ export async function ProductsServicesSection({
       key: "status",
       header: table.columns.status,
       className: "admin-table-status-column",
+      width: "126px",
       render: (row) => (
         <AdminStatusBadge
           label={row.isActive ? table.active : table.inactive}
@@ -172,18 +183,21 @@ export async function ProductsServicesSection({
       key: "updatedBy",
       header: table.columns.updatedBy,
       className: "admin-table-user-column",
+      width: "170px",
       render: (row) => row.updatedBy,
     },
     {
       key: "updatedAt",
       header: table.columns.updatedAt,
       className: "admin-table-date-column",
+      width: "190px",
       render: (row) => formatAdminDateTime(row.updatedAt, locale),
     },
     {
       key: "actions",
       header: table.columns.actions,
       className: "admin-table-actions-column",
+      width: "96px",
       render: () => (
         <AdminRowActions deleteLabel={table.delete} editLabel={table.edit} />
       ),
