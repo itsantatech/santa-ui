@@ -6,6 +6,7 @@ import {
   getDictionary,
   dictionaries,
 } from "@/lib/i18n";
+import { getSession } from "@/lib/auth/keycloak";
 
 type SiteNavbarProps = {
   locale: Locale;
@@ -66,8 +67,9 @@ function LocaleFlag({ locale }: { locale: Locale }) {
   );
 }
 
-export function SiteNavbar({ locale }: SiteNavbarProps) {
+export async function SiteNavbar({ locale }: SiteNavbarProps) {
   const content = getDictionary(locale);
+  const session = await getSession();
   const alternateLocale = getAlternateLocale(locale);
   const newsNavLabel = content.nav[4];
   const navItems = content.nav.map((label) => ({
@@ -143,9 +145,18 @@ export function SiteNavbar({ locale }: SiteNavbarProps) {
           {/* <ChevronIcon /> */}
         </Link>
 
-        <Link className="sign-in-link" href={`/${locale}/sign-in`}>
-          {content.signIn}
-        </Link>
+        {session ? (
+          <div className="nav-session">
+            <span className="nav-username">{session.username}</span>
+            <Link className="sign-out-link" href="/api/auth/logout">
+              {content.signOut}
+            </Link>
+          </div>
+        ) : (
+          <Link className="sign-in-link" href={`/api/auth/login?locale=${locale}`}>
+            {content.signIn}
+          </Link>
+        )}
       </div>
     </header>
   );

@@ -5,11 +5,12 @@ const defaultLocale = "th";
 
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const pathnameIsAppRoute = pathname === "/app" || pathname.startsWith("/app/");
   const pathnameHasLocale = locales.some(
     (locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`),
   );
 
-  if (pathnameHasLocale) {
+  if (pathnameHasLocale || pathnameIsAppRoute) {
     return NextResponse.next();
   }
 

@@ -16,6 +16,7 @@ export const dictionaries = {
     searchPlaceholder: "ค้นหาสินค้าและบริการ",
     searchAction: "ค้นหา",
     signIn: "ลงชื่อเข้าใช้",
+    signOut: "ลงชื่อออก",
     heroTitle: "สินค้าอุตสาหกรรมและโซลูชันจาก SantaTech",
     heroText:
       "ค้นหา เปรียบเทียบ และจัดการสินค้าอุตสาหกรรมด้วยอินเทอร์เฟซที่เร็วและชัดเจน",
@@ -39,6 +40,7 @@ export const dictionaries = {
     searchPlaceholder: "Search products and services",
     searchAction: "Search",
     signIn: "Sign in",
+    signOut: "Sign out",
     heroTitle: "Industrial products and solutions from SantaTech",
     heroText:
       "Search, compare, and manage industrial products through a fast, clear interface.",
@@ -57,6 +59,7 @@ export const dictionaries = {
     searchPlaceholder: string;
     searchAction: string;
     signIn: string;
+    signOut: string;
     heroTitle: string;
     heroText: string;
     languageLabel: string;

@@ -187,7 +187,9 @@ input {
 .primary-nav-link:hover,
 .primary-nav-link:focus-visible,
 .sign-in-link:hover,
-.sign-in-link:focus-visible {
+.sign-in-link:focus-visible,
+.sign-out-link:hover,
+.sign-out-link:focus-visible {
   color: var(--color-brand);
 }
 
@@ -332,6 +334,73 @@ input {
   white-space: nowrap;
 }
 
+.nav-session {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.nav-username {
+  max-width: 140px;
+  overflow: hidden;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sign-out-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  border: 1px solid #d6deeb;
+  border-radius: var(--radius-pill);
+}
+
+.admin-shell {
+  min-height: 100vh;
+  padding: 48px;
+  background: var(--color-page);
+}
+
+.admin-panel {
+  max-width: 960px;
+  padding: 32px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.admin-eyebrow {
+  margin: 0 0 8px;
+  color: var(--color-brand);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.admin-panel h1 {
+  margin: 0 0 12px;
+  color: var(--color-text);
+  font-size: 32px;
+  line-height: 1.2;
+}
+
+.admin-panel p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 16px;
+}
+
 .hero-band {
   display: flex;
   align-items: center;
@@ -447,7 +516,12 @@ input {
     min-height: calc(100vh - 204px);
   }
 
-  .sign-in-link {
+  .sign-in-link,
+  .nav-session {
     width: 100%;
+  }
+
+  .nav-session {
+    justify-content: space-between;
   }
 }
