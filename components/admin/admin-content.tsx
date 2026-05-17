@@ -12,30 +12,30 @@ import { SettingsSection } from "./settings-section";
 
 type AdminContentProps = {
   locale: Locale;
+  page: number;
   section: AdminSection;
 };
 
-export function AdminContent({ locale, section }: AdminContentProps) {
+export function AdminContent({ locale, page, section }: AdminContentProps) {
   switch (section) {
     case "categories":
-      return <CategoriesSection locale={locale} />;
+      return <CategoriesSection locale={locale} page={page} />;
     case "brands":
-      return <BrandsSection locale={locale} />;
+      return <BrandsSection locale={locale} page={page} />;
     case "inventory":
-      return <InventorySection locale={locale} />;
+      return <InventorySection locale={locale} page={page} />;
     case "orders":
       return <OrdersSection locale={locale} />;
     case "quotations":
       return <QuotationsSection locale={locale} />;
     case "news-activities":
-      return <NewsActivitiesSection locale={locale} />;
+      return <NewsActivitiesSection locale={locale} page={page} />;
     case "articles":
-      return <ArticlesSection locale={locale} />;
+      return <ArticlesSection locale={locale} page={page} />;
     case "settings":
       return <SettingsSection locale={locale} />;
     case "products-services":
     default:
-      return <ProductsServicesSection locale={locale} />;
+      return <ProductsServicesSection locale={locale} page={page} />;
   }
 }
-

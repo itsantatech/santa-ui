@@ -1,43 +1,44 @@
-import { getDictionary, type Locale } from "@/lib/i18n";
 import { fetchAdminList, formatAdminDateTime } from "@/lib/admin-api";
+import { getDictionary, type Locale } from "@/lib/i18n";
 import {
   AdminDataTable,
   type AdminDataTableColumn,
   AdminRowActions,
   AdminStatusBadge,
 } from "./admin-data-table";
+import type { AdminSection } from "./admin-sections";
 
-type BrandRow = {
-  code: string;
-  id: number;
+type ContentRow = {
+  id: string;
   rank: number;
-  nameTh: string;
-  nameEn: string;
+  topicTh: string;
+  topicEn: string;
   slug: string;
-  imgUrl: string | null;
+  imgUrl: string[];
+  relatedSku: string[];
   isActive: boolean;
   updatedAt?: string;
   updatedBy?: string;
 };
 
-export async function BrandsSection({
-  locale,
-  page,
-}: {
+type ContentListSectionProps = {
+  apiPath: "/articles" | "/news-and-activities";
   locale: Locale;
   page: number;
-}) {
-  const content = getDictionary(locale).adminSections.brands;
-  const labels = getBrandLabels(locale);
-  const response = await fetchAdminList<BrandRow>("/brands", { page });
+  section: Extract<AdminSection, "articles" | "news-activities">;
+};
+
+export async function ContentListSection({
+  apiPath,
+  locale,
+  page,
+  section,
+}: ContentListSectionProps) {
+  const content = getDictionary(locale).adminSections[section];
+  const labels = getContentLabels(locale);
+  const response = await fetchAdminList<ContentRow>(apiPath, { page });
   const rows = response?.items ?? [];
-  const columns: AdminDataTableColumn<BrandRow>[] = [
-    {
-      key: "code",
-      header: labels.columns.code,
-      className: "admin-table-code-column",
-      render: (row) => <strong>{row.code}</strong>,
-    },
+  const columns: AdminDataTableColumn<ContentRow>[] = [
     {
       key: "rank",
       header: labels.columns.rank,
@@ -45,16 +46,16 @@ export async function BrandsSection({
       render: (row) => row.rank,
     },
     {
-      key: "nameTh",
-      header: labels.columns.nameTh,
+      key: "topicTh",
+      header: labels.columns.topicTh,
       className: "admin-table-name-column",
-      render: (row) => row.nameTh,
+      render: (row) => row.topicTh,
     },
     {
-      key: "nameEn",
-      header: labels.columns.nameEn,
+      key: "topicEn",
+      header: labels.columns.topicEn,
       className: "admin-table-name-column",
-      render: (row) => row.nameEn,
+      render: (row) => row.topicEn,
     },
     {
       key: "slug",
@@ -63,16 +64,24 @@ export async function BrandsSection({
       render: (row) => row.slug,
     },
     {
-      key: "image",
-      header: labels.columns.image,
-      className: "admin-table-image-column",
+      key: "images",
+      header: labels.columns.images,
+      className: "admin-table-number-column",
+      render: (row) => row.imgUrl.length,
+    },
+    {
+      key: "relatedSku",
+      header: labels.columns.relatedSku,
+      className: "admin-table-relations-column",
       render: (row) =>
-        row.imgUrl ? (
-          <a href={row.imgUrl} rel="noreferrer" target="_blank">
-            {labels.image}
-          </a>
+        row.relatedSku.length > 0 ? (
+          <div className="admin-table-relations">
+            {row.relatedSku.map((sku) => (
+              <strong key={sku}>{sku}</strong>
+            ))}
+          </div>
         ) : (
-          <span className="admin-table-muted">{labels.noImage}</span>
+          <span className="admin-table-muted">-</span>
         ),
     },
     {
@@ -114,33 +123,34 @@ export async function BrandsSection({
       <p>{content.description}</p>
       <AdminDataTable
         columns={columns}
-        emptyLabel={response ? labels.empty : labels.fetchError}
-        getRowId={(row) => row.code}
+        emptyLabel={response ? labels.empty[section] : labels.fetchError[section]}
+        getRowId={(row) => row.id}
         pagination={{
           currentPage: response?.meta.page ?? page,
           totalPages: response?.meta.totalPages ?? 1,
-          getPageHref: (page) => `/${locale}/admin?section=brands&page=${page}`,
+          getPageHref: (page) => `/${locale}/admin?section=${section}&page=${page}`,
           previousLabel: labels.previousPage,
           nextLabel: labels.nextPage,
         }}
         rows={rows}
         selectAllLabel={labels.selectAll}
-        selectRowLabel={(row) => `${labels.selectRow} ${row.code}`}
+        selectRowLabel={(row) => `${labels.selectRow} ${row.slug}`}
+        wide
       />
     </div>
   );
 }
 
-function getBrandLabels(locale: Locale) {
+function getContentLabels(locale: Locale) {
   return locale === "th"
     ? {
         columns: {
-          code: "รหัส",
           rank: "ลำดับ",
-          nameTh: "ชื่อภาษาไทย",
-          nameEn: "ชื่อภาษาอังกฤษ",
+          topicTh: "หัวข้อภาษาไทย",
+          topicEn: "หัวข้อภาษาอังกฤษ",
           slug: "Slug",
-          image: "รูปภาพ",
+          images: "รูปภาพ",
+          relatedSku: "SKU ที่เกี่ยวข้อง",
           status: "สถานะ",
           updatedBy: "อัปเดตโดย",
           updatedAt: "อัปเดตล่าสุด",
@@ -154,19 +164,23 @@ function getBrandLabels(locale: Locale) {
         selectRow: "เลือกรายการ",
         previousPage: "หน้าก่อนหน้า",
         nextPage: "หน้าถัดไป",
-        image: "รูปภาพ",
-        noImage: "ไม่มีรูป",
-        empty: "ไม่พบข้อมูลแบรนด์",
-        fetchError: "ไม่สามารถโหลดข้อมูลแบรนด์ได้",
+        empty: {
+          articles: "ไม่พบข้อมูลบทความ",
+          "news-activities": "ไม่พบข้อมูลข่าวสารและกิจกรรม",
+        },
+        fetchError: {
+          articles: "ไม่สามารถโหลดข้อมูลบทความได้",
+          "news-activities": "ไม่สามารถโหลดข้อมูลข่าวสารและกิจกรรมได้",
+        },
       }
     : {
         columns: {
-          code: "Code",
           rank: "Rank",
-          nameTh: "Thai Name",
-          nameEn: "English Name",
+          topicTh: "Thai Topic",
+          topicEn: "English Topic",
           slug: "Slug",
-          image: "Image",
+          images: "Images",
+          relatedSku: "Related SKU",
           status: "Status",
           updatedBy: "Updated By",
           updatedAt: "Updated At",
@@ -180,9 +194,13 @@ function getBrandLabels(locale: Locale) {
         selectRow: "Select row",
         previousPage: "Previous page",
         nextPage: "Next page",
-        image: "Image",
-        noImage: "No image",
-        empty: "No brands found",
-        fetchError: "Unable to load brands",
+        empty: {
+          articles: "No articles found",
+          "news-activities": "No news or activities found",
+        },
+        fetchError: {
+          articles: "Unable to load articles",
+          "news-activities": "Unable to load news and activities",
+        },
       };
 }

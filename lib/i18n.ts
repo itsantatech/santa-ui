@@ -72,6 +72,71 @@ export const dictionaries = {
         description: "ปรับแต่งการตั้งค่าหลักของระบบผู้ดูแล",
       },
     },
+    adminCategoryTable: {
+      columns: {
+        code: "รหัส",
+        rank: "ลำดับ",
+        nameTh: "ชื่อภาษาไทย",
+        nameEn: "ชื่อภาษาอังกฤษ",
+        slug: "Slug",
+        image: "รูปภาพ",
+        status: "สถานะ",
+        updatedBy: "อัปเดตโดย",
+        updatedAt: "อัปเดตล่าสุด",
+        actions: "จัดการ",
+      },
+      selectAll: "เลือกรายการทั้งหมด",
+      selectRow: "เลือกรายการ",
+      active: "ACTIVE",
+      inactive: "INACTIVE",
+      edit: "แก้ไข",
+      delete: "ลบ",
+      previousPage: "หน้าก่อนหน้า",
+      nextPage: "หน้าถัดไป",
+      iconImage: "ไอคอน",
+      coverImage: "ปก",
+      noImage: "ไม่มีรูป",
+      empty: "ไม่พบข้อมูลหมวดหมู่",
+      fetchError: "ไม่สามารถโหลดข้อมูลหมวดหมู่ได้",
+    },
+    adminProductTable: {
+      columns: {
+        sku: "SKU",
+        rank: "ลำดับ",
+        nameTh: "ชื่อภาษาไทย",
+        nameEn: "ชื่อภาษาอังกฤษ",
+        model: "รุ่น",
+        price: "ราคา",
+        category: "หมวดหมู่",
+        subCategory: "หมวดย่อย",
+        brands: "แบรนด์",
+        flags: "ประเภท",
+        status: "สถานะ",
+        updatedBy: "อัปเดตโดย",
+        updatedAt: "อัปเดตล่าสุด",
+        actions: "จัดการ",
+      },
+      selectAll: "เลือกรายการทั้งหมด",
+      selectRow: "เลือกรายการ",
+      active: "ACTIVE",
+      inactive: "INACTIVE",
+      newProduct: "ใหม่",
+      bestSeller: "ขายดี",
+      promotion: "โปรโมชัน",
+      noFlags: "-",
+      noRelations: "-",
+      noPrice: "-",
+      noModel: "-",
+      categories: "หมวดหมู่",
+      subCategories: "หมวดย่อย",
+      brands: "แบรนด์",
+      edit: "แก้ไข",
+      delete: "ลบ",
+      previousPage: "หน้าก่อนหน้า",
+      nextPage: "หน้าถัดไป",
+      empty: "ไม่พบข้อมูลสินค้าและบริการ",
+      fetchError: "ไม่สามารถโหลดข้อมูลสินค้าและบริการได้",
+    },
     newsDropdown: {
       news: "ข่าวสารและกิจกรรม",
       articles: "บทความ",
@@ -147,6 +212,71 @@ export const dictionaries = {
         description: "Configure core admin system settings.",
       },
     },
+    adminCategoryTable: {
+      columns: {
+        code: "Code",
+        rank: "Rank",
+        nameTh: "Thai Name",
+        nameEn: "English Name",
+        slug: "Slug",
+        image: "Images",
+        status: "Status",
+        updatedBy: "Updated By",
+        updatedAt: "Updated At",
+        actions: "Actions",
+      },
+      selectAll: "Select all rows",
+      selectRow: "Select row",
+      active: "ACTIVE",
+      inactive: "INACTIVE",
+      edit: "Edit",
+      delete: "Delete",
+      previousPage: "Previous page",
+      nextPage: "Next page",
+      iconImage: "Icon",
+      coverImage: "Cover",
+      noImage: "No image",
+      empty: "No categories found",
+      fetchError: "Unable to load categories",
+    },
+    adminProductTable: {
+      columns: {
+        sku: "SKU",
+        rank: "Rank",
+        nameTh: "Thai Name",
+        nameEn: "English Name",
+        model: "Model",
+        price: "Price",
+        category: "Category",
+        subCategory: "Sub-category",
+        brands: "Brands",
+        flags: "Type",
+        status: "Status",
+        updatedBy: "Updated By",
+        updatedAt: "Updated At",
+        actions: "Actions",
+      },
+      selectAll: "Select all rows",
+      selectRow: "Select row",
+      active: "ACTIVE",
+      inactive: "INACTIVE",
+      newProduct: "New",
+      bestSeller: "Best seller",
+      promotion: "Promotion",
+      noFlags: "-",
+      noRelations: "-",
+      noPrice: "-",
+      noModel: "-",
+      categories: "Categories",
+      subCategories: "Sub Categories",
+      brands: "Brands",
+      edit: "Edit",
+      delete: "Delete",
+      previousPage: "Previous page",
+      nextPage: "Next page",
+      empty: "No products or services found",
+      fetchError: "Unable to load products and services",
+    },
     newsDropdown: {
       news: "News & Activities",
       articles: "Articles",
@@ -175,6 +305,71 @@ export const dictionaries = {
         description: string;
       }
     >;
+    adminCategoryTable: {
+      columns: {
+        code: string;
+        rank: string;
+        nameTh: string;
+        nameEn: string;
+        slug: string;
+        image: string;
+        status: string;
+        updatedBy: string;
+        updatedAt: string;
+        actions: string;
+      };
+      selectAll: string;
+      selectRow: string;
+      active: string;
+      inactive: string;
+      edit: string;
+      delete: string;
+      previousPage: string;
+      nextPage: string;
+      iconImage: string;
+      coverImage: string;
+      noImage: string;
+      empty: string;
+      fetchError: string;
+    };
+    adminProductTable: {
+      columns: {
+        sku: string;
+        rank: string;
+        nameTh: string;
+        nameEn: string;
+        model: string;
+        price: string;
+        category: string;
+        subCategory: string;
+        brands: string;
+        flags: string;
+        status: string;
+        updatedBy: string;
+        updatedAt: string;
+        actions: string;
+      };
+      selectAll: string;
+      selectRow: string;
+      active: string;
+      inactive: string;
+      newProduct: string;
+      bestSeller: string;
+      promotion: string;
+      noFlags: string;
+      noRelations: string;
+      noPrice: string;
+      noModel: string;
+      categories: string;
+      subCategories: string;
+      brands: string;
+      edit: string;
+      delete: string;
+      previousPage: string;
+      nextPage: string;
+      empty: string;
+      fetchError: string;
+    };
     newsDropdown: {
       news: string;
       articles: string;

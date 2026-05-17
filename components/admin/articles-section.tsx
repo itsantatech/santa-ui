@@ -1,12 +1,19 @@
-import { getDictionary, type Locale } from "@/lib/i18n";
+import type { Locale } from "@/lib/i18n";
+import { ContentListSection } from "./content-list-section";
 
-export function ArticlesSection({ locale }: { locale: Locale }) {
-  const content = getDictionary(locale).adminSections.articles;
-
+export function ArticlesSection({
+  locale,
+  page,
+}: {
+  locale: Locale;
+  page: number;
+}) {
   return (
-    <div className="admin-section-panel">
-      <h1 id="admin-heading">{content.title}</h1>
-      <p>{content.description}</p>
-    </div>
+    <ContentListSection
+      apiPath="/articles"
+      locale={locale}
+      page={page}
+      section="articles"
+    />
   );
 }
