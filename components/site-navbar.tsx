@@ -10,6 +10,7 @@ import { getSession } from "@/lib/auth/keycloak";
 
 type SiteNavbarProps = {
   locale: Locale;
+  variant?: "default" | "admin";
 };
 
 function ChevronIcon() {
@@ -67,9 +68,13 @@ function LocaleFlag({ locale }: { locale: Locale }) {
   );
 }
 
-export async function SiteNavbar({ locale }: SiteNavbarProps) {
+export async function SiteNavbar({
+  locale,
+  variant = "default",
+}: SiteNavbarProps) {
   const content = getDictionary(locale);
   const session = await getSession();
+  const isAdminVariant = variant === "admin";
   const alternateLocale = getAlternateLocale(locale);
   const newsNavLabel = content.nav[4];
   const navItems = content.nav.map((label) => ({
@@ -83,67 +88,79 @@ export async function SiteNavbar({ locale }: SiteNavbarProps) {
 
   return (
     <header className="site-header">
-      <div className="site-header-inner">
+      <div
+        className={
+          isAdminVariant
+            ? "site-header-inner site-header-inner-admin"
+            : "site-header-inner"
+        }
+      >
         <SantaTechLogo locale={locale} />
 
-        <nav className="primary-nav" aria-label="Primary navigation">
-          {navItems.map((item) =>
-            item.label === newsNavLabel ? (
-              <details className="primary-nav-dropdown" key={item.label}>
-                <summary className="primary-nav-link">
+        {!isAdminVariant ? (
+          <nav className="primary-nav" aria-label="Primary navigation">
+            {navItems.map((item) =>
+              item.label === newsNavLabel ? (
+                <details className="primary-nav-dropdown" key={item.label}>
+                  <summary className="primary-nav-link">
+                    <span>{item.label}</span>
+                    <ChevronIcon />
+                  </summary>
+                  <ul className="primary-nav-menu" role="menu">
+                    <li>
+                      <Link className="primary-nav-menu-item active" href={`/${locale}/news`}>
+                        {content.newsDropdown.news}
+                      </Link>
+                    </li>
+                    <li>
+                      <Link className="primary-nav-menu-item" href={`/${locale}/articles`}>
+                        {content.newsDropdown.articles}
+                      </Link>
+                    </li>
+                  </ul>
+                </details>
+              ) : (
+                <Link
+                  href={`/${locale}`}
+                  className="primary-nav-link"
+                  key={item.label}
+                >
                   <span>{item.label}</span>
-                  <ChevronIcon />
-                </summary>
-                <ul className="primary-nav-menu" role="menu">
-                  <li>
-                    <Link className="primary-nav-menu-item active" href={`/${locale}/news`}>
-                      {content.newsDropdown.news}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link className="primary-nav-menu-item" href={`/${locale}/articles`}>
-                      {content.newsDropdown.articles}
-                    </Link>
-                  </li>
-                </ul>
-              </details>
-            ) : (
-              <Link
-                href={`/${locale}`}
-                className="primary-nav-link"
-                key={item.label}
-              >
-                <span>{item.label}</span>
-                {item.hasMenu ? <ChevronIcon /> : null}
-              </Link>
-            ),
-          )}
-        </nav>
+                  {item.hasMenu ? <ChevronIcon /> : null}
+                </Link>
+              ),
+            )}
+          </nav>
+        ) : null}
 
-        <form className="nav-search" role="search" action={`/${locale}/search`}>
-          <label className="sr-only" htmlFor="site-search">
-            {content.searchPlaceholder}
-          </label>
-          <SearchIcon />
-          <input
-            id="site-search"
-            name="q"
-            type="search"
-            placeholder={content.searchPlaceholder}
-          />
-          <button type="submit">{content.searchAction}</button>
-        </form>
+        {!isAdminVariant ? (
+          <form className="nav-search" role="search" action={`/${locale}/search`}>
+            <label className="sr-only" htmlFor="site-search">
+              {content.searchPlaceholder}
+            </label>
+            <SearchIcon />
+            <input
+              id="site-search"
+              name="q"
+              type="search"
+              placeholder={content.searchPlaceholder}
+            />
+            <button type="submit">{content.searchAction}</button>
+          </form>
+        ) : null}
 
-        <Link
-          className="language-switch"
-          href={`/${alternateLocale}`}
-          aria-label={content.languageLabel}
-          hrefLang={alternateLocale}
-        >
-          <span>{locale.toUpperCase()}</span>
-          <LocaleFlag locale={locale} />
-          {/* <ChevronIcon /> */}
-        </Link>
+        {!isAdminVariant ? (
+          <Link
+            className="language-switch"
+            href={`/${alternateLocale}`}
+            aria-label={content.languageLabel}
+            hrefLang={alternateLocale}
+          >
+            <span>{locale.toUpperCase()}</span>
+            <LocaleFlag locale={locale} />
+            {/* <ChevronIcon /> */}
+          </Link>
+        ) : null}
 
         {session ? (
           <div className="nav-session">
