@@ -12,7 +12,19 @@ import { getDictionary, isLocale, locales } from "@/lib/i18n";
 
 type HomeProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ page?: string | string[]; section?: string | string[] }>;
+  searchParams?: Promise<{
+    page?: string | string[];
+    section?: string | string[];
+    categoryCode?: string | string[];
+    subCategoryCode?: string | string[];
+    brandCode?: string | string[];
+  }>;
+};
+
+type ProductFilterQuery = {
+  brandCode?: string;
+  categoryCode?: string;
+  subCategoryCode?: string;
 };
 
 export function generateStaticParams() {
@@ -59,6 +71,11 @@ export default async function Home({ params, searchParams }: HomeProps) {
       ? sectionParam
       : defaultAdminSection;
   const page = getPositiveInteger(pageParam);
+  const productFilters: ProductFilterQuery = {
+    brandCode: getSingleQueryParam(query?.brandCode),
+    categoryCode: getSingleQueryParam(query?.categoryCode),
+    subCategoryCode: getSingleQueryParam(query?.subCategoryCode),
+  };
 
   await requireAdminSession({
     returnTo: `/${locale}/admin?section=${activeSection}`,
@@ -76,7 +93,12 @@ export default async function Home({ params, searchParams }: HomeProps) {
       <div className="admin-layout">
         <AdminSidebar activeSection={activeSection} locale={locale} />
         <section className="admin-content" aria-labelledby="admin-heading">
-          <AdminContent locale={locale} page={page} section={activeSection} />
+          <AdminContent
+            locale={locale}
+            page={page}
+            productFilters={productFilters}
+            section={activeSection}
+          />
         </section>
       </div>
     </main>
@@ -87,4 +109,8 @@ function getPositiveInteger(value: string | undefined) {
   const parsed = Number(value);
 
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function getSingleQueryParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
 }

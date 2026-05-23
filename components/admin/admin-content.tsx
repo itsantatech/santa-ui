@@ -13,10 +13,20 @@ import { SettingsSection } from "./settings-section";
 type AdminContentProps = {
   locale: Locale;
   page: number;
+  productFilters?: {
+    brandCode?: string;
+    categoryCode?: string;
+    subCategoryCode?: string;
+  };
   section: AdminSection;
 };
 
-export function AdminContent({ locale, page, section }: AdminContentProps) {
+export function AdminContent({
+  locale,
+  page,
+  productFilters,
+  section,
+}: AdminContentProps) {
   switch (section) {
     case "categories":
       return <CategoriesSection locale={locale} page={page} />;
@@ -36,6 +46,12 @@ export function AdminContent({ locale, page, section }: AdminContentProps) {
       return <SettingsSection locale={locale} />;
     case "products-services":
     default:
-      return <ProductsServicesSection locale={locale} page={page} />;
+      return (
+        <ProductsServicesSection
+          filters={productFilters}
+          locale={locale}
+          page={page}
+        />
+      );
   }
 }
