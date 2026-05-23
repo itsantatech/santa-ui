@@ -1,30 +1,11 @@
-import { ProductFilter, type ProductFilterOption } from "@/components/product-filter";
-import { getDictionary, type Locale } from "@/lib/i18n";
-import {
-  fetchAdminList,
-  formatAdminDateTime,
-  type AdminListResponse,
-} from "@/lib/admin-api";
-import {
-  AdminDataTable,
-  type AdminDataTableColumn,
-  AdminRowActions,
-  AdminStatusBadge,
-} from "./admin-data-table";
+"use client";
 
-type ProductRelation = {
-  code: string;
-  categoryCode?: string;
-  nameTh: string;
-  nameEn: string;
-};
+import { useRouter, useSearchParams } from "next/navigation";
+import { type FormEvent, useMemo, useState } from "react";
+import type { ProductSearchSuggestion } from "@/components/product-search";
 
-type ProductRow = {
-  sku: string;
-  id: number;
+export type ProductManagementRow = ProductSearchSuggestion & {
   rank: number;
-  nameTh: string;
-  nameEn: string;
   shortDescriptionTh: string;
   shortDescriptionEn: string;
   descriptionTh: string;
@@ -33,7 +14,6 @@ type ProductRow = {
   imgUrl: string[];
   slug: string;
   price: number | null;
-  model: string | null;
   seoTitleTh: string;
   seoTitleEn: string;
   seoDescriptionTh: string;
@@ -44,431 +24,679 @@ type ProductRow = {
   isBestSeller: boolean;
   isPromotion: boolean;
   discountedPrice: number | null;
-  categoryCods?: ProductRelation[];
-  categories?: ProductRelation[];
-  subCategories: ProductRelation[];
-  brands: ProductRelation[];
-  createdAt: string;
-  createdBy: string;
-  updatedAt: string;
-  updatedBy: string;
-  deletedAt: string | null;
-  deletedBy: string | null;
+  categories?: { code: string }[];
+  categoryCods?: { code: string }[];
+  subCategories: { code: string }[];
+  brands: { code: string }[];
 };
 
-type ProductResponse = AdminListResponse<ProductRow>;
-type ProductFilterListResponse = AdminListResponse<ProductRelation>;
+type ProductFormValue = {
+  rank: string;
+  nameTh: string;
+  nameEn: string;
+  shortDescriptionTh: string;
+  shortDescriptionEn: string;
+  descriptionTh: string;
+  descriptionEn: string;
+  datasheetUrl: string;
+  imgUrl: string;
+  slug: string;
+  price: string;
+  model: string;
+  seoTitleTh: string;
+  seoTitleEn: string;
+  seoDescriptionTh: string;
+  seoDescriptionEn: string;
+  googleCategoryId: string;
+  isActive: boolean;
+  isNewProduct: boolean;
+  isBestSeller: boolean;
+  isPromotion: boolean;
+  discountedPrice: string;
+  categoryCodes: string;
+  subCategoryCodes: string;
+  brandCodes: string;
+};
 
-export async function ProductsServicesSection({
-  filters,
-  locale,
-  page,
+type ProductLabels = {
+  add: string;
+  addTitle: string;
+  cancel: string;
+  confirmDelete: string;
+  delete: string;
+  deleteBodyTemplate: string;
+  deleteTitle: string;
+  download: string;
+  edit: string;
+  editTitle: string;
+  error: string;
+  fileSelected: string;
+  noSuggestions: string;
+  save: string;
+  search: string;
+  searchPlaceholder: string;
+  searchTooShort: string;
+  template: string;
+  upload: string;
+};
+
+export function ProductToolbarActions({
+  labels,
 }: {
-  filters?: {
-    brandCode?: string;
-    categoryCode?: string;
-    subCategoryCode?: string;
-  };
-  locale: Locale;
-  page: number;
+  labels: ProductLabels;
+  rows?: ProductManagementRow[];
 }) {
-  const dictionary = getDictionary(locale);
-  const content = dictionary.adminSections["products-services"];
-  const table = dictionary.adminProductTable;
-  const [response, categoryResponse, subCategoryResponse, brandResponse] =
-    await Promise.all([
-      getProducts(page, filters),
-      getFilterOptions("/categories"),
-      getFilterOptions("/sub-categories"),
-      getFilterOptions("/brands"),
-    ]);
-  const rows = response?.items ?? [];
-  const totalPages = response?.meta.totalPages ?? 1;
-  const currentPage = response?.meta.page ?? page;
-  const totalItems = response?.meta.totalItems ?? 0;
-  const isThaiLocale = locale === "th";
-  const categoryOptions = toProductFilterOptions(
-    categoryResponse?.items ?? [],
-    locale,
-  );
-  const subCategoryOptions = toProductFilterOptions(
-    subCategoryResponse?.items ?? [],
-    locale,
-  );
-  const brandOptions = toProductFilterOptions(brandResponse?.items ?? [], locale);
-  const selectedCategory = findSelectedOption(categoryOptions, filters?.categoryCode);
-  const selectedSubCategory = findSelectedOption(
-    subCategoryOptions,
-    filters?.subCategoryCode,
-  );
-  const selectedBrand = findSelectedOption(brandOptions, filters?.brandCode);
-  const filterStateKey = [
-    filters?.categoryCode ?? "",
-    filters?.subCategoryCode ?? "",
-    filters?.brandCode ?? "",
-  ].join(":");
-  const filterContent = {
-    fields: [
-      {
-        id: "categoryCode",
-        label: table.categories,
-        options: categoryOptions,
-        placeholder: isThaiLocale ? "เลือกหมวดหมู่" : "Select category",
-        selected: selectedCategory ? [selectedCategory] : undefined,
-      },
-      {
-        id: "subCategoryCode",
-        dependsOn: "categoryCode",
-        disabledPlaceholder: isThaiLocale
-          ? "เลือกหมวดหมู่ก่อน"
-          : "Select category first",
-        label: table.subCategories,
-        options: subCategoryOptions,
-        placeholder: isThaiLocale ? "เลือกหมวดหมู่ย่อย" : "Select sub-category",
-        selected: selectedSubCategory ? [selectedSubCategory] : undefined,
-      },
-      {
-        id: "brandCode",
-        label: table.brands,
-        options: brandOptions,
-        placeholder: isThaiLocale ? "เลือกแบรนด์" : "Select brand",
-        selected: selectedBrand ? [selectedBrand] : undefined,
-      },
-    ],
-    removeFilterLabel: isThaiLocale ? "ลบตัวกรอง" : "Remove filter",
-    resultLabel: isThaiLocale ? "ผลการค้นหาจำนวน" : "Search results",
-    resultUnit: isThaiLocale ? "รายการ" : "items",
-    title: isThaiLocale ? "ตัวกรอง" : "Filters",
-  };
-  const columns: AdminDataTableColumn<ProductRow>[] = [
-    {
-      key: "sku",
-      header: table.columns.sku,
-      className: "admin-table-code-column",
-      width: "138px",
-      render: (row) => <strong>{row.sku}</strong>,
-    },
-    {
-      key: "rank",
-      header: table.columns.rank,
-      className: "admin-table-rank-column",
-      width: "88px",
-      render: (row) => row.rank,
-    },
-    {
-      key: "nameTh",
-      header: table.columns.nameTh,
-      className: "admin-table-name-column",
-      width: "240px",
-      render: (row) => row.nameTh,
-    },
-    {
-      key: "nameEn",
-      header: table.columns.nameEn,
-      className: "admin-table-name-column",
-      width: "250px",
-      render: (row) => row.nameEn,
-    },
-    {
-      key: "model",
-      header: table.columns.model,
-      className: "admin-table-model-column",
-      width: "130px",
-      render: (row) => row.model ?? table.noModel,
-    },
-    {
-      key: "price",
-      header: table.columns.price,
-      className: "admin-table-price-column",
-      width: "132px",
-      render: (row) => formatPrice(row.discountedPrice ?? row.price, locale, table.noPrice),
-    },
-    {
-      key: "category",
-      header: table.columns.category,
-      className: "admin-table-relations-column",
-      width: "220px",
-      render: (row) => (
-        <ProductRelationList
-          locale={locale}
-          noRelationsLabel={table.noRelations}
-          relations={row.categories ?? row.categoryCods ?? []}
-        />
-      ),
-    },
-    {
-      key: "subCategory",
-      header: table.columns.subCategory,
-      className: "admin-table-sub-category-column",
-      width: "230px",
-      render: (row) => (
-        <ProductRelationList
-          locale={locale}
-          noRelationsLabel={table.noRelations}
-          relations={row.subCategories}
-        />
-      ),
-    },
-    {
-      key: "brands",
-      header: table.columns.brands,
-      className: "admin-table-brands-column",
-      width: "190px",
-      render: (row) => (
-        <ProductRelationList
-          locale={locale}
-          noRelationsLabel={table.noRelations}
-          relations={row.brands}
-        />
-      ),
-    },
-    {
-      key: "flags",
-      header: table.columns.flags,
-      className: "admin-table-flags-column",
-      width: "160px",
-      render: (row) => (
-        <ProductFlags
-          bestSellerLabel={table.bestSeller}
-          noFlagsLabel={table.noFlags}
-          newProductLabel={table.newProduct}
-          product={row}
-          promotionLabel={table.promotion}
-        />
-      ),
-    },
-    {
-      key: "status",
-      header: table.columns.status,
-      className: "admin-table-status-column",
-      width: "126px",
-      render: (row) => (
-        <AdminStatusBadge
-          label={row.isActive ? table.active : table.inactive}
-          tone={row.isActive ? "active" : "inactive"}
-        />
-      ),
-    },
-    {
-      key: "updatedBy",
-      header: table.columns.updatedBy,
-      className: "admin-table-user-column",
-      width: "170px",
-      render: (row) => row.updatedBy,
-    },
-    {
-      key: "updatedAt",
-      header: table.columns.updatedAt,
-      className: "admin-table-date-column",
-      width: "190px",
-      render: (row) => formatAdminDateTime(row.updatedAt, locale),
-    },
-    {
-      key: "actions",
-      header: table.columns.actions,
-      className: "admin-table-actions-column",
-      width: "96px",
-      render: () => (
-        <AdminRowActions deleteLabel={table.delete} editLabel={table.edit} />
-      ),
-    },
-  ];
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const searchParams = useSearchParams();
+
+  async function handleDownload(path: string, fallbackFilename: string) {
+    const response = await fetch(path, { cache: "no-store" });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = getDownloadFilename(response, fallbackFilename);
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
-    <div className="admin-section-panel">
-      <h1 id="admin-heading">{content.title}</h1>
-      <div className="admin-product-heading-row">
-        <form className="admin-product-search" role="search">
-          <label className="sr-only" htmlFor="admin-product-search">
-            {isThaiLocale ? "ค้นหาสินค้าและบริการ" : "Search products and services"}
-          </label>
-          <input
-            id="admin-product-search"
-            name="q"
-            placeholder={
-              isThaiLocale ? "ค้นหาสินค้าและบริการ" : "Search products and services"
-            }
-            type="search"
-          />
-          <button type="submit">{isThaiLocale ? "ค้นหา" : "Search"}</button>
-        </form>
-        <button className="admin-product-add-button" type="button">
-          <span aria-hidden="true">+</span>
-          {isThaiLocale ? "เพิ่มสินค้าและบริการ" : "Add product or service"}
+    <div className="admin-product-toolbar-actions">
+      <button
+        className="admin-product-secondary-button"
+        onClick={() => setIsUploadOpen(true)}
+        type="button"
+      >
+        <span className="material-symbols-outlined" aria-hidden="true">
+          upload
+        </span>
+        {labels.upload}
+      </button>
+      <button
+        className="admin-product-secondary-button"
+        onClick={() =>
+          void handleDownload(
+            `/api/admin/products/export?${searchParams.toString()}`,
+            "products-export.xlsx",
+          )
+        }
+        type="button"
+      >
+        <span className="material-symbols-outlined" aria-hidden="true">
+          download
+        </span>
+        {labels.download}
+      </button>
+      <button
+        className="admin-product-secondary-button"
+        onClick={() =>
+          void handleDownload(
+            "/api/admin/products/template",
+            "products-import-template.xlsx",
+          )
+        }
+        type="button"
+      >
+        <span className="material-symbols-outlined" aria-hidden="true">
+          description
+        </span>
+        {labels.template}
+      </button>
+      <button
+        className="admin-product-add-button"
+        onClick={() => setIsAddOpen(true)}
+        type="button"
+      >
+        <span aria-hidden="true">+</span>
+        {labels.add}
+      </button>
+      {isAddOpen ? (
+        <ProductFormModal
+          labels={labels}
+          mode="add"
+          onClose={() => setIsAddOpen(false)}
+        />
+      ) : null}
+      {isUploadOpen ? (
+        <ProductUploadModal labels={labels} onClose={() => setIsUploadOpen(false)} />
+      ) : null}
+    </div>
+  );
+}
+
+export function ProductRowManagementActions({
+  labels,
+  product,
+}: {
+  labels: ProductLabels;
+  product: ProductManagementRow;
+}) {
+  const [mode, setMode] = useState<"edit" | "delete" | null>(null);
+
+  return (
+    <>
+      <div className="admin-table-actions">
+        <button
+          className="admin-table-icon-button"
+          onClick={() => setMode("edit")}
+          type="button"
+          aria-label={labels.edit}
+        >
+          <span className="material-symbols-outlined" aria-hidden="true">
+            edit
+          </span>
+        </button>
+        <button
+          className="admin-table-icon-button"
+          onClick={() => setMode("delete")}
+          type="button"
+          aria-label={labels.delete}
+        >
+          <span className="material-symbols-outlined" aria-hidden="true">
+            delete
+          </span>
         </button>
       </div>
-      <ProductFilter
-        key={filterStateKey}
-        fields={filterContent.fields}
-        locale={isThaiLocale ? "th-TH" : "en-US"}
-        removeFilterLabel={filterContent.removeFilterLabel}
-        resultCount={totalItems}
-        resultLabel={filterContent.resultLabel}
-        resultUnit={filterContent.resultUnit}
-        syncQueryParams
-        title={filterContent.title}
-        variant="admin"
-      />
-      <AdminDataTable
-        columns={columns}
-        emptyLabel={response ? table.empty : table.fetchError}
-        getRowId={(row) => row.sku}
-        pagination={{
-          currentPage,
-          totalPages,
-          getPageHref: (page) =>
-            createProductsPageHref(locale, page, filters),
-          previousLabel: table.previousPage,
-          nextLabel: table.nextPage,
-        }}
-        rows={rows}
-        selectAllLabel={table.selectAll}
-        selectRowLabel={(row) => `${table.selectRow} ${row.sku}`}
-        wide
-      />
-    </div>
+      {mode === "edit" ? (
+        <ProductFormModal
+          labels={labels}
+          mode="edit"
+          onClose={() => setMode(null)}
+          product={product}
+        />
+      ) : null}
+      {mode === "delete" ? (
+        <DeleteProductModal
+          labels={labels}
+          onClose={() => setMode(null)}
+          product={product}
+        />
+      ) : null}
+    </>
   );
 }
 
-async function getProducts(
-  page: number,
-  filters?: {
-    brandCode?: string;
-    categoryCode?: string;
-    subCategoryCode?: string;
-  },
-): Promise<ProductResponse | null> {
-  return fetchAdminList<ProductRow>("/products", {
-    brandCode: filters?.brandCode,
-    categoryCode: filters?.categoryCode,
-    page,
-    subCategoryCode: filters?.subCategoryCode,
-  });
-}
-
-async function getFilterOptions(
-  resourcePath: string,
-): Promise<ProductFilterListResponse | null> {
-  return fetchAdminList<ProductRelation>(resourcePath, {
-    page: 1,
-    pageSize: 100,
-  });
-}
-
-function toProductFilterOptions(
-  items: ProductRelation[],
-  locale: Locale,
-): ProductFilterOption[] {
-  return items.map((item) => ({
-    label: locale === "th" ? item.nameTh : item.nameEn,
-    parentValue: item.categoryCode,
-    value: item.code,
-  }));
-}
-
-function findSelectedOption(
-  options: ProductFilterOption[],
-  value: string | undefined,
-) {
-  if (!value) {
-    return undefined;
-  }
-
-  return options.find((option) => option.value === value);
-}
-
-function createProductsPageHref(
-  locale: Locale,
-  page: number,
-  filters?: {
-    brandCode?: string;
-    categoryCode?: string;
-    subCategoryCode?: string;
-  },
-) {
-  const searchParams = new URLSearchParams({
-    page: String(page),
-    section: "products-services",
-  });
-
-  if (filters?.categoryCode) {
-    searchParams.set("categoryCode", filters.categoryCode);
-  }
-
-  if (filters?.subCategoryCode) {
-    searchParams.set("subCategoryCode", filters.subCategoryCode);
-  }
-
-  if (filters?.brandCode) {
-    searchParams.set("brandCode", filters.brandCode);
-  }
-
-  return `/${locale}/admin?${searchParams.toString()}`;
-}
-
-function ProductRelationList({
-  locale,
-  noRelationsLabel,
-  relations,
+function ProductUploadModal({
+  labels,
+  onClose,
 }: {
-  locale: Locale;
-  noRelationsLabel: string;
-  relations: ProductRelation[];
+  labels: ProductLabels;
+  onClose: () => void;
 }) {
-  if (relations.length === 0) {
-    return <span className="admin-table-muted">{noRelationsLabel}</span>;
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [summary, setSummary] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+
+  async function handleTemplateDownload() {
+    const response = await fetch("/api/admin/products/template", {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      setError(labels.error);
+      return;
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "products-import-template.xlsx";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleUpload(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSummary("");
+    setIsUploading(true);
+
+    const response = await fetch("/api/admin/products/import", {
+      body: new FormData(event.currentTarget),
+      method: "POST",
+    });
+
+    setIsUploading(false);
+
+    if (!response.ok) {
+      setError(labels.error);
+      return;
+    }
+
+    const result = (await response.json()) as {
+      created: number;
+      updated: number;
+      failed: number;
+    };
+
+    setSummary(
+      `Created ${result.created}, updated ${result.updated}, failed ${result.failed}`,
+    );
+    router.refresh();
   }
 
   return (
-    <div className="admin-table-relations">
-      {relations.map((relation) => (
-        <strong key={relation.code}>
-          {locale === "th" ? relation.nameTh : relation.nameEn}
-        </strong>
-      ))}
+    <div className="admin-product-modal-backdrop" role="presentation">
+      <div
+        aria-labelledby="admin-product-upload-title"
+        aria-modal="true"
+        className="admin-product-modal admin-product-confirm-modal"
+        role="dialog"
+      >
+        <div className="admin-product-modal-header">
+          <h2 id="admin-product-upload-title">{labels.upload}</h2>
+          <button
+            aria-label={labels.cancel}
+            className="admin-product-modal-close"
+            onClick={onClose}
+            type="button"
+          >
+            <span className="material-symbols-outlined" aria-hidden="true">
+              close
+            </span>
+          </button>
+        </div>
+        <form className="admin-product-upload-body" onSubmit={handleUpload}>
+          <button
+            className="admin-product-secondary-button"
+            onClick={() => void handleTemplateDownload()}
+            type="button"
+          >
+            <span className="material-symbols-outlined" aria-hidden="true">
+              download
+            </span>
+            {labels.template}
+          </button>
+          <input accept=".csv,.xlsx" name="file" required type="file" />
+          {error ? <p className="admin-product-form-error">{error}</p> : null}
+          {summary ? <p className="admin-product-file-note">{summary}</p> : null}
+          <div className="admin-product-modal-actions">
+            <button
+              className="admin-product-secondary-button"
+              onClick={onClose}
+              type="button"
+            >
+              {labels.cancel}
+            </button>
+            <button
+              className="admin-product-add-button"
+              disabled={isUploading}
+              type="submit"
+            >
+              {labels.upload}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
 
-function ProductFlags({
-  bestSellerLabel,
-  noFlagsLabel,
-  newProductLabel,
+function ProductFormModal({
+  labels,
+  mode,
+  onClose,
   product,
-  promotionLabel,
 }: {
-  bestSellerLabel: string;
-  noFlagsLabel: string;
-  newProductLabel: string;
-  product: ProductRow;
-  promotionLabel: string;
+  labels: ProductLabels;
+  mode: "add" | "edit";
+  onClose: () => void;
+  product?: ProductManagementRow;
 }) {
-  const flags = [
-    product.isNewProduct ? newProductLabel : null,
-    product.isBestSeller ? bestSellerLabel : null,
-    product.isPromotion ? promotionLabel : null,
-  ].filter((flag): flag is string => Boolean(flag));
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const initialValue = useMemo(() => getInitialFormValue(product), [product]);
 
-  if (flags.length === 0) {
-    return <span className="admin-table-muted">{noFlagsLabel}</span>;
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSaving(true);
+    setError("");
+
+    const form = new FormData(event.currentTarget);
+    const payload = getProductPayload(form);
+    const response = await fetch(
+      product ? `/api/admin/products/${encodeURIComponent(product.sku)}` : "/api/admin/products",
+      {
+        body: JSON.stringify(payload),
+        headers: { "content-type": "application/json" },
+        method: product ? "PATCH" : "POST",
+      },
+    );
+
+    setIsSaving(false);
+
+    if (!response.ok) {
+      setError(labels.error);
+      return;
+    }
+
+    router.refresh();
+    onClose();
   }
 
   return (
-    <div className="admin-table-flag-list">
-      {flags.map((flag) => (
-        <span key={flag}>{flag}</span>
-      ))}
+    <div className="admin-product-modal-backdrop" role="presentation">
+      <div
+        aria-labelledby="admin-product-form-title"
+        aria-modal="true"
+        className="admin-product-modal"
+        role="dialog"
+      >
+        <div className="admin-product-modal-header">
+          <h2 id="admin-product-form-title">
+            {mode === "add" ? labels.addTitle : labels.editTitle}
+          </h2>
+          <button
+            aria-label={labels.cancel}
+            className="admin-product-modal-close"
+            onClick={onClose}
+            type="button"
+          >
+            <span className="material-symbols-outlined" aria-hidden="true">
+              close
+            </span>
+          </button>
+        </div>
+        <form className="admin-product-form" onSubmit={handleSubmit}>
+          <ProductFormFields initialValue={initialValue} />
+          {error ? <p className="admin-product-form-error">{error}</p> : null}
+          <div className="admin-product-modal-actions">
+            <button
+              className="admin-product-secondary-button"
+              onClick={onClose}
+              type="button"
+            >
+              {labels.cancel}
+            </button>
+            <button className="admin-product-add-button" disabled={isSaving} type="submit">
+              {labels.save}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
 
-function formatPrice(value: number | null, locale: Locale, fallback: string) {
-  if (value === null) {
-    return fallback;
+function ProductFormFields({ initialValue }: { initialValue: ProductFormValue }) {
+  return (
+    <div className="admin-product-form-grid">
+      <TextField label="Rank" name="rank" type="number" value={initialValue.rank} />
+      <TextField label="Slug" name="slug" required value={initialValue.slug} />
+      <TextField label="Thai Name" name="nameTh" required value={initialValue.nameTh} />
+      <TextField label="English Name" name="nameEn" required value={initialValue.nameEn} />
+      <TextField label="Model" name="model" value={initialValue.model} />
+      <TextField label="Price" name="price" type="number" value={initialValue.price} />
+      <TextField
+        label="Discounted Price"
+        name="discountedPrice"
+        type="number"
+        value={initialValue.discountedPrice}
+      />
+      <TextField label="Datasheet URL" name="datasheetUrl" value={initialValue.datasheetUrl} />
+      <TextField label="Image URLs" name="imgUrl" value={initialValue.imgUrl} />
+      <TextField label="Google Category ID" name="googleCategoryId" value={initialValue.googleCategoryId} />
+      <TextField label="Category Codes" name="categoryCodes" value={initialValue.categoryCodes} />
+      <TextField label="Sub-category Codes" name="subCategoryCodes" value={initialValue.subCategoryCodes} />
+      <TextField label="Brand Codes" name="brandCodes" value={initialValue.brandCodes} />
+      <TextArea label="Thai Short Description" name="shortDescriptionTh" required value={initialValue.shortDescriptionTh} />
+      <TextArea label="English Short Description" name="shortDescriptionEn" required value={initialValue.shortDescriptionEn} />
+      <TextArea label="Thai Description" name="descriptionTh" required value={initialValue.descriptionTh} />
+      <TextArea label="English Description" name="descriptionEn" required value={initialValue.descriptionEn} />
+      <TextField label="Thai SEO Title" name="seoTitleTh" required value={initialValue.seoTitleTh} />
+      <TextField label="English SEO Title" name="seoTitleEn" required value={initialValue.seoTitleEn} />
+      <TextArea label="Thai SEO Description" name="seoDescriptionTh" required value={initialValue.seoDescriptionTh} />
+      <TextArea label="English SEO Description" name="seoDescriptionEn" required value={initialValue.seoDescriptionEn} />
+      <CheckboxField label="Active" name="isActive" checked={initialValue.isActive} />
+      <CheckboxField label="New product" name="isNewProduct" checked={initialValue.isNewProduct} />
+      <CheckboxField label="Best seller" name="isBestSeller" checked={initialValue.isBestSeller} />
+      <CheckboxField label="Promotion" name="isPromotion" checked={initialValue.isPromotion} />
+    </div>
+  );
+}
+
+function DeleteProductModal({
+  labels,
+  onClose,
+  product,
+}: {
+  labels: ProductLabels;
+  onClose: () => void;
+  product: ProductManagementRow;
+}) {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  async function handleDelete() {
+    setIsDeleting(true);
+    setError("");
+
+    const response = await fetch(`/api/admin/products/${encodeURIComponent(product.sku)}`, {
+      method: "DELETE",
+    });
+
+    setIsDeleting(false);
+
+    if (!response.ok) {
+      setError(labels.error);
+      return;
+    }
+
+    router.refresh();
+    onClose();
   }
 
-  return new Intl.NumberFormat(locale === "th" ? "th-TH" : "en-US", {
-    currency: "THB",
-    style: "currency",
-  }).format(value);
+  return (
+    <div className="admin-product-modal-backdrop" role="presentation">
+      <div
+        aria-labelledby="admin-product-delete-title"
+        aria-modal="true"
+        className="admin-product-modal admin-product-confirm-modal"
+        role="dialog"
+      >
+        <div className="admin-product-modal-header">
+          <h2 id="admin-product-delete-title">{labels.deleteTitle}</h2>
+          <button
+            aria-label={labels.cancel}
+            className="admin-product-modal-close"
+            onClick={onClose}
+            type="button"
+          >
+            <span className="material-symbols-outlined" aria-hidden="true">
+              close
+            </span>
+          </button>
+        </div>
+        <p>{labels.deleteBodyTemplate.replace("{sku}", product.sku)}</p>
+        {error ? <p className="admin-product-form-error">{error}</p> : null}
+        <div className="admin-product-modal-actions">
+          <button
+            className="admin-product-secondary-button"
+            onClick={onClose}
+            type="button"
+          >
+            {labels.cancel}
+          </button>
+          <button
+            className="admin-product-danger-button"
+            disabled={isDeleting}
+            onClick={handleDelete}
+            type="button"
+          >
+            {labels.confirmDelete}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TextField({
+  label,
+  name,
+  required = false,
+  type = "text",
+  value,
+}: {
+  label: string;
+  name: keyof ProductFormValue;
+  required?: boolean;
+  type?: "number" | "text";
+  value: string;
+}) {
+  return (
+    <label className="admin-product-form-field">
+      <span>{label}</span>
+      <input defaultValue={value} name={name} required={required} type={type} />
+    </label>
+  );
+}
+
+function TextArea({
+  label,
+  name,
+  required = false,
+  value,
+}: {
+  label: string;
+  name: keyof ProductFormValue;
+  required?: boolean;
+  value: string;
+}) {
+  return (
+    <label className="admin-product-form-field admin-product-form-field-wide">
+      <span>{label}</span>
+      <textarea defaultValue={value} name={name} required={required} rows={3} />
+    </label>
+  );
+}
+
+function CheckboxField({
+  checked,
+  label,
+  name,
+}: {
+  checked: boolean;
+  label: string;
+  name: keyof ProductFormValue;
+}) {
+  return (
+    <label className="admin-product-checkbox-field">
+      <input defaultChecked={checked} name={name} type="checkbox" value="true" />
+      <span>{label}</span>
+    </label>
+  );
+}
+
+function getInitialFormValue(product?: ProductManagementRow): ProductFormValue {
+  return {
+    rank: product ? String(product.rank) : "0",
+    nameTh: product?.nameTh ?? "",
+    nameEn: product?.nameEn ?? "",
+    shortDescriptionTh: product?.shortDescriptionTh ?? "",
+    shortDescriptionEn: product?.shortDescriptionEn ?? "",
+    descriptionTh: product?.descriptionTh ?? "",
+    descriptionEn: product?.descriptionEn ?? "",
+    datasheetUrl: product?.datasheetUrl ?? "",
+    imgUrl: product?.imgUrl.join(", ") ?? "",
+    slug: product?.slug ?? "",
+    price: product?.price === null || product?.price === undefined ? "" : String(product.price),
+    model: product?.model ?? "",
+    seoTitleTh: product?.seoTitleTh ?? "",
+    seoTitleEn: product?.seoTitleEn ?? "",
+    seoDescriptionTh: product?.seoDescriptionTh ?? "",
+    seoDescriptionEn: product?.seoDescriptionEn ?? "",
+    googleCategoryId: product?.googleCategoryId ?? "",
+    isActive: product?.isActive ?? true,
+    isNewProduct: product?.isNewProduct ?? false,
+    isBestSeller: product?.isBestSeller ?? false,
+    isPromotion: product?.isPromotion ?? false,
+    discountedPrice:
+      product?.discountedPrice === null || product?.discountedPrice === undefined
+        ? ""
+        : String(product.discountedPrice),
+    categoryCodes: (product?.categories ?? product?.categoryCods ?? [])
+      .map((category) => category.code)
+      .join(", "),
+    subCategoryCodes: product?.subCategories.map((subCategory) => subCategory.code).join(", ") ?? "",
+    brandCodes: product?.brands.map((brand) => brand.code).join(", ") ?? "",
+  };
+}
+
+function getProductPayload(form: FormData) {
+  return {
+    rank: getNumber(form, "rank") ?? 0,
+    nameTh: getString(form, "nameTh"),
+    nameEn: getString(form, "nameEn"),
+    shortDescriptionTh: getString(form, "shortDescriptionTh"),
+    shortDescriptionEn: getString(form, "shortDescriptionEn"),
+    descriptionTh: getString(form, "descriptionTh"),
+    descriptionEn: getString(form, "descriptionEn"),
+    datasheetUrl: getNullableString(form, "datasheetUrl"),
+    imgUrl: getList(form, "imgUrl"),
+    slug: getString(form, "slug"),
+    price: getNumber(form, "price"),
+    model: getNullableString(form, "model"),
+    seoTitleTh: getString(form, "seoTitleTh"),
+    seoTitleEn: getString(form, "seoTitleEn"),
+    seoDescriptionTh: getString(form, "seoDescriptionTh"),
+    seoDescriptionEn: getString(form, "seoDescriptionEn"),
+    googleCategoryId: getNullableString(form, "googleCategoryId"),
+    isActive: form.get("isActive") === "true",
+    isNewProduct: form.get("isNewProduct") === "true",
+    isBestSeller: form.get("isBestSeller") === "true",
+    isPromotion: form.get("isPromotion") === "true",
+    discountedPrice: getNumber(form, "discountedPrice"),
+    categoryCodes: getList(form, "categoryCodes"),
+    subCategoryCodes: getList(form, "subCategoryCodes"),
+    brandCodes: getList(form, "brandCodes"),
+  };
+}
+
+function getDownloadFilename(response: Response, fallbackFilename: string) {
+  const disposition = response.headers.get("content-disposition");
+  const filename = disposition?.match(/filename="?([^";]+)"?/)?.[1];
+
+  return filename ? decodeURIComponent(filename) : fallbackFilename;
+}
+
+function getString(form: FormData, name: string) {
+  return String(form.get(name) ?? "").trim();
+}
+
+function getNullableString(form: FormData, name: string) {
+  const value = getString(form, name);
+
+  return value || null;
+}
+
+function getNumber(form: FormData, name: string) {
+  const value = getString(form, name);
+
+  if (!value) {
+    return null;
+  }
+
+  const numberValue = Number(value);
+
+  return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function getList(form: FormData, name: string) {
+  return getString(form, name)
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
 }

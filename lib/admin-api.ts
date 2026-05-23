@@ -19,10 +19,14 @@ type AdminListOptions = {
 };
 
 const defaultPageSize = 20;
-const santaApiBaseUrl =
+export const santaApiBaseUrl =
   process.env.SANTA_API_BASE_URL ??
   process.env.NEXT_PUBLIC_SANTA_API_BASE_URL ??
   "http://localhost:4000";
+
+export function createSantaApiUrl(resourcePath: string) {
+  return new URL(resourcePath, santaApiBaseUrl);
+}
 
 export async function fetchAdminList<Row>(
   resourcePath: string,
@@ -36,7 +40,7 @@ export async function fetchAdminList<Row>(
     subCategoryCode,
   }: AdminListOptions,
 ): Promise<AdminListResponse<Row> | null> {
-  const url = new URL(resourcePath, santaApiBaseUrl);
+  const url = createSantaApiUrl(resourcePath);
   url.searchParams.set("page", String(page));
   url.searchParams.set("pageSize", String(pageSize));
   url.searchParams.set("isActive", String(isActive));

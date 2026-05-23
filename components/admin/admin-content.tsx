@@ -6,7 +6,7 @@ import { CategoriesSection } from "./categories-section";
 import { InventorySection } from "./inventory-section";
 import { NewsActivitiesSection } from "./news-activities-section";
 import { OrdersSection } from "./orders-section";
-import { ProductsServicesSection } from "./products-services-section";
+import { ProductsServicesSection } from "./products-services-section.server";
 import { QuotationsSection } from "./quotations-section";
 import { SettingsSection } from "./settings-section";
 
@@ -16,6 +16,8 @@ type AdminContentProps = {
   productFilters?: {
     brandCode?: string;
     categoryCode?: string;
+    pageSize?: number;
+    search?: string;
     subCategoryCode?: string;
   };
   section: AdminSection;

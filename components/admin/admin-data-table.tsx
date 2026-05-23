@@ -11,10 +11,14 @@ export type AdminDataTableColumn<Row> = {
 
 export type AdminDataTablePagination = {
   currentPage: number;
+  currentPageSize?: number;
+  getPageSizeHref?: (pageSize: number) => string;
   totalPages: number;
   getPageHref: (page: number) => string;
   previousLabel: string;
   nextLabel: string;
+  rowsPerPageLabel?: string;
+  pageSizeOptions?: number[];
 };
 
 type AdminDataTableProps<Row> = {
@@ -156,11 +160,33 @@ function AdminTablePagination({
     { length: pageEnd - pageStart + 1 },
     (_, index) => pageStart + index,
   );
+  const getPageSizeHref = pagination.getPageSizeHref;
   const previousPage = Math.max(1, pagination.currentPage - 1);
   const nextPage = Math.min(totalPages, pagination.currentPage + 1);
 
   return (
     <nav className="admin-table-pagination" aria-label="Table pagination">
+      {getPageSizeHref ? (
+        <div className="admin-table-page-size" aria-label={pagination.rowsPerPageLabel}>
+          <span>{pagination.rowsPerPageLabel ?? "Rows per page"}</span>
+          {(pagination.pageSizeOptions ?? [10, 20, 50, 100]).map((pageSize) => (
+            <Link
+              aria-current={
+                pageSize === pagination.currentPageSize ? true : undefined
+              }
+              className={
+                pageSize === pagination.currentPageSize
+                  ? "admin-table-page-size-link admin-table-page-size-link-active"
+                  : "admin-table-page-size-link"
+              }
+              href={getPageSizeHref(pageSize)}
+              key={pageSize}
+            >
+              {pageSize}
+            </Link>
+          ))}
+        </div>
+      ) : null}
       <Link
         aria-label={pagination.previousLabel}
         className="admin-table-page-link"
