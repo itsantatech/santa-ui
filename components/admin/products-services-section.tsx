@@ -1,3 +1,4 @@
+import { ProductFilter, type ProductFilterOption } from "@/components/product-filter";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import {
   fetchAdminList,
@@ -13,6 +14,7 @@ import {
 
 type ProductRelation = {
   code: string;
+  categoryCode?: string;
   nameTh: string;
   nameEn: string;
 };
@@ -55,21 +57,89 @@ type ProductRow = {
 };
 
 type ProductResponse = AdminListResponse<ProductRow>;
+type ProductFilterListResponse = AdminListResponse<ProductRelation>;
 
 export async function ProductsServicesSection({
+  filters,
   locale,
   page,
 }: {
+  filters?: {
+    brandCode?: string;
+    categoryCode?: string;
+    subCategoryCode?: string;
+  };
   locale: Locale;
   page: number;
 }) {
   const dictionary = getDictionary(locale);
   const content = dictionary.adminSections["products-services"];
   const table = dictionary.adminProductTable;
-  const response = await getProducts(page);
+  const [response, categoryResponse, subCategoryResponse, brandResponse] =
+    await Promise.all([
+      getProducts(page, filters),
+      getFilterOptions("/categories"),
+      getFilterOptions("/sub-categories"),
+      getFilterOptions("/brands"),
+    ]);
   const rows = response?.items ?? [];
   const totalPages = response?.meta.totalPages ?? 1;
   const currentPage = response?.meta.page ?? page;
+  const totalItems = response?.meta.totalItems ?? 0;
+  const isThaiLocale = locale === "th";
+  const categoryOptions = toProductFilterOptions(
+    categoryResponse?.items ?? [],
+    locale,
+  );
+  const subCategoryOptions = toProductFilterOptions(
+    subCategoryResponse?.items ?? [],
+    locale,
+  );
+  const brandOptions = toProductFilterOptions(brandResponse?.items ?? [], locale);
+  const selectedCategory = findSelectedOption(categoryOptions, filters?.categoryCode);
+  const selectedSubCategory = findSelectedOption(
+    subCategoryOptions,
+    filters?.subCategoryCode,
+  );
+  const selectedBrand = findSelectedOption(brandOptions, filters?.brandCode);
+  const filterStateKey = [
+    filters?.categoryCode ?? "",
+    filters?.subCategoryCode ?? "",
+    filters?.brandCode ?? "",
+  ].join(":");
+  const filterContent = {
+    fields: [
+      {
+        id: "categoryCode",
+        label: table.categories,
+        options: categoryOptions,
+        placeholder: isThaiLocale ? "เลือกหมวดหมู่" : "Select category",
+        selected: selectedCategory ? [selectedCategory] : undefined,
+      },
+      {
+        id: "subCategoryCode",
+        dependsOn: "categoryCode",
+        disabledPlaceholder: isThaiLocale
+          ? "เลือกหมวดหมู่ก่อน"
+          : "Select category first",
+        label: table.subCategories,
+        options: subCategoryOptions,
+        placeholder: isThaiLocale ? "เลือกหมวดหมู่ย่อย" : "Select sub-category",
+        selected: selectedSubCategory ? [selectedSubCategory] : undefined,
+      },
+      {
+        id: "brandCode",
+        label: table.brands,
+        options: brandOptions,
+        placeholder: isThaiLocale ? "เลือกแบรนด์" : "Select brand",
+        selected: selectedBrand ? [selectedBrand] : undefined,
+      },
+    ],
+    removeFilterLabel: isThaiLocale ? "ลบตัวกรอง" : "Remove filter",
+    resultLabel: isThaiLocale ? "ผลการค้นหาจำนวน" : "Search results",
+    resultUnit: isThaiLocale ? "รายการ" : "items",
+    title: isThaiLocale ? "ตัวกรอง" : "Filters",
+  };
   const columns: AdminDataTableColumn<ProductRow>[] = [
     {
       key: "sku",
@@ -207,7 +277,38 @@ export async function ProductsServicesSection({
   return (
     <div className="admin-section-panel">
       <h1 id="admin-heading">{content.title}</h1>
-      <p>{content.description}</p>
+      <div className="admin-product-heading-row">
+        <form className="admin-product-search" role="search">
+          <label className="sr-only" htmlFor="admin-product-search">
+            {isThaiLocale ? "ค้นหาสินค้าและบริการ" : "Search products and services"}
+          </label>
+          <input
+            id="admin-product-search"
+            name="q"
+            placeholder={
+              isThaiLocale ? "ค้นหาสินค้าและบริการ" : "Search products and services"
+            }
+            type="search"
+          />
+          <button type="submit">{isThaiLocale ? "ค้นหา" : "Search"}</button>
+        </form>
+        <button className="admin-product-add-button" type="button">
+          <span aria-hidden="true">+</span>
+          {isThaiLocale ? "เพิ่มสินค้าและบริการ" : "Add product or service"}
+        </button>
+      </div>
+      <ProductFilter
+        key={filterStateKey}
+        fields={filterContent.fields}
+        locale={isThaiLocale ? "th-TH" : "en-US"}
+        removeFilterLabel={filterContent.removeFilterLabel}
+        resultCount={totalItems}
+        resultLabel={filterContent.resultLabel}
+        resultUnit={filterContent.resultUnit}
+        syncQueryParams
+        title={filterContent.title}
+        variant="admin"
+      />
       <AdminDataTable
         columns={columns}
         emptyLabel={response ? table.empty : table.fetchError}
@@ -215,7 +316,8 @@ export async function ProductsServicesSection({
         pagination={{
           currentPage,
           totalPages,
-          getPageHref: (page) => `/${locale}/admin?section=products-services&page=${page}`,
+          getPageHref: (page) =>
+            createProductsPageHref(locale, page, filters),
           previousLabel: table.previousPage,
           nextLabel: table.nextPage,
         }}
@@ -228,8 +330,80 @@ export async function ProductsServicesSection({
   );
 }
 
-async function getProducts(page: number): Promise<ProductResponse | null> {
-  return fetchAdminList<ProductRow>("/products", { page });
+async function getProducts(
+  page: number,
+  filters?: {
+    brandCode?: string;
+    categoryCode?: string;
+    subCategoryCode?: string;
+  },
+): Promise<ProductResponse | null> {
+  return fetchAdminList<ProductRow>("/products", {
+    brandCode: filters?.brandCode,
+    categoryCode: filters?.categoryCode,
+    page,
+    subCategoryCode: filters?.subCategoryCode,
+  });
+}
+
+async function getFilterOptions(
+  resourcePath: string,
+): Promise<ProductFilterListResponse | null> {
+  return fetchAdminList<ProductRelation>(resourcePath, {
+    page: 1,
+    pageSize: 100,
+  });
+}
+
+function toProductFilterOptions(
+  items: ProductRelation[],
+  locale: Locale,
+): ProductFilterOption[] {
+  return items.map((item) => ({
+    label: locale === "th" ? item.nameTh : item.nameEn,
+    parentValue: item.categoryCode,
+    value: item.code,
+  }));
+}
+
+function findSelectedOption(
+  options: ProductFilterOption[],
+  value: string | undefined,
+) {
+  if (!value) {
+    return undefined;
+  }
+
+  return options.find((option) => option.value === value);
+}
+
+function createProductsPageHref(
+  locale: Locale,
+  page: number,
+  filters?: {
+    brandCode?: string;
+    categoryCode?: string;
+    subCategoryCode?: string;
+  },
+) {
+  const searchParams = new URLSearchParams({
+    page: String(page),
+    section: "products-services",
+  });
+
+  if (filters?.categoryCode) {
+    searchParams.set("categoryCode", filters.categoryCode);
+  }
+
+  if (filters?.subCategoryCode) {
+    searchParams.set("subCategoryCode", filters.subCategoryCode);
+  }
+
+  if (filters?.brandCode) {
+    searchParams.set("brandCode", filters.brandCode);
+  }
+
+  return `/${locale}/admin?${searchParams.toString()}`;
 }
 
 function ProductRelationList({

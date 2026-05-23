@@ -9,9 +9,13 @@ export type AdminListResponse<Row> = {
 };
 
 type AdminListOptions = {
+  brandCode?: string;
+  categoryCode?: string;
   page: number;
   pageSize?: number;
   isActive?: boolean;
+  search?: string;
+  subCategoryCode?: string;
 };
 
 const defaultPageSize = 20;
@@ -22,12 +26,32 @@ const santaApiBaseUrl =
 
 export async function fetchAdminList<Row>(
   resourcePath: string,
-  { isActive = true, page, pageSize = defaultPageSize }: AdminListOptions,
+  {
+    brandCode,
+    categoryCode,
+    isActive = true,
+    page,
+    pageSize = defaultPageSize,
+    search,
+    subCategoryCode,
+  }: AdminListOptions,
 ): Promise<AdminListResponse<Row> | null> {
   const url = new URL(resourcePath, santaApiBaseUrl);
   url.searchParams.set("page", String(page));
   url.searchParams.set("pageSize", String(pageSize));
   url.searchParams.set("isActive", String(isActive));
+  if (search) {
+    url.searchParams.set("search", search);
+  }
+  if (categoryCode) {
+    url.searchParams.set("categoryCode", categoryCode);
+  }
+  if (subCategoryCode) {
+    url.searchParams.set("subCategoryCode", subCategoryCode);
+  }
+  if (brandCode) {
+    url.searchParams.set("brandCode", brandCode);
+  }
 
   try {
     const response = await fetch(url, {
