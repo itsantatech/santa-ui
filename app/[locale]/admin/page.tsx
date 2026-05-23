@@ -18,12 +18,16 @@ type HomeProps = {
     categoryCode?: string | string[];
     subCategoryCode?: string | string[];
     brandCode?: string | string[];
+    pageSize?: string | string[];
+    search?: string | string[];
   }>;
 };
 
 type ProductFilterQuery = {
   brandCode?: string;
   categoryCode?: string;
+  pageSize?: number;
+  search?: string;
   subCategoryCode?: string;
 };
 
@@ -66,6 +70,9 @@ export default async function Home({ params, searchParams }: HomeProps) {
     ? query?.section[0]
     : query?.section;
   const pageParam = Array.isArray(query?.page) ? query?.page[0] : query?.page;
+  const pageSizeParam = Array.isArray(query?.pageSize)
+    ? query?.pageSize[0]
+    : query?.pageSize;
   const activeSection =
     typeof sectionParam === "string" && isAdminSection(sectionParam)
       ? sectionParam
@@ -74,6 +81,8 @@ export default async function Home({ params, searchParams }: HomeProps) {
   const productFilters: ProductFilterQuery = {
     brandCode: getSingleQueryParam(query?.brandCode),
     categoryCode: getSingleQueryParam(query?.categoryCode),
+    pageSize: getPageSize(pageSizeParam),
+    search: getProductSearch(getSingleQueryParam(query?.search)),
     subCategoryCode: getSingleQueryParam(query?.subCategoryCode),
   };
 
@@ -105,12 +114,25 @@ export default async function Home({ params, searchParams }: HomeProps) {
   );
 }
 
-function getPositiveInteger(value: string | undefined) {
+function getPositiveInteger(value: string | undefined, fallback = 1) {
   const parsed = Number(value);
 
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function getPageSize(value: string | undefined) {
+  const parsed = Number(value);
+  const allowedPageSizes = [10, 20, 50, 100];
+
+  return allowedPageSizes.includes(parsed) ? parsed : 20;
 }
 
 function getSingleQueryParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function getProductSearch(value: string | undefined) {
+  const trimmed = value?.trim();
+
+  return trimmed && trimmed.length >= 3 ? trimmed : undefined;
 }
