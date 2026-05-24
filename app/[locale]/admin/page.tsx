@@ -19,6 +19,7 @@ type HomeProps = {
     categoryCode?: string | string[];
     subCategoryCode?: string | string[];
     brandCode?: string | string[];
+    lowStockOnly?: string | string[];
     pageSize?: string | string[];
     search?: string | string[];
   }>;
@@ -27,6 +28,7 @@ type HomeProps = {
 type ProductFilterQuery = {
   brandCode?: string;
   categoryCode?: string;
+  lowStockOnly?: boolean;
   pageSize?: number;
   search?: string;
   subCategoryCode?: string;
@@ -84,6 +86,7 @@ export default async function Home({ params, searchParams }: HomeProps) {
   const productFilters: ProductFilterQuery = {
     brandCode: getSingleQueryParam(query?.brandCode),
     categoryCode: getSingleQueryParam(query?.categoryCode),
+    lowStockOnly: getBooleanQuery(getSingleQueryParam(query?.lowStockOnly)),
     pageSize: getPageSize(pageSizeParam),
     search: getProductSearch(getSingleQueryParam(query?.search)),
     subCategoryCode: getSingleQueryParam(query?.subCategoryCode),
@@ -145,4 +148,12 @@ function getProductSearch(value: string | undefined) {
   const trimmed = value?.trim();
 
   return trimmed && trimmed.length >= 3 ? trimmed : undefined;
+}
+
+function getBooleanQuery(value: string | undefined) {
+  if (value === "true") {
+    return true;
+  }
+
+  return undefined;
 }

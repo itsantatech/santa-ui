@@ -25,6 +25,7 @@ type AdminDataTableProps<Row> = {
   rows: Row[];
   columns: AdminDataTableColumn<Row>[];
   getRowId: (row: Row) => string;
+  getRowClassName?: (row: Row) => string | undefined;
   emptyLabel?: string;
   selectAllLabel: string;
   selectRowLabel: (row: Row) => string;
@@ -78,6 +79,7 @@ export function AdminDataTable<Row>({
   columns,
   emptyLabel,
   getRowId,
+  getRowClassName,
   pagination,
   rows,
   selectAllLabel,
@@ -118,7 +120,7 @@ export function AdminDataTable<Row>({
           <tbody>
             {rows.length > 0 ? (
               rows.map((row) => (
-                <tr key={getRowId(row)}>
+                <tr className={getRowClassName?.(row)} key={getRowId(row)}>
                   <td className="admin-table-select-cell">
                     <label className="admin-table-checkbox-label">
                       <span className="sr-only">{selectRowLabel(row)}</span>

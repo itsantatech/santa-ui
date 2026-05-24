@@ -17,6 +17,7 @@ type AdminContentProps = {
   productFilters?: {
     brandCode?: string;
     categoryCode?: string;
+    lowStockOnly?: boolean;
     pageSize?: number;
     search?: string;
     subCategoryCode?: string;
@@ -50,7 +51,13 @@ export function AdminContent({
         />
       );
     case "inventory":
-      return <InventorySection locale={locale} page={page} />;
+      return (
+        <InventorySection
+          filters={productFilters}
+          locale={locale}
+          page={page}
+        />
+      );
     case "orders":
       return <OrdersSection locale={locale} />;
     case "quotations":
