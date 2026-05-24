@@ -1,18 +1,21 @@
 import type { Locale } from "@/lib/i18n";
-import { ContentListSection } from "./content-list-section";
+import { ContentManagementSection } from "./content-management-section";
 
 export function ArticlesSection({
   locale,
   page,
+  search,
 }: {
   locale: Locale;
   page: number;
+  search?: string;
 }) {
   return (
-    <ContentListSection
-      apiPath="/articles"
+    <ContentManagementSection
       locale={locale}
       page={page}
+      resource="articles"
+      search={search}
       section="articles"
     />
   );

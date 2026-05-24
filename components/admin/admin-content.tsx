@@ -63,9 +63,21 @@ export function AdminContent({
     case "quotations":
       return <QuotationsSection locale={locale} />;
     case "news-activities":
-      return <NewsActivitiesSection locale={locale} page={page} />;
+      return (
+        <NewsActivitiesSection
+          locale={locale}
+          page={page}
+          search={productFilters?.search}
+        />
+      );
     case "articles":
-      return <ArticlesSection locale={locale} page={page} />;
+      return (
+        <ArticlesSection
+          locale={locale}
+          page={page}
+          search={productFilters?.search}
+        />
+      );
     case "settings":
       return (
         <SettingsSection

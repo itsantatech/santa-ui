@@ -4,10 +4,13 @@ import { proxySantaApiRequest } from "@/lib/admin-api-proxy";
 const allowedResources = new Set([
   "admin-users",
   "about-page-settings",
+  "articles",
   "brands",
   "categories",
+  "files",
   "home-section-settings",
   "inventory-stocks",
+  "news-and-activities",
   "social-media-contacts",
   "sub-categories",
 ]);
