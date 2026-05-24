@@ -15,6 +15,7 @@ type HomeProps = {
   searchParams?: Promise<{
     page?: string | string[];
     section?: string | string[];
+    tab?: string | string[];
     categoryCode?: string | string[];
     subCategoryCode?: string | string[];
     brandCode?: string | string[];
@@ -29,6 +30,7 @@ type ProductFilterQuery = {
   pageSize?: number;
   search?: string;
   subCategoryCode?: string;
+  tab?: string;
 };
 
 export function generateStaticParams() {
@@ -73,6 +75,7 @@ export default async function Home({ params, searchParams }: HomeProps) {
   const pageSizeParam = Array.isArray(query?.pageSize)
     ? query?.pageSize[0]
     : query?.pageSize;
+  const tabParam = Array.isArray(query?.tab) ? query?.tab[0] : query?.tab;
   const activeSection =
     typeof sectionParam === "string" && isAdminSection(sectionParam)
       ? sectionParam
@@ -84,11 +87,17 @@ export default async function Home({ params, searchParams }: HomeProps) {
     pageSize: getPageSize(pageSizeParam),
     search: getProductSearch(getSingleQueryParam(query?.search)),
     subCategoryCode: getSingleQueryParam(query?.subCategoryCode),
+    tab: typeof tabParam === "string" ? tabParam : undefined,
   };
 
-  await requireAdminSession({
+  const session = await requireAdminSession({
     returnTo: `/${locale}/admin?section=${activeSection}`,
     forbiddenRedirectTo: `/${locale}`,
+  });
+
+  const canManageUsers = session.roles.some((role) => {
+    const normalized = role.toLowerCase().replace(/[\s-]+/g, "_");
+    return normalized === "superadmin" || normalized === "super_admin";
   });
 
   return (
@@ -103,6 +112,7 @@ export default async function Home({ params, searchParams }: HomeProps) {
         <AdminSidebar activeSection={activeSection} locale={locale} />
         <section className="admin-content" aria-labelledby="admin-heading">
           <AdminContent
+            canManageUsers={canManageUsers}
             locale={locale}
             page={page}
             productFilters={productFilters}
