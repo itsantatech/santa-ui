@@ -7,6 +7,7 @@ const allowedResources = new Set([
   "brands",
   "categories",
   "home-section-settings",
+  "inventory-stocks",
   "social-media-contacts",
   "sub-categories",
 ]);

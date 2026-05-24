@@ -525,6 +525,68 @@ input {
   margin-bottom: 24px;
 }
 
+.admin-inventory-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.admin-inventory-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 232px));
+  gap: 20px;
+}
+
+.admin-inventory-summary-card {
+  display: grid;
+  gap: 16px;
+  min-height: 156px;
+  padding: 28px 30px;
+  background: #ffffff;
+  border: 1px solid #f0f0f0;
+}
+
+.admin-inventory-summary-card h2 {
+  margin: 0;
+  color: #475569;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.admin-inventory-summary-card strong {
+  color: #1f2937;
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.admin-inventory-summary-card span {
+  color: #b45309;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-inventory-summary-card a {
+  color: #b45309;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-inventory-summary-card-accent {
+  border-left: 4px solid #f97316;
+}
+
+.admin-inventory-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
 .admin-section-tabs {
   display: inline-flex;
   align-items: center;
@@ -814,6 +876,10 @@ input {
   border-bottom: 1px solid #e5e7eb;
 }
 
+.admin-data-table .admin-table-row-low-stock td {
+  background: #fee2e2;
+}
+
 .admin-data-table th,
 .admin-data-table td {
   min-width: 0;
@@ -959,6 +1025,12 @@ input {
 .admin-table-number-column {
   width: 15%;
   min-width: 130px;
+}
+
+.admin-table-number-fit-column {
+  width: 1%;
+  min-width: 88px;
+  white-space: nowrap;
 }
 
 .admin-table-status-column {
@@ -1619,6 +1691,42 @@ button.admin-table-page-link:disabled {
 .admin-product-upload-body {
   display: grid;
   gap: 18px;
+}
+
+.admin-inventory-upload-body {
+  gap: 22px;
+}
+
+.admin-inventory-template-button {
+  justify-content: center;
+  width: 100%;
+  min-height: 68px;
+  font-size: 16px;
+}
+
+.admin-inventory-file-input {
+  display: none;
+}
+
+.admin-inventory-file-picker {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.admin-inventory-file-button {
+  min-width: 180px;
+}
+
+.admin-inventory-file-name {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.admin-inventory-file-name-muted {
+  color: #64748b;
 }
 
 .admin-settings-card-stack {
