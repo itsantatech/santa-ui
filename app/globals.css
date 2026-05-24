@@ -1986,7 +1986,24 @@ button.admin-table-page-link:disabled {
 
 .admin-rich-text-surface ul,
 .admin-rich-text-surface ol {
+  list-style-position: outside;
   padding-left: 24px;
+}
+
+.admin-rich-text-surface ul {
+  list-style-type: disc;
+}
+
+.admin-rich-text-surface ol {
+  list-style-type: decimal;
+}
+
+.admin-rich-text-surface li {
+  display: list-item;
+}
+
+.admin-rich-text-surface li + li {
+  margin-top: 4px;
 }
 
 .admin-rich-text-surface blockquote {

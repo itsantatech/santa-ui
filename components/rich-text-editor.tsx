@@ -5,7 +5,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
 import { EditorContent, type Editor, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { type MouseEvent, useEffect, useMemo } from "react";
+import { type MouseEvent, useEffect, useId, useMemo, useRef } from "react";
 
 type RichTextEditorProps = {
   label: string;
@@ -16,10 +16,11 @@ type RichTextEditorProps = {
 
 type ToolbarButtonProps = {
   active?: boolean;
+  ariaLabel?: string;
   disabled?: boolean;
   icon?: string;
   label: string;
-  onClick: () => void;
+  onExecute: () => void;
 };
 
 export function RichTextEditor({
@@ -28,6 +29,8 @@ export function RichTextEditor({
   placeholder,
   value,
 }: RichTextEditorProps) {
+  const labelId = useId();
+  const lastSyncedValueRef = useRef(value);
   const placeholderText = useMemo(
     () => placeholder ?? label,
     [label, placeholder],
@@ -57,7 +60,9 @@ export function RichTextEditor({
     ],
     immediatelyRender: false,
     onUpdate: ({ editor: currentEditor }) => {
-      onChange(currentEditor.getHTML());
+      const nextHtml = currentEditor.getHTML();
+      lastSyncedValueRef.current = nextHtml;
+      onChange(nextHtml);
     },
   });
 
@@ -66,21 +71,22 @@ export function RichTextEditor({
       return;
     }
 
-    const currentHtml = editor.getHTML();
-
-    if (currentHtml !== value) {
-      editor.commands.setContent(value, { emitUpdate: false });
+    if (value === lastSyncedValueRef.current) {
+      return;
     }
+
+    editor.commands.setContent(value, { emitUpdate: false });
+    lastSyncedValueRef.current = value;
   }, [editor, value]);
 
   return (
-    <label className="admin-product-field admin-product-field-wide">
-      <span>{label}</span>
+    <div className="admin-product-field admin-product-field-wide">
+      <span id={labelId}>{label}</span>
       <div className="admin-rich-text-editor">
         <RichTextToolbar editor={editor} label={label} />
-        <EditorContent editor={editor} />
+        <EditorContent aria-labelledby={labelId} editor={editor} />
       </div>
-    </label>
+    </div>
   );
 }
 
@@ -119,25 +125,25 @@ function RichTextToolbar({
             active={editor?.isActive("paragraph") ?? false}
             icon="notes"
             label="Body"
-            onClick={() => editor?.chain().focus().setParagraph().run()}
+            onExecute={() => editor?.chain().focus().setParagraph().run()}
           />
           <ToolbarButton
             active={editor?.isActive("heading", { level: 1 }) ?? false}
             icon="format_h1"
             label="H1"
-            onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+            onExecute={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
           />
           <ToolbarButton
             active={editor?.isActive("heading", { level: 2 }) ?? false}
             icon="format_h2"
             label="H2"
-            onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+            onExecute={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
           />
           <ToolbarButton
             active={editor?.isActive("heading", { level: 3 }) ?? false}
             icon="format_h3"
             label="H3"
-            onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+            onExecute={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
           />
         </div>
 
@@ -146,57 +152,48 @@ function RichTextToolbar({
             active={editor?.isActive("bold") ?? false}
             icon="format_bold"
             label="Bold"
-            onClick={() => editor?.chain().focus().toggleBold().run()}
+            onExecute={() => editor?.chain().focus().toggleBold().run()}
           />
           <ToolbarButton
             active={editor?.isActive("italic") ?? false}
             icon="format_italic"
             label="Italic"
-            onClick={() => editor?.chain().focus().toggleItalic().run()}
+            onExecute={() => editor?.chain().focus().toggleItalic().run()}
           />
           <ToolbarButton
             active={editor?.isActive("underline") ?? false}
             icon="format_underlined"
             label="Underline"
-            onClick={() => editor?.chain().focus().toggleUnderline().run()}
+            onExecute={() => editor?.chain().focus().toggleUnderline().run()}
           />
           <ToolbarButton
             active={editor?.isActive("strike") ?? false}
             icon="format_strikethrough"
             label="Strike"
-            onClick={() => editor?.chain().focus().toggleStrike().run()}
+            onExecute={() => editor?.chain().focus().toggleStrike().run()}
           />
         </div>
 
         <div className="admin-rich-text-toolbar-group">
           <ToolbarButton
-            active={editor?.isActive("bulletList") ?? false}
-            icon="format_list_bulleted"
-            label="Bullet"
-            onClick={() => editor?.chain().focus().toggleBulletList().run()}
-          />
-          <ToolbarButton
-            active={editor?.isActive("orderedList") ?? false}
-            icon="format_list_numbered"
-            label="Number"
-            onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-          />
-          <ToolbarButton
             active={editor?.isActive("blockquote") ?? false}
+            disabled={!(editor?.can().chain().focus().toggleBlockquote().run() ?? false)}
             icon="format_quote"
             label="Quote"
-            onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+            onExecute={() => editor?.chain().focus().toggleBlockquote().run()}
           />
           <ToolbarButton
             active={editor?.isActive("codeBlock") ?? false}
+            disabled={!(editor?.can().chain().focus().toggleCodeBlock().run() ?? false)}
             icon="code_blocks"
             label="Code"
-            onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+            onExecute={() => editor?.chain().focus().toggleCodeBlock().run()}
           />
           <ToolbarButton
-            onClick={() => editor?.chain().focus().setHorizontalRule().run()}
+            disabled={!(editor?.can().chain().focus().setHorizontalRule().run() ?? false)}
             icon="horizontal_rule"
             label="Divider"
+            onExecute={() => editor?.chain().focus().setHorizontalRule().run()}
           />
         </div>
 
@@ -205,24 +202,19 @@ function RichTextToolbar({
             active={editor?.isActive("link") ?? false}
             icon="link"
             label="Link"
-            onClick={promptForLink}
+            onExecute={promptForLink}
           />
           <ToolbarButton
             disabled={!(editor?.can().chain().focus().undo().run() ?? false)}
             icon="undo"
             label="Undo"
-            onClick={() => editor?.chain().focus().undo().run()}
+            onExecute={() => editor?.chain().focus().undo().run()}
           />
           <ToolbarButton
             disabled={!(editor?.can().chain().focus().redo().run() ?? false)}
             icon="redo"
             label="Redo"
-            onClick={() => editor?.chain().focus().redo().run()}
-          />
-          <ToolbarButton
-            icon="format_clear"
-            label="Clear"
-            onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()}
+            onExecute={() => editor?.chain().focus().redo().run()}
           />
         </div>
       </div>
@@ -232,24 +224,30 @@ function RichTextToolbar({
 
 function ToolbarButton({
   active = false,
+  ariaLabel,
   disabled = false,
   icon,
   label,
-  onClick,
+  onExecute,
 }: ToolbarButtonProps) {
-  function keepSelection(event: MouseEvent<HTMLButtonElement>) {
+  function handleMouseDown(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
+
+    if (disabled) {
+      return;
+    }
+
+    onExecute();
   }
 
   return (
     <button
-      aria-label={label}
+      aria-label={ariaLabel ?? label}
       aria-pressed={active}
       className="admin-rich-text-toolbar-button"
       data-active={active ? "true" : "false"}
       disabled={disabled}
-      onMouseDown={keepSelection}
-      onClick={onClick}
+      onMouseDown={handleMouseDown}
       type="button"
     >
       {icon ? (
