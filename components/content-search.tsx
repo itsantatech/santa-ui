@@ -9,40 +9,32 @@ import {
   useTransition,
 } from "react";
 
-export type ProductSearchSuggestion = {
-  sku: string;
-  nameTh: string;
-  nameEn: string;
-  model: string | null;
+export type ContentSearchSuggestion = {
+  id: string;
+  slug: string;
+  topicEn: string;
+  topicTh: string;
 };
 
-type ProductSearchLabels = {
-  noSuggestions?: string;
-  search?: string;
-  searchPlaceholder?: string;
-  searchTooShort?: string;
+type ContentSearchLabels = {
+  empty: string;
+  placeholder: string;
+  search: string;
+  tooShort: string;
 };
 
-export function ProductSearch<
-  Row extends ProductSearchSuggestion = ProductSearchSuggestion,
->({
-  disabled = false,
-  embedded = false,
+export function ContentSearch({
   initialSearch = "",
   labels,
   locale,
-  onSearch,
-  onSelect,
-  placeholder,
+  resource,
+  section,
 }: {
-  disabled?: boolean;
-  embedded?: boolean;
   initialSearch?: string;
-  labels?: ProductSearchLabels;
+  labels: ContentSearchLabels;
   locale: "th" | "en";
-  onSearch?: (query: string) => void;
-  onSelect?: (product: Row) => void;
-  placeholder?: string;
+  resource: "articles" | "news-and-activities";
+  section: "articles" | "news-activities";
 }) {
   const inputId = useId();
   const pathname = usePathname();
@@ -50,19 +42,9 @@ export function ProductSearch<
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
   const [query, setQuery] = useState(initialSearch);
-  const [suggestions, setSuggestions] = useState<Row[]>([]);
+  const [suggestions, setSuggestions] = useState<ContentSearchSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const searchLabel = labels?.search ?? (locale === "th" ? "ค้นหา" : "Search");
-  const searchPlaceholder =
-    placeholder ??
-    labels?.searchPlaceholder ??
-    (locale === "th" ? "ค้นหาสินค้า" : "Search products");
-  const searchTooShort =
-    labels?.searchTooShort ??
-    (locale === "th" ? "พิมพ์อย่างน้อย 3 ตัวอักษร" : "Enter at least 3 characters");
-  const noSuggestions =
-    labels?.noSuggestions ?? (locale === "th" ? "ไม่พบสินค้า" : "No products found");
 
   useEffect(() => {
     const trimmedQuery = query.trim();
@@ -77,7 +59,7 @@ export function ProductSearch<
 
       try {
         const response = await fetch(
-          `/api/admin/products?search=${encodeURIComponent(trimmedQuery)}&pageSize=10`,
+          `/api/admin/${resource}?search=${encodeURIComponent(trimmedQuery)}&pageSize=10`,
           { signal: controller.signal },
         );
 
@@ -87,7 +69,7 @@ export function ProductSearch<
         }
 
         const payload = (await response.json()) as {
-          items?: Row[];
+          items?: ContentSearchSuggestion[];
         };
 
         setSuggestions((payload.items ?? []).slice(0, 10));
@@ -107,13 +89,13 @@ export function ProductSearch<
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [query]);
+  }, [query, resource]);
 
   function updateTable(nextSearch: string) {
     const trimmedSearch = nextSearch.trim();
     const nextSearchParams = new URLSearchParams(searchParams.toString());
 
-    nextSearchParams.set("section", "products-services");
+    nextSearchParams.set("section", section);
     nextSearchParams.delete("page");
 
     if (trimmedSearch.length >= 3) {
@@ -129,23 +111,15 @@ export function ProductSearch<
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    handleSearch();
-  }
-
-  function handleSearch() {
-    if (onSearch) {
-      onSearch(query.trim());
-    } else {
-      updateTable(query);
-    }
+    updateTable(query);
     setIsOpen(false);
   }
 
-  const content = (
-    <>
+  return (
+    <form className="admin-product-search" onSubmit={handleSubmit} role="search">
       <div className="admin-product-search-field">
         <label className="sr-only" htmlFor={inputId}>
-          {searchPlaceholder}
+          {labels.placeholder}
         </label>
         <input
           aria-autocomplete="list"
@@ -153,7 +127,6 @@ export function ProductSearch<
           aria-expanded={isOpen}
           autoComplete="off"
           id={inputId}
-          disabled={disabled}
           minLength={3}
           name="search"
           onBlur={() => {
@@ -172,13 +145,13 @@ export function ProductSearch<
               setIsOpen(true);
             }
           }}
-          placeholder={searchPlaceholder}
+          placeholder={labels.placeholder}
           role="combobox"
           type="search"
           value={query}
         />
         {query.trim().length > 0 && query.trim().length < 3 ? (
-          <span className="admin-product-search-hint">{searchTooShort}</span>
+          <span className="admin-product-search-hint">{labels.tooShort}</span>
         ) : null}
         {isOpen ? (
           <div
@@ -189,56 +162,31 @@ export function ProductSearch<
             {suggestions.length > 0 ? (
               suggestions.map((suggestion) => (
                 <button
+                  aria-selected="false"
                   className="admin-product-suggestion"
-                  key={suggestion.sku}
-                  onMouseDown={(event) => event.preventDefault()}
+                  key={suggestion.id}
                   onClick={() => {
-                    setQuery(suggestion.sku);
-                    if (onSelect) {
-                      onSelect(suggestion);
-                    } else {
-                      updateTable(suggestion.sku);
-                    }
+                    setQuery(suggestion.slug);
+                    updateTable(suggestion.slug);
                     setIsOpen(false);
                   }}
-                  aria-selected="false"
+                  onMouseDown={(event) => event.preventDefault()}
                   role="option"
                   type="button"
                 >
-                  <strong>{suggestion.sku}</strong>
-                  <span>
-                    {locale === "th" ? suggestion.nameTh : suggestion.nameEn}
-                    {suggestion.model ? ` / ${suggestion.model}` : ""}
-                  </span>
+                  <strong>{locale === "th" ? suggestion.topicTh : suggestion.topicEn}</strong>
+                  <span>{suggestion.slug}</span>
                 </button>
               ))
             ) : (
               <span className="admin-product-suggestion-empty">
-                {isLoading ? searchLabel : noSuggestions}
+                {isLoading ? labels.search : labels.empty}
               </span>
             )}
           </div>
         ) : null}
       </div>
-      <button
-        disabled={disabled}
-        onClick={embedded ? handleSearch : undefined}
-        type={embedded ? "button" : "submit"}
-      >
-        {searchLabel}
-      </button>
-    </>
-  );
-
-  return (
-    embedded ? (
-      <div className="admin-product-search" role="search">
-        {content}
-      </div>
-    ) : (
-      <form className="admin-product-search" role="search" onSubmit={handleSubmit}>
-        {content}
-      </form>
-    )
+      <button type="submit">{labels.search}</button>
+    </form>
   );
 }

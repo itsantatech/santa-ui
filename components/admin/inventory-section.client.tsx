@@ -253,6 +253,7 @@ function InventoryFormModal({
         <form className="admin-product-form" onSubmit={handleSubmit}>
           {!inventory ? (
             <ProductSearch
+              embedded
               labels={{
                 noSuggestions: labels.noSuggestions,
                 search: labels.search,

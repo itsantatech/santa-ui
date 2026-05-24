@@ -1061,6 +1061,21 @@ input {
   white-space: nowrap;
 }
 
+.admin-table-content-topic-column {
+  width: 34%;
+  min-width: 360px;
+}
+
+.admin-table-content-type-column {
+  width: 10%;
+  min-width: 110px;
+}
+
+.admin-table-content-body-column {
+  width: 32%;
+  min-width: 320px;
+}
+
 .admin-table-actions-column {
   width: 9%;
   min-width: 130px;
@@ -1213,6 +1228,96 @@ input {
   font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
+}
+
+.admin-content-topic-cell {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-content-topic-cell span {
+  color: #475569;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.admin-content-datetime {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-content-datetime span {
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.admin-content-type-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 6px 12px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+  background: #e5e7eb;
+  border-radius: 999px;
+}
+
+.admin-content-media-uploader,
+.admin-content-related-sku {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-content-media-list,
+.admin-content-sku-chip-list {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-content-media-item,
+.admin-content-sku-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border: 1px solid #d6deeb;
+  border-radius: 8px;
+}
+
+.admin-content-media-item a {
+  max-width: 360px;
+  overflow: hidden;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-content-media-item button,
+.admin-content-sku-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: #64748b;
+  background: transparent;
+  border: 0;
+}
+
+.admin-content-media-item button .material-symbols-outlined,
+.admin-content-sku-chip button .material-symbols-outlined {
+  font-size: 18px;
 }
 
 .admin-resource-thumbnail {
@@ -1727,6 +1832,207 @@ button.admin-table-page-link:disabled {
 
 .admin-inventory-file-name-muted {
   color: #64748b;
+}
+
+.admin-rich-text-editor {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid #d6deeb;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 60%);
+}
+
+.admin-rich-text-toolbar-shell {
+  padding: 14px 14px 0;
+  background: linear-gradient(180deg, #f8fafc 0%, #fefefe 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.admin-rich-text-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 14px;
+}
+
+.admin-rich-text-toolbar-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-right: 10px;
+  margin-right: 2px;
+  border-right: 1px solid #e2e8f0;
+}
+
+.admin-rich-text-toolbar-group:last-child {
+  padding-right: 0;
+  margin-right: 0;
+  border-right: 0;
+}
+
+.admin-rich-text-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-start;
+  min-width: 44px;
+  min-height: 40px;
+  padding: 0 12px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+  background: #ffffff;
+  border: 1px solid #d6deeb;
+  border-radius: 10px;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.admin-rich-text-toolbar-button .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.admin-rich-text-toolbar-button:hover,
+.admin-rich-text-toolbar-button:focus-visible {
+  color: #f97316;
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgb(249 115 22 / 10%);
+  outline: none;
+}
+
+.admin-rich-text-toolbar-button:active {
+  transform: translateY(1px);
+}
+
+.admin-rich-text-toolbar-button[data-active="true"] {
+  color: #f97316;
+  background: #fff7ed;
+  border-color: #fb923c;
+  box-shadow: 0 0 0 3px rgb(249 115 22 / 8%);
+}
+
+.admin-rich-text-toolbar-button:disabled {
+  color: #94a3b8;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.admin-rich-text-surface {
+  min-height: 280px;
+  padding: 18px 20px 22px;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.75;
+  outline: none;
+}
+
+.admin-rich-text-surface p.is-editor-empty:first-child::before {
+  float: left;
+  height: 0;
+  pointer-events: none;
+  content: attr(data-placeholder);
+  color: #94a3b8;
+}
+
+.admin-rich-text-surface > *:first-child {
+  margin-top: 0;
+}
+
+.admin-rich-text-surface > *:last-child {
+  margin-bottom: 0;
+}
+
+.admin-rich-text-surface h1,
+.admin-rich-text-surface h2,
+.admin-rich-text-surface h3 {
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.admin-rich-text-surface h1 {
+  margin: 0 0 14px;
+  font-size: 1.9rem;
+  line-height: 1.2;
+}
+
+.admin-rich-text-surface h2 {
+  margin: 0 0 12px;
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+
+.admin-rich-text-surface h3 {
+  margin: 0 0 10px;
+  font-size: 1.2rem;
+  line-height: 1.35;
+}
+
+.admin-rich-text-surface p,
+.admin-rich-text-surface ul,
+.admin-rich-text-surface ol,
+.admin-rich-text-surface blockquote,
+.admin-rich-text-surface pre {
+  margin: 0 0 14px;
+}
+
+.admin-rich-text-surface ul,
+.admin-rich-text-surface ol {
+  padding-left: 24px;
+}
+
+.admin-rich-text-surface blockquote {
+  padding: 14px 18px;
+  color: #334155;
+  background: #f8fafc;
+  border-left: 4px solid #fb923c;
+  border-radius: 0 12px 12px 0;
+}
+
+.admin-rich-text-surface code {
+  padding: 0.15rem 0.4rem;
+  color: #c2410c;
+  font-size: 0.92em;
+  font-weight: 700;
+  background: #fff7ed;
+  border-radius: 6px;
+}
+
+.admin-rich-text-surface pre {
+  padding: 16px 18px;
+  overflow-x: auto;
+  color: #e2e8f0;
+  font-size: 0.92em;
+  background: #0f172a;
+  border-radius: 14px;
+}
+
+.admin-rich-text-surface pre code {
+  padding: 0;
+  color: inherit;
+  background: transparent;
+}
+
+.admin-rich-text-surface hr {
+  margin: 18px 0;
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+.admin-rich-text-surface a {
+  color: #ea580c;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
 }
 
 .admin-settings-card-stack {
