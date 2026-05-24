@@ -11,6 +11,7 @@ import { QuotationsSection } from "./quotations-section";
 import { SettingsSection } from "./settings-section";
 
 type AdminContentProps = {
+  canManageUsers?: boolean;
   locale: Locale;
   page: number;
   productFilters?: {
@@ -19,11 +20,13 @@ type AdminContentProps = {
     pageSize?: number;
     search?: string;
     subCategoryCode?: string;
+    tab?: string;
   };
   section: AdminSection;
 };
 
 export function AdminContent({
+  canManageUsers,
   locale,
   page,
   productFilters,
@@ -31,9 +34,21 @@ export function AdminContent({
 }: AdminContentProps) {
   switch (section) {
     case "categories":
-      return <CategoriesSection locale={locale} page={page} />;
+      return (
+        <CategoriesSection
+          locale={locale}
+          page={page}
+          tab={productFilters?.tab}
+        />
+      );
     case "brands":
-      return <BrandsSection locale={locale} page={page} />;
+      return (
+        <BrandsSection
+          locale={locale}
+          page={page}
+          search={productFilters?.search}
+        />
+      );
     case "inventory":
       return <InventorySection locale={locale} page={page} />;
     case "orders":
@@ -45,7 +60,13 @@ export function AdminContent({
     case "articles":
       return <ArticlesSection locale={locale} page={page} />;
     case "settings":
-      return <SettingsSection locale={locale} />;
+      return (
+        <SettingsSection
+          canManageUsers={canManageUsers}
+          locale={locale}
+          tab={productFilters?.tab}
+        />
+      );
     case "products-services":
     default:
       return (
