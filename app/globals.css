@@ -2129,7 +2129,7 @@ button.admin-table-page-link:disabled {
 .admin-settings-social-grid .admin-product-field {
   gap: 8px;
   color: #444444;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 500;
 }
 
@@ -2139,7 +2139,7 @@ button.admin-table-page-link:disabled {
   min-height: 32px;
   padding: 8px 10px;
   color: #232323;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 500;
   background: #f7f8fa;
   border: 1px solid #f1f2f4;
@@ -2155,6 +2155,34 @@ button.admin-table-page-link:disabled {
 .admin-settings-card-grid .admin-product-field textarea {
   min-height: 116px;
   resize: none;
+}
+
+.admin-settings-richtext-field {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-settings-richtext-field .admin-rich-text-editor {
+  border: 1px solid #f1f2f4;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.admin-settings-richtext-field .admin-rich-text-editor-plain .admin-rich-text-surface {
+  min-height: 116px;
+  padding: 10px;
+  color: #232323;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.6;
+  background: #f7f8fa;
+}
+
+.admin-settings-field-hint {
+  color: #8f95a1;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: right;
 }
 
 .admin-settings-card-footer {
@@ -2271,14 +2299,14 @@ button.admin-table-page-link:disabled {
 
 .admin-settings-toggle-copy strong {
   color: #232323;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.2;
 }
 
 .admin-settings-toggle-copy span {
   color: #8b8f97;
-  font-size: 9px;
+  font-size: 16px;
   line-height: 1.3;
 }
 

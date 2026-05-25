@@ -9,6 +9,7 @@ import { type MouseEvent, useEffect, useId, useMemo, useRef } from "react";
 
 type RichTextEditorProps = {
   label: string;
+  maxCharacters?: number;
   onChange: (value: string) => void;
   placeholder?: string;
   showToolbar?: boolean;
@@ -26,6 +27,7 @@ type ToolbarButtonProps = {
 
 export function RichTextEditor({
   label,
+  maxCharacters,
   onChange,
   placeholder,
   showToolbar = true,
@@ -50,6 +52,8 @@ export function RichTextEditor({
         heading: {
           levels: [1, 2, 3],
         },
+        link: false,
+        underline: false,
       }),
       Underline,
       Link.configure({
@@ -62,6 +66,15 @@ export function RichTextEditor({
     ],
     immediatelyRender: false,
     onUpdate: ({ editor: currentEditor }) => {
+      const nextTextLength = countEditorCharacters(currentEditor.getText());
+
+      if (maxCharacters && nextTextLength > maxCharacters) {
+        currentEditor.commands.setContent(lastSyncedValueRef.current, {
+          emitUpdate: false,
+        });
+        return;
+      }
+
       const nextHtml = currentEditor.getHTML();
       lastSyncedValueRef.current = nextHtml;
       onChange(nextHtml);
@@ -96,6 +109,10 @@ export function RichTextEditor({
       </div>
     </div>
   );
+}
+
+function countEditorCharacters(value: string) {
+  return value.replace(/\s+/g, " ").trim().length;
 }
 
 function RichTextToolbar({
