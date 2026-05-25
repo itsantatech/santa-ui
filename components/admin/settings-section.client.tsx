@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { AdminDataTable, type AdminDataTableColumn, AdminStatusBadge } from "./admin-data-table";
 import type { Locale } from "@/lib/i18n";
+import { formatAdminDateTime } from "@/lib/admin-api";
 
 type HomeSettingRow = {
   id: string;
@@ -34,6 +36,28 @@ type SocialContactRow = {
   isActive: boolean;
 };
 
+type FaqRow = {
+  id: string;
+  rank: number;
+  questionTh?: string | null;
+  questionEn?: string | null;
+  answerTh?: string | null;
+  answerEn?: string | null;
+  url?: string | null;
+  categoryCode?: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  createdBy?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+};
+
+type CategoryOption = {
+  code: string;
+  nameTh: string;
+  nameEn: string;
+};
+
 type AdminUserRow = {
   id: string;
   username: string;
@@ -45,12 +69,14 @@ type AdminUserRow = {
 
 type UserRoleOption = string;
 
-type TabValue = "users" | "home-content" | "social-media";
+type TabValue = "users" | "home-content" | "social-media" | "faq";
 
 export function SettingsSectionClient({
   aboutSettings,
   activeTab,
   canManageUsers = false,
+  categories,
+  faqs,
   homeSettings,
   locale,
   socialContacts,
@@ -58,7 +84,9 @@ export function SettingsSectionClient({
 }: {
   aboutSettings: AboutSettingRow[];
   activeTab: TabValue;
+  categories: CategoryOption[];
   canManageUsers?: boolean;
+  faqs: FaqRow[];
   homeSettings: HomeSettingRow[];
   locale: Locale;
   socialContacts: SocialContactRow[];
@@ -69,6 +97,19 @@ export function SettingsSectionClient({
   const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null);
   const [deletingUser, setDeletingUser] = useState<AdminUserRow | null>(null);
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
+  const [editingFaq, setEditingFaq] = useState<FaqRow | null>(null);
+  const [deletingFaq, setDeletingFaq] = useState<FaqRow | null>(null);
+  const [isCreateFaqOpen, setIsCreateFaqOpen] = useState(false);
+  const categoryNameByCode = useMemo(
+    () =>
+      new Map(
+        categories.map((category) => [
+          category.code,
+          locale === "th" ? category.nameTh : category.nameEn,
+        ]),
+      ),
+    [categories, locale],
+  );
   const userColumns = useMemo<AdminDataTableColumn<AdminUserRow>[]>(
     () => {
       const columns: AdminDataTableColumn<AdminUserRow>[] = [
@@ -145,6 +186,82 @@ export function SettingsSectionClient({
     },
     [canManageUsers, labels],
   );
+  const faqColumns = useMemo<AdminDataTableColumn<FaqRow>[]>(
+    () => [
+      {
+        key: "rank",
+        header: labels.faq.columns.rank,
+        className: "admin-table-rank-column admin-table-number-fit-column",
+        render: (row) => row.rank,
+      },
+      {
+        key: "questionTh",
+        header: labels.faq.columns.questionTh,
+        className: "admin-table-name-column admin-table-faq-question-column",
+        render: (row) => <strong>{row.questionTh || "-"}</strong>,
+      },
+      {
+        key: "questionEn",
+        header: labels.faq.columns.questionEn,
+        className: "admin-table-name-column admin-table-faq-question-column",
+        render: (row) => row.questionEn || "-",
+      },
+      {
+        key: "url",
+        header: labels.faq.columns.url,
+        className: "admin-table-slug-column",
+        render: (row) => row.url || "-",
+      },
+      {
+        key: "categoryCode",
+        header: labels.faq.columns.categoryCode,
+        className: "admin-table-category-column admin-table-faq-category-column",
+        render: (row) =>
+          row.categoryCode ? categoryNameByCode.get(row.categoryCode) ?? row.categoryCode : "-",
+      },
+      {
+        key: "status",
+        header: labels.faq.columns.status,
+        className: "admin-table-status-column",
+        render: (row) => (
+          <AdminStatusBadge
+            label={row.isActive ? labels.common.active : labels.common.inactive}
+            tone={row.isActive ? "active" : "inactive"}
+          />
+        ),
+      },
+      {
+        key: "actions",
+        header: labels.faq.columns.actions,
+        className: "admin-table-actions-column",
+        render: (row) => (
+          <div className="admin-table-actions">
+            <button
+              aria-label={labels.common.edit}
+              className="admin-table-icon-button"
+              onClick={() => setEditingFaq(row)}
+              type="button"
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">
+                edit
+              </span>
+            </button>
+            <button
+              aria-label={labels.common.delete}
+              className="admin-table-icon-button"
+              onClick={() => setDeletingFaq(row)}
+              type="button"
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">
+                delete
+              </span>
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [categoryNameByCode, labels],
+  );
 
   const sections = buildHomeSectionCards(homeSettings, aboutSettings, labels);
 
@@ -171,6 +288,16 @@ export function SettingsSectionClient({
           href={`/${locale}/admin?section=settings&tab=home-content`}
         >
           {labels.tabs.homeContent}
+        </Link>
+        <Link
+          className={
+            activeTab === "faq"
+              ? "admin-section-tab admin-section-tab-active"
+              : "admin-section-tab"
+          }
+          href={`/${locale}/admin?section=settings&tab=faq`}
+        >
+          {labels.tabs.faq}
         </Link>
         <Link
           className={
@@ -260,6 +387,70 @@ export function SettingsSectionClient({
 
       {activeTab === "social-media" ? (
         <SocialMediaCard labels={labels} locale={locale} socialContacts={socialContacts} />
+      ) : null}
+
+      {activeTab === "faq" ? (
+        <>
+          <div className="admin-resource-toolbar">
+            <div />
+            <button
+              className="admin-product-add-button"
+              onClick={() => setIsCreateFaqOpen(true)}
+              type="button"
+            >
+              <span aria-hidden="true">+</span>
+              {labels.faq.add}
+            </button>
+          </div>
+          <AdminDataTable
+            columns={faqColumns}
+            emptyLabel={labels.faq.empty}
+            getRowId={(row) => row.id}
+            rows={faqs}
+            selectAllLabel={labels.common.selectAll}
+            selectRowLabel={(row) => `${labels.common.selectRow} ${row.questionTh ?? row.id}`}
+          />
+          {isCreateFaqOpen ? (
+            <FaqModal
+              categories={categories}
+              labels={labels}
+              locale={locale}
+              onClose={() => setIsCreateFaqOpen(false)}
+              onSaved={() => {
+                setIsCreateFaqOpen(false);
+                router.refresh();
+              }}
+            />
+          ) : null}
+          {editingFaq ? (
+            <FaqModal
+              categories={categories}
+              initialFaq={editingFaq}
+              labels={labels}
+              locale={locale}
+              onClose={() => setEditingFaq(null)}
+              onSaved={() => {
+                setEditingFaq(null);
+                router.refresh();
+              }}
+            />
+          ) : null}
+          {deletingFaq ? (
+            <DeleteFaqModal
+              body={labels.faq.deleteBody(deletingFaq.questionTh ?? deletingFaq.id)}
+              labels={labels}
+              onClose={() => setDeletingFaq(null)}
+              onConfirm={async () => {
+                await fetch(`/api/admin/faqs/${encodeURIComponent(deletingFaq.id)}`, {
+                  method: "DELETE",
+                });
+                setDeletingFaq(null);
+                router.refresh();
+              }}
+              title={labels.faq.deleteTitle}
+            />
+          ) : null}
+        </>
       ) : null}
     </div>
   );
@@ -725,7 +916,231 @@ function DeleteUserModal({
   );
 }
 
+function FaqModal({
+  categories,
+  initialFaq,
+  labels,
+  locale,
+  onClose,
+  onSaved,
+}: {
+  categories: CategoryOption[];
+  initialFaq?: FaqRow;
+  labels: ReturnType<typeof getLabels>;
+  locale: Locale;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [form, setForm] = useState(() => ({
+    answerEn: initialFaq?.answerEn ?? "",
+    answerTh: initialFaq?.answerTh ?? "",
+    categoryCode: initialFaq?.categoryCode ?? "",
+    isActive: initialFaq?.isActive ?? true,
+    questionEn: initialFaq?.questionEn ?? "",
+    questionTh: initialFaq?.questionTh ?? "",
+    rank: String(initialFaq?.rank ?? 1),
+    url: initialFaq?.url ?? "",
+  }));
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSaving(true);
+    setError("");
+
+    const payload = {
+      rank: Number(form.rank || 1),
+      questionTh: form.questionTh,
+      questionEn: form.questionEn,
+      answerTh: form.answerTh,
+      answerEn: form.answerEn,
+      url: form.url || undefined,
+      categoryCode: form.categoryCode || undefined,
+      isActive: form.isActive,
+    };
+
+    const response = await fetch(
+      initialFaq ? `/api/admin/faqs/${encodeURIComponent(initialFaq.id)}` : "/api/admin/faqs",
+      {
+        method: initialFaq ? "PATCH" : "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+
+    setIsSaving(false);
+
+    if (!response.ok) {
+      setError(labels.faq.error);
+      return;
+    }
+
+    onSaved();
+  }
+
+  return (
+    <div className="admin-product-modal-backdrop" role="presentation">
+      <div aria-modal="true" className="admin-product-modal admin-faq-modal" role="dialog">
+        <div className="admin-product-modal-header">
+          <h2>{initialFaq ? labels.faq.editTitle : labels.faq.addTitle}</h2>
+          <button onClick={onClose} type="button">
+            <span className="material-symbols-outlined" aria-hidden="true">
+              close
+            </span>
+          </button>
+        </div>
+        <form className="admin-product-form admin-faq-form" onSubmit={handleSubmit}>
+          <fieldset>
+            <legend>{labels.faq.formSection}</legend>
+            <div className="admin-faq-form-grid">
+              <div className="admin-faq-top-grid">
+                <SettingsField
+                  className="admin-faq-rank-field"
+                  label={labels.faq.fields.rank}
+                  onChange={(value) => setForm((current) => ({ ...current, rank: value }))}
+                  type="number"
+                  value={form.rank}
+                />
+                <label className="admin-product-field admin-faq-category-field">
+                  <span>{labels.faq.fields.categoryCode}</span>
+                  <select
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, categoryCode: event.target.value }))
+                    }
+                    value={form.categoryCode}
+                  >
+                    <option value="">{labels.faq.fields.categoryPlaceholder}</option>
+                    {categories.map((category) => (
+                      <option key={category.code} value={category.code}>
+                        {category.code} - {locale === "th" ? category.nameTh : category.nameEn}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <SettingsField
+                  className="admin-product-field-wide"
+                  label={labels.faq.fields.url}
+                  onChange={(value) => setForm((current) => ({ ...current, url: value }))}
+                  type="url"
+                  value={form.url}
+                />
+              </div>
+              <div className="admin-faq-question-grid">
+                <SettingsField
+                  label={labels.faq.fields.questionTh}
+                  onChange={(value) => setForm((current) => ({ ...current, questionTh: value }))}
+                  required
+                  value={form.questionTh}
+                />
+                <SettingsField
+                  label={labels.faq.fields.questionEn}
+                  onChange={(value) => setForm((current) => ({ ...current, questionEn: value }))}
+                  required
+                  value={form.questionEn}
+                />
+              </div>
+              <div className="admin-faq-answer-grid">
+                <RichTextEditor
+                  label={labels.faq.fields.answerTh}
+                  onChange={(value) => setForm((current) => ({ ...current, answerTh: value }))}
+                  placeholder={labels.faq.fields.answerPlaceholder}
+                  showToolbar={false}
+                  value={form.answerTh}
+                />
+                <RichTextEditor
+                  label={labels.faq.fields.answerEn}
+                  onChange={(value) => setForm((current) => ({ ...current, answerEn: value }))}
+                  placeholder={labels.faq.fields.answerPlaceholder}
+                  showToolbar={false}
+                  value={form.answerEn}
+                />
+              </div>
+            </div>
+          </fieldset>
+          {error ? <p className="admin-product-form-error">{error}</p> : null}
+          <div className="admin-product-modal-actions admin-faq-modal-actions">
+            <label className="admin-product-toggle admin-faq-toggle">
+              <input
+                checked={form.isActive}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, isActive: event.target.checked }))
+                }
+                type="checkbox"
+              />
+              <span>{labels.common.active}</span>
+            </label>
+            <div className="admin-faq-modal-action-buttons">
+            <button className="admin-product-secondary-button" onClick={onClose} type="button">
+              {labels.common.cancel}
+            </button>
+            <button className="admin-product-add-button" disabled={isSaving} type="submit">
+              {isSaving ? labels.common.saving : labels.common.save}
+            </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function DeleteFaqModal({
+  body,
+  labels,
+  onClose,
+  onConfirm,
+  title,
+}: {
+  body: string;
+  labels: ReturnType<typeof getLabels>;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+  title: string;
+}) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  return (
+    <div className="admin-product-modal-backdrop" role="presentation">
+      <div
+        aria-modal="true"
+        className="admin-product-modal admin-product-confirm-modal"
+        role="dialog"
+      >
+        <div className="admin-product-modal-header">
+          <h2>{title}</h2>
+          <button onClick={onClose} type="button">
+            <span className="material-symbols-outlined" aria-hidden="true">
+              close
+            </span>
+          </button>
+        </div>
+        <p>{body}</p>
+        <div className="admin-product-modal-actions admin-product-confirm-message">
+          <button className="admin-product-secondary-button" onClick={onClose} type="button">
+            {labels.common.cancel}
+          </button>
+          <button
+            className="admin-product-danger-button"
+            disabled={isDeleting}
+            onClick={async () => {
+              setIsDeleting(true);
+              await onConfirm();
+            }}
+            type="button"
+          >
+            {isDeleting ? labels.faq.deleting : labels.common.delete}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SettingsField({
+  className,
   label,
   onChange,
   placeholder,
@@ -733,6 +1148,7 @@ function SettingsField({
   type = "text",
   value,
 }: {
+  className?: string;
   label: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -741,7 +1157,7 @@ function SettingsField({
   value: string;
 }) {
   return (
-    <label className="admin-product-field">
+    <label className={className ? `admin-product-field ${className}` : "admin-product-field"}>
       <span>{label}</span>
       <input
         onChange={(event) => onChange(event.target.value)}
@@ -1012,6 +1428,7 @@ function getLabels(locale: Locale) {
     ? {
         title: "ตั้งค่า",
         tabs: {
+          faq: "FAQ",
           users: "ผู้ใช้งาน",
           homeContent: "เนื้อหาหน้าแรก",
           socialMedia: "โซเชียลมีเดีย",
@@ -1083,10 +1500,42 @@ function getLabels(locale: Locale) {
         social: {
           title: "โซเชียลมีเดีย",
         },
+        faq: {
+          add: "เพิ่ม FAQ",
+          addTitle: "เพิ่ม FAQ",
+          columns: {
+            actions: "จัดการ",
+            categoryCode: "หมวดหมู่",
+            questionEn: "คำถามภาษาอังกฤษ",
+            questionTh: "คำถามภาษาไทย",
+            rank: "ลำดับ",
+            status: "สถานะ",
+            url: "URL",
+          },
+          deleteBody: (question: string) => `ยืนยันการลบ FAQ ${question} อีกครั้งก่อนดำเนินการ`,
+          deleteTitle: "ยืนยันการลบ FAQ",
+          deleting: "กำลังลบ...",
+          editTitle: "แก้ไข FAQ",
+          empty: "ไม่พบข้อมูล FAQ",
+          error: "ไม่สามารถบันทึกข้อมูล FAQ ได้",
+          fields: {
+            answerEn: "คำตอบภาษาอังกฤษ",
+            answerPlaceholder: "กรอกคำตอบ",
+            answerTh: "คำตอบภาษาไทย",
+            categoryCode: "Category",
+            categoryPlaceholder: "เลือกหมวดหมู่",
+            questionEn: "คำถามภาษาอังกฤษ",
+            questionTh: "คำถามภาษาไทย",
+            rank: "ลำดับ",
+            url: "URL",
+          },
+          formSection: "รายละเอียด FAQ",
+        },
       }
     : {
         title: "Settings",
         tabs: {
+          faq: "FAQ",
           users: "Users",
           homeContent: "Home Content",
           socialMedia: "Social Media",
@@ -1157,6 +1606,37 @@ function getLabels(locale: Locale) {
         },
         social: {
           title: "Social Media",
+        },
+        faq: {
+          add: "Add FAQ",
+          addTitle: "Add FAQ",
+          columns: {
+            actions: "Actions",
+            categoryCode: "Category",
+            questionEn: "English Question",
+            questionTh: "Thai Question",
+            rank: "Rank",
+            status: "Status",
+            url: "URL",
+          },
+          deleteBody: (question: string) => `Please confirm deleting FAQ ${question}.`,
+          deleteTitle: "Confirm FAQ Delete",
+          deleting: "Deleting...",
+          editTitle: "Edit FAQ",
+          empty: "No FAQ found",
+          error: "Unable to save FAQ data",
+          fields: {
+            answerEn: "English Answer",
+            answerPlaceholder: "Enter answer",
+            answerTh: "Thai Answer",
+            categoryCode: "Category",
+            categoryPlaceholder: "Select category",
+            questionEn: "English Question",
+            questionTh: "Thai Question",
+            rank: "Rank",
+            url: "URL",
+          },
+          formSection: "FAQ Details",
         },
       };
 }

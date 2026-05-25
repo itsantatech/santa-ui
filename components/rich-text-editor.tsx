@@ -11,6 +11,7 @@ type RichTextEditorProps = {
   label: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  showToolbar?: boolean;
   value: string;
 };
 
@@ -27,6 +28,7 @@ export function RichTextEditor({
   label,
   onChange,
   placeholder,
+  showToolbar = true,
   value,
 }: RichTextEditorProps) {
   const labelId = useId();
@@ -82,8 +84,14 @@ export function RichTextEditor({
   return (
     <div className="admin-product-field admin-product-field-wide">
       <span id={labelId}>{label}</span>
-      <div className="admin-rich-text-editor">
-        <RichTextToolbar editor={editor} label={label} />
+      <div
+        className={
+          showToolbar
+            ? "admin-rich-text-editor"
+            : "admin-rich-text-editor admin-rich-text-editor-plain"
+        }
+      >
+        {showToolbar ? <RichTextToolbar editor={editor} label={label} /> : null}
         <EditorContent aria-labelledby={labelId} editor={editor} />
       </div>
     </div>
