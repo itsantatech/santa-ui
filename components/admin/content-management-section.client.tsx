@@ -5,6 +5,7 @@ import { type FormEvent, type RefObject, useMemo, useRef, useState } from "react
 import { ProductSearch, type ProductSearchSuggestion } from "@/components/product-search";
 import { ContentSearch } from "@/components/content-search";
 import { RichTextEditor } from "@/components/rich-text-editor";
+import { formatAdminDateTime } from "@/lib/admin-api";
 import type { Locale } from "@/lib/i18n";
 import { AdminDataTable, type AdminDataTableColumn, AdminStatusBadge } from "./admin-data-table";
 import type {
@@ -67,16 +68,34 @@ export function ContentManagementSectionClient({
         render: (row) => <strong>{row.topicEn}</strong>,
       },
       {
-        key: "contentTh",
-        header: labels.columns.contentTh,
-        className: "admin-table-name-column admin-table-content-body-column",
-        render: (row) => <ContentPreview html={row.contentTh} />,
+        key: "slug",
+        header: labels.columns.slug,
+        className: "admin-table-slug-column",
+        render: (row) => row.slug,
       },
       {
-        key: "contentEn",
-        header: labels.columns.contentEn,
-        className: "admin-table-name-column admin-table-content-body-column",
-        render: (row) => <ContentPreview html={row.contentEn} />,
+        key: "createdAt",
+        header: labels.columns.createdAt,
+        className: "admin-table-date-column",
+        render: (row) => formatAdminDateTime(row.createdAt, locale),
+      },
+      {
+        key: "createdBy",
+        header: labels.columns.createdBy,
+        className: "admin-table-user-column",
+        render: (row) => row.createdBy ?? "-",
+      },
+      {
+        key: "updatedAt",
+        header: labels.columns.updatedAt,
+        className: "admin-table-date-column",
+        render: (row) => formatAdminDateTime(row.updatedAt, locale),
+      },
+      {
+        key: "updatedBy",
+        header: labels.columns.updatedBy,
+        className: "admin-table-user-column",
+        render: (row) => row.updatedBy ?? "-",
       },
       {
         key: "status",
@@ -119,7 +138,7 @@ export function ContentManagementSectionClient({
         ),
       },
     ],
-    [labels],
+    [labels, locale],
   );
 
   return (
@@ -590,10 +609,6 @@ function DeleteContentModal({
   );
 }
 
-function ContentPreview({ html }: { html: string }) {
-  return <span>{toPlainText(html)}</span>;
-}
-
 function Field({
   label,
   onChange,
@@ -633,13 +648,6 @@ function createContentPageHref(
   return `/${locale}/admin?${searchParams.toString()}`;
 }
 
-function toPlainText(html: string) {
-  return html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function getLabels(locale: Locale, section: ContentSection) {
   const isArticle = section === "articles";
 
@@ -668,8 +676,11 @@ function getLabels(locale: Locale, section: ContentSection) {
         columns: {
           topicTh: "ชื่อภาษาไทย",
           topicEn: "ชื่อภาษาอังกฤษ",
-          contentTh: "เนื้อหาภาษาไทย",
-          contentEn: "เนื้อหาภาษาอังกฤษ",
+          slug: "Slug",
+          createdAt: "วันที่สร้าง",
+          createdBy: "สร้างโดย",
+          updatedAt: "วันที่อัปเดต",
+          updatedBy: "อัปเดตโดย",
           status: "สถานะ",
           actions: "จัดการ",
         },
@@ -734,8 +745,11 @@ function getLabels(locale: Locale, section: ContentSection) {
         columns: {
           topicTh: "Thai Name",
           topicEn: "English Name",
-          contentTh: "Thai Content",
-          contentEn: "English Content",
+          slug: "Slug",
+          createdAt: "Created At",
+          createdBy: "Created By",
+          updatedAt: "Updated At",
+          updatedBy: "Updated By",
           status: "Status",
           actions: "Actions",
         },
