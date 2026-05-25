@@ -476,6 +476,21 @@ function HomeContentCard({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const headlineThLength = form.headlineTh.trim().length;
+    const headlineEnLength = form.headlineEn.trim().length;
+    const contentThLength = countRichTextCharacters(form.contentTh);
+    const contentEnLength = countRichTextCharacters(form.contentEn);
+
+    if (headlineThLength > 150 || headlineEnLength > 150) {
+      setError(labels.home.validation.headlineMax);
+      return;
+    }
+
+    if (contentThLength > 500 || contentEnLength > 500) {
+      setError(labels.home.validation.contentMax);
+      return;
+    }
+
     setIsSaving(true);
     setError("");
 
@@ -522,37 +537,52 @@ function HomeContentCard({
     <form className="admin-settings-card" onSubmit={handleSubmit}>
       <div className="admin-settings-card-header">
         <h2>{card.title}</h2>
-        <button aria-label="close" className="admin-settings-card-close" type="button">
-          <span className="material-symbols-outlined" aria-hidden="true">
-            close
-          </span>
-        </button>
       </div>
       <div className="admin-settings-card-grid">
         <SettingsField
           label={labels.home.fields.headlineTh}
+          maxLength={150}
           placeholder={labels.home.placeholders.headlineTh}
-          onChange={(value) => setForm((current) => ({ ...current, headlineTh: value }))}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, headlineTh: value.slice(0, 150) }))
+          }
           value={form.headlineTh}
         />
         <SettingsField
           label={labels.home.fields.headlineEn}
+          maxLength={150}
           placeholder={labels.home.placeholders.headlineEn}
-          onChange={(value) => setForm((current) => ({ ...current, headlineEn: value }))}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, headlineEn: value.slice(0, 150) }))
+          }
           value={form.headlineEn}
         />
-        <SettingsTextarea
-          label={labels.home.fields.contentTh}
-          placeholder={labels.home.placeholders.contentTh}
-          onChange={(value) => setForm((current) => ({ ...current, contentTh: value }))}
-          value={form.contentTh}
-        />
-        <SettingsTextarea
-          label={labels.home.fields.contentEn}
-          placeholder={labels.home.placeholders.contentEn}
-          onChange={(value) => setForm((current) => ({ ...current, contentEn: value }))}
-          value={form.contentEn}
-        />
+        <div className="admin-settings-richtext-field">
+          <RichTextEditor
+            label={labels.home.fields.contentTh}
+            maxCharacters={500}
+            onChange={(value) => setForm((current) => ({ ...current, contentTh: value }))}
+            placeholder={labels.home.placeholders.contentTh}
+            showToolbar={false}
+            value={form.contentTh}
+          />
+          <span className="admin-settings-field-hint">
+            {countRichTextCharacters(form.contentTh)}/500
+          </span>
+        </div>
+        <div className="admin-settings-richtext-field">
+          <RichTextEditor
+            label={labels.home.fields.contentEn}
+            maxCharacters={500}
+            onChange={(value) => setForm((current) => ({ ...current, contentEn: value }))}
+            placeholder={labels.home.placeholders.contentEn}
+            showToolbar={false}
+            value={form.contentEn}
+          />
+          <span className="admin-settings-field-hint">
+            {countRichTextCharacters(form.contentEn)}/500
+          </span>
+        </div>
       </div>
       <div className="admin-settings-card-footer">
         {card.resource === "home-section-settings" ? (
@@ -1142,6 +1172,7 @@ function DeleteFaqModal({
 function SettingsField({
   className,
   label,
+  maxLength,
   onChange,
   placeholder,
   required = false,
@@ -1150,6 +1181,7 @@ function SettingsField({
 }: {
   className?: string;
   label: string;
+  maxLength?: number;
   onChange: (value: string) => void;
   placeholder?: string;
   required?: boolean;
@@ -1160,6 +1192,7 @@ function SettingsField({
     <label className={className ? `admin-product-field ${className}` : "admin-product-field"}>
       <span>{label}</span>
       <input
+        maxLength={maxLength}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         required={required}
@@ -1423,6 +1456,14 @@ function resolveHomeSectionTitle(
   return `${name} Section`;
 }
 
+function countRichTextCharacters(html: string) {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim().length;
+}
+
 function getLabels(locale: Locale) {
   return locale === "th"
     ? {
@@ -1481,10 +1522,10 @@ function getLabels(locale: Locale) {
             headlineTh: "พาดหัว (Headline) ภาษาไทย (TH)",
           },
           placeholders: {
-            contentEn: "ไม่เกิน 200 ตัวอักษร",
-            contentTh: "ไม่เกิน 200 ตัวอักษร",
-            headlineEn: "ไม่เกิน 100 ตัวอักษร",
-            headlineTh: "ไม่เกิน 100 ตัวอักษร",
+            contentEn: "ไม่เกิน 500 ตัวอักษร",
+            contentTh: "ไม่เกิน 500 ตัวอักษร",
+            headlineEn: "ไม่เกิน 150 ตัวอักษร",
+            headlineTh: "ไม่เกิน 150 ตัวอักษร",
           },
           sectionTitles: {
             about: "เกี่ยวกับเรา - About US Section",
@@ -1496,6 +1537,10 @@ function getLabels(locale: Locale) {
           },
           toggleDescription: "ตั้งค่าการแสดงบนหน้าแรกของ Section",
           toggleTitle: "การแสดงผล",
+          validation: {
+            contentMax: "เนื้อหาต้องมีความยาวไม่เกิน 500 ตัวอักษร",
+            headlineMax: "พาดหัวต้องมีความยาวไม่เกิน 150 ตัวอักษร",
+          },
         },
         social: {
           title: "โซเชียลมีเดีย",
@@ -1588,10 +1633,10 @@ function getLabels(locale: Locale) {
             headlineTh: "Headline (TH)",
           },
           placeholders: {
-            contentEn: "No more than 200 characters",
-            contentTh: "No more than 200 characters",
-            headlineEn: "No more than 100 characters",
-            headlineTh: "No more than 100 characters",
+            contentEn: "No more than 500 characters",
+            contentTh: "No more than 500 characters",
+            headlineEn: "No more than 150 characters",
+            headlineTh: "No more than 150 characters",
           },
           sectionTitles: {
             about: "About Us - About US Section",
@@ -1603,6 +1648,10 @@ function getLabels(locale: Locale) {
           },
           toggleDescription: "Control section visibility on the home page",
           toggleTitle: "Visibility",
+          validation: {
+            contentMax: "Content must be 500 characters or fewer",
+            headlineMax: "Headline must be 150 characters or fewer",
+          },
         },
         social: {
           title: "Social Media",
