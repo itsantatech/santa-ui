@@ -7,6 +7,7 @@ const allowedResources = new Set([
   "articles",
   "brands",
   "categories",
+  "faqs",
   "files",
   "home-section-settings",
   "inventory-stocks",

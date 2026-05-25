@@ -30,6 +30,24 @@ type SocialContactRow = {
   isActive: boolean;
 };
 
+type FaqRow = {
+  id: string;
+  rank: number;
+  questionTh?: string | null;
+  questionEn?: string | null;
+  answerTh?: string | null;
+  answerEn?: string | null;
+  url?: string | null;
+  categoryCode?: string | null;
+  isActive: boolean;
+};
+
+type CategoryOption = {
+  code: string;
+  nameTh: string;
+  nameEn: string;
+};
+
 type AdminUserRow = {
   id: string;
   username: string;
@@ -48,8 +66,9 @@ export async function SettingsSection({
   locale: Locale;
   tab?: string;
 }) {
-  const activeTab = tab === "home-content" || tab === "social-media" ? tab : "users";
-  const [users, homeSettings, aboutSettings, socialContacts] = await Promise.all([
+  const activeTab =
+    tab === "home-content" || tab === "social-media" || tab === "faq" ? tab : "users";
+  const [users, homeSettings, aboutSettings, socialContacts, faqs, categories] = await Promise.all([
     fetchAdminList<AdminUserRow>("/admin-users", {
       isActive: true,
       page: 1,
@@ -68,6 +87,14 @@ export async function SettingsSection({
       page: 1,
       pageSize: 20,
     }),
+    fetchAdminList<FaqRow>("/faqs", {
+      page: 1,
+      pageSize: 50,
+    }),
+    fetchAdminList<CategoryOption>("/categories", {
+      page: 1,
+      pageSize: 100,
+    }),
   ]);
 
   return (
@@ -75,6 +102,8 @@ export async function SettingsSection({
       aboutSettings={aboutSettings?.items ?? []}
       activeTab={activeTab}
       canManageUsers={canManageUsers}
+      categories={categories?.items ?? []}
+      faqs={faqs?.items ?? []}
       homeSettings={homeSettings?.items ?? []}
       locale={locale}
       socialContacts={socialContacts?.items ?? []}

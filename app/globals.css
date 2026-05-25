@@ -1076,6 +1076,16 @@ input {
   min-width: 320px;
 }
 
+.admin-table-faq-question-column {
+  width: 28%;
+  min-width: 420px;
+}
+
+.admin-table-faq-category-column {
+  width: 16%;
+  min-width: 240px;
+}
+
 .admin-table-actions-column {
   width: 9%;
   min-width: 130px;
@@ -1453,6 +1463,10 @@ input {
 .admin-product-confirm-modal {
   width: min(480px, 100%);
   padding-bottom: 20px;
+}
+
+.admin-faq-modal {
+  width: min(1120px, 100%);
 }
 
 .admin-product-confirm-modal p {
@@ -2148,6 +2162,96 @@ button.admin-table-page-link:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.admin-faq-form-grid {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 18px;
+}
+
+.admin-faq-form .admin-product-form fieldset {
+  grid-template-columns: 1fr;
+}
+
+.admin-faq-top-grid,
+.admin-faq-question-grid,
+.admin-faq-answer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+}
+
+.admin-faq-top-grid {
+  align-items: end;
+}
+
+.admin-faq-rank-field {
+  max-width: 160px;
+}
+
+.admin-faq-category-field {
+  max-width: 320px;
+}
+
+.admin-faq-top-grid .admin-product-field-wide {
+  grid-column: 1 / -1;
+}
+
+.admin-faq-answer-grid .admin-rich-text-editor {
+  min-height: 170px;
+}
+
+.admin-rich-text-editor-plain {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.admin-rich-text-editor-plain .admin-rich-text-surface {
+  min-height: 150px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.admin-faq-modal-actions {
+  justify-content: space-between;
+}
+
+.admin-faq-toggle {
+  min-height: 44px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.admin-faq-modal-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 920px) {
+  .admin-faq-top-grid,
+  .admin-faq-question-grid,
+  .admin-faq-answer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-faq-category-field,
+  .admin-faq-rank-field {
+    max-width: none;
+  }
+
+  .admin-faq-modal-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-faq-modal-action-buttons {
+    justify-content: flex-end;
+  }
 }
 
 .admin-settings-toggle-card {
