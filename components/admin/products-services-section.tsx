@@ -14,6 +14,7 @@ export type ProductManagementRow = ProductSearchSuggestion & {
   imgUrl: string[];
   slug: string;
   price: number | null;
+  deliveryFee: number | null;
   seoTitleTh: string;
   seoTitleEn: string;
   seoDescriptionTh: string;
@@ -42,6 +43,7 @@ type ProductFormValue = {
   imgUrl: string;
   slug: string;
   price: string;
+  deliveryFee: string;
   model: string;
   seoTitleTh: string;
   seoTitleEn: string;
@@ -357,6 +359,8 @@ function ProductFormModal({
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const initialValue = useMemo(() => getInitialFormValue(product), [product]);
+  const [isPromotion, setIsPromotion] = useState(initialValue.isPromotion);
+  const [discountedPrice, setDiscountedPrice] = useState(initialValue.discountedPrice);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -364,7 +368,10 @@ function ProductFormModal({
     setError("");
 
     const form = new FormData(event.currentTarget);
-    const payload = getProductPayload(form);
+    const payload = getProductPayload(form, {
+      discountedPrice,
+      isPromotion,
+    });
     const response = await fetch(
       product ? `/api/admin/products/${encodeURIComponent(product.sku)}` : "/api/admin/products",
       {
@@ -409,7 +416,18 @@ function ProductFormModal({
           </button>
         </div>
         <form className="admin-product-form" onSubmit={handleSubmit}>
-          <ProductFormFields initialValue={initialValue} />
+          <ProductFormFields
+            discountedPrice={discountedPrice}
+            initialValue={initialValue}
+            isPromotion={isPromotion}
+            onDiscountedPriceChange={setDiscountedPrice}
+            onPromotionChange={(nextValue) => {
+              setIsPromotion(nextValue);
+              if (!nextValue) {
+                setDiscountedPrice("");
+              }
+            }}
+          />
           {error ? <p className="admin-product-form-error">{error}</p> : null}
           <div className="admin-product-modal-actions">
             <button
@@ -429,7 +447,19 @@ function ProductFormModal({
   );
 }
 
-function ProductFormFields({ initialValue }: { initialValue: ProductFormValue }) {
+function ProductFormFields({
+  discountedPrice,
+  initialValue,
+  isPromotion,
+  onDiscountedPriceChange,
+  onPromotionChange,
+}: {
+  discountedPrice: string;
+  initialValue: ProductFormValue;
+  isPromotion: boolean;
+  onDiscountedPriceChange: (value: string) => void;
+  onPromotionChange: (value: boolean) => void;
+}) {
   return (
     <div className="admin-product-form-grid">
       <TextField label="Rank" name="rank" type="number" value={initialValue.rank} />
@@ -439,10 +469,18 @@ function ProductFormFields({ initialValue }: { initialValue: ProductFormValue })
       <TextField label="Model" name="model" value={initialValue.model} />
       <TextField label="Price" name="price" type="number" value={initialValue.price} />
       <TextField
+        label="Delivery Fee"
+        name="deliveryFee"
+        type="number"
+        value={initialValue.deliveryFee}
+      />
+      <ControlledTextField
         label="Discounted Price"
         name="discountedPrice"
         type="number"
-        value={initialValue.discountedPrice}
+        value={discountedPrice}
+        disabled={!isPromotion}
+        onChange={onDiscountedPriceChange}
       />
       <TextField label="Datasheet URL" name="datasheetUrl" value={initialValue.datasheetUrl} />
       <TextField label="Image URLs" name="imgUrl" value={initialValue.imgUrl} />
@@ -461,7 +499,12 @@ function ProductFormFields({ initialValue }: { initialValue: ProductFormValue })
       <CheckboxField label="Active" name="isActive" checked={initialValue.isActive} />
       <CheckboxField label="New product" name="isNewProduct" checked={initialValue.isNewProduct} />
       <CheckboxField label="Best seller" name="isBestSeller" checked={initialValue.isBestSeller} />
-      <CheckboxField label="Promotion" name="isPromotion" checked={initialValue.isPromotion} />
+      <ControlledCheckboxField
+        checked={isPromotion}
+        label="Promotion"
+        name="isPromotion"
+        onChange={onPromotionChange}
+      />
     </div>
   );
 }
@@ -544,12 +587,14 @@ function DeleteProductModal({
 }
 
 function TextField({
+  disabled = false,
   label,
   name,
   required = false,
   type = "text",
   value,
 }: {
+  disabled?: boolean;
   label: string;
   name: keyof ProductFormValue;
   required?: boolean;
@@ -559,7 +604,45 @@ function TextField({
   return (
     <label className="admin-product-form-field">
       <span>{label}</span>
-      <input defaultValue={value} name={name} required={required} type={type} />
+      <input
+        defaultValue={value}
+        disabled={disabled}
+        name={name}
+        required={required}
+        type={type}
+      />
+    </label>
+  );
+}
+
+function ControlledTextField({
+  disabled = false,
+  label,
+  name,
+  required = false,
+  type = "text",
+  value,
+  onChange,
+}: {
+  disabled?: boolean;
+  label: string;
+  name: keyof ProductFormValue;
+  required?: boolean;
+  type?: "number" | "text";
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="admin-product-form-field">
+      <span>{label}</span>
+      <input
+        disabled={disabled}
+        name={name}
+        onChange={(event) => onChange(event.target.value)}
+        required={required}
+        type={type}
+        value={value}
+      />
     </label>
   );
 }
@@ -600,6 +683,31 @@ function CheckboxField({
   );
 }
 
+function ControlledCheckboxField({
+  checked,
+  label,
+  name,
+  onChange,
+}: {
+  checked: boolean;
+  label: string;
+  name: keyof ProductFormValue;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="admin-product-checkbox-field">
+      <input
+        checked={checked}
+        name={name}
+        onChange={(event) => onChange(event.target.checked)}
+        type="checkbox"
+        value="true"
+      />
+      <span>{label}</span>
+    </label>
+  );
+}
+
 function getInitialFormValue(product?: ProductManagementRow): ProductFormValue {
   return {
     rank: product ? String(product.rank) : "0",
@@ -613,6 +721,10 @@ function getInitialFormValue(product?: ProductManagementRow): ProductFormValue {
     imgUrl: product?.imgUrl.join(", ") ?? "",
     slug: product?.slug ?? "",
     price: product?.price === null || product?.price === undefined ? "" : String(product.price),
+    deliveryFee:
+      product?.deliveryFee === null || product?.deliveryFee === undefined
+        ? ""
+        : String(product.deliveryFee),
     model: product?.model ?? "",
     seoTitleTh: product?.seoTitleTh ?? "",
     seoTitleEn: product?.seoTitleEn ?? "",
@@ -635,7 +747,16 @@ function getInitialFormValue(product?: ProductManagementRow): ProductFormValue {
   };
 }
 
-function getProductPayload(form: FormData) {
+function getProductPayload(
+  form: FormData,
+  {
+    discountedPrice,
+    isPromotion,
+  }: {
+    discountedPrice: string;
+    isPromotion: boolean;
+  },
+) {
   return {
     rank: getNumber(form, "rank") ?? 0,
     nameTh: getString(form, "nameTh"),
@@ -648,6 +769,7 @@ function getProductPayload(form: FormData) {
     imgUrl: getList(form, "imgUrl"),
     slug: getString(form, "slug"),
     price: getNumber(form, "price"),
+    deliveryFee: getNumber(form, "deliveryFee"),
     model: getNullableString(form, "model"),
     seoTitleTh: getString(form, "seoTitleTh"),
     seoTitleEn: getString(form, "seoTitleEn"),
@@ -657,8 +779,8 @@ function getProductPayload(form: FormData) {
     isActive: form.get("isActive") === "true",
     isNewProduct: form.get("isNewProduct") === "true",
     isBestSeller: form.get("isBestSeller") === "true",
-    isPromotion: form.get("isPromotion") === "true",
-    discountedPrice: getNumber(form, "discountedPrice"),
+    isPromotion,
+    discountedPrice: isPromotion ? getNumberFromValue(discountedPrice) : null,
     categoryCodes: getList(form, "categoryCodes"),
     subCategoryCodes: getList(form, "subCategoryCodes"),
     brandCodes: getList(form, "brandCodes"),
@@ -683,7 +805,10 @@ function getNullableString(form: FormData, name: string) {
 }
 
 function getNumber(form: FormData, name: string) {
-  const value = getString(form, name);
+  return getNumberFromValue(getString(form, name));
+}
+
+function getNumberFromValue(value: string) {
 
   if (!value) {
     return null;

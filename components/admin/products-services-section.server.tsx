@@ -38,6 +38,7 @@ type ProductRow = {
   imgUrl: string[];
   slug: string;
   price: number | null;
+  deliveryFee: number | null;
   model: string | null;
   seoTitleTh: string;
   seoTitleEn: string;
@@ -269,6 +270,13 @@ export async function ProductsServicesSection({
           promotionLabel={table.promotion}
         />
       ),
+    },
+    {
+      key: "deliveryFee",
+      header: productUi.columns.deliveryFee,
+      className: "admin-table-price-column",
+      width: "132px",
+      render: (row) => formatPrice(row.deliveryFee, locale, table.noPrice),
     },
     {
       key: "status",
@@ -532,6 +540,7 @@ function getProductAdminUiLabels(locale: Locale) {
   ? {
       columns: {
         image: "รูปภาพ",
+        deliveryFee: "ค่าส่ง",
         discountedPrice: "ราคาลด",
       },
       add: "เพิ่มสินค้าและบริการ",
@@ -559,6 +568,7 @@ function getProductAdminUiLabels(locale: Locale) {
   : {
       columns: {
         image: "Image",
+        deliveryFee: "Delivery Fee",
         discountedPrice: "Discounted Price",
       },
       add: "Add product or service",
