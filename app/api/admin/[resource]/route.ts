@@ -59,7 +59,7 @@ function withDefaultListPagination(request: NextRequest) {
 
   const url = request.nextUrl.clone();
   url.searchParams.set("page", url.searchParams.get("page") ?? "1");
-  url.searchParams.set("pageSize", url.searchParams.get("pageSize") ?? "10");
+  url.searchParams.set("pageSize", url.searchParams.get("pageSize") ?? "50");
 
   return new Request(url, request);
 }

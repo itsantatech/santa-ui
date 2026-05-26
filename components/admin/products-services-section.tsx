@@ -10,6 +10,12 @@ import {
   useState,
 } from "react";
 import type { ProductSearchSuggestion } from "@/components/product-search";
+import {
+  AdminBatchFieldModal,
+  type AdminBatchFieldModalConfig,
+} from "./admin-batch-field-modal";
+import { useAdminTableEditRequest } from "./admin-table-events";
+import type { ProductLabels } from "./products-services-shared";
 import { RichTextEditor } from "@/components/rich-text-editor";
 
 export type ProductManagementRow = ProductSearchSuggestion & {
@@ -90,6 +96,7 @@ type ProductFormValue = {
   brandCodes: string[];
 };
 
+type ProductBatchAction = keyof ProductLabels["fields"];
 type ProductLabels = {
   add: string;
   addTitle: string;
@@ -316,6 +323,221 @@ export function ProductRowManagementActions({
       ) : null}
     </>
   );
+}
+
+export function ProductTableEditController({
+  labels,
+  rows,
+}: {
+  labels: ProductLabels;
+  rows: ProductManagementRow[];
+}) {
+  const router = useRouter();
+  const [editingProduct, setEditingProduct] = useState<ProductManagementRow | null>(
+    null,
+  );
+  const [bulkEditingProducts, setBulkEditingProducts] = useState<
+    ProductManagementRow[]
+  >([]);
+  const [bulkEditingAction, setBulkEditingAction] =
+    useState<ProductBatchAction | null>(null);
+
+  useAdminTableEditRequest("products-services", (actionId, rowIds) => {
+    const matchedRows = rows.filter((row) => rowIds.includes(row.sku));
+
+    if (matchedRows.length === 1 && actionId === "edit") {
+      setEditingProduct(matchedRows[0]);
+      return;
+    }
+
+    if (matchedRows.length > 0) {
+      setBulkEditingAction(actionId as ProductBatchAction);
+      setBulkEditingProducts(matchedRows);
+    }
+  });
+
+  return (
+    <>
+      {editingProduct ? (
+        <ProductFormModal
+          labels={labels}
+          mode="edit"
+          onClose={() => setEditingProduct(null)}
+          product={editingProduct}
+        />
+      ) : null}
+      {bulkEditingProducts.length > 0 && bulkEditingAction ? (
+        <AdminBatchFieldModal
+          cancelLabel={labels.cancel}
+          config={getProductBatchFieldConfig(labels, bulkEditingAction, bulkEditingProducts[0])}
+          description={`Update ${labels.fields[bulkEditingAction]} for ${bulkEditingProducts.length} selected products.`}
+          errorMessage={labels.error}
+          items={bulkEditingProducts.map((row) => row.sku)}
+          onClose={() => {
+            setBulkEditingAction(null);
+            setBulkEditingProducts([]);
+          }}
+          onSubmit={async (value) => {
+            const responses = await Promise.all(
+              bulkEditingProducts.map((row) =>
+                fetch(`/api/admin/products/${encodeURIComponent(row.sku)}`, {
+                  method: "PATCH",
+                  headers: {
+                    "content-type": "application/json",
+                  },
+                  body: JSON.stringify(
+                    buildProductPayload(row, bulkEditingAction, value),
+                  ),
+                }),
+              ),
+            );
+
+            if (responses.some((response) => !response.ok)) {
+              throw new Error("bulk-edit-failed");
+            }
+
+            setBulkEditingAction(null);
+            setBulkEditingProducts([]);
+            router.refresh();
+          }}
+          saveLabel={labels.save}
+          savingLabel={labels.save}
+          title={`Bulk edit products: ${labels.fields[bulkEditingAction]}`}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function getProductBatchFieldConfig(
+  labels: ProductLabels,
+  action: ProductBatchAction,
+  row: ProductManagementRow,
+): AdminBatchFieldModalConfig {
+  if (
+    action === "isActive" ||
+    action === "isBestSeller" ||
+    action === "isNewProduct" ||
+    action === "isPromotion"
+  ) {
+    return {
+      fieldLabel: labels.fields[action],
+      initialValue: row[action],
+      options: [
+        { label: "true", value: "true" },
+        { label: "false", value: "false" },
+      ],
+      type: "boolean",
+    };
+  }
+
+  if (
+    action === "rank" ||
+    action === "price" ||
+    action === "deliveryFee" ||
+    action === "discountedPrice"
+  ) {
+    return {
+      fieldLabel: labels.fields[action],
+      initialValue: row[action] ?? "",
+      type: "number",
+    };
+  }
+
+  if (
+    action === "descriptionTh" ||
+    action === "descriptionEn" ||
+    action === "seoDescriptionTh" ||
+    action === "seoDescriptionEn" ||
+    action === "categoryCodes" ||
+    action === "subCategoryCodes" ||
+    action === "brandCodes"
+  ) {
+    return {
+      fieldLabel: labels.fields[action],
+      initialValue:
+        action === "categoryCodes"
+          ? (row.categories ?? row.categoryCods ?? []).map((item) => item.code).join(", ")
+          : action === "subCategoryCodes"
+            ? row.subCategories.map((item) => item.code).join(", ")
+            : action === "brandCodes"
+              ? row.brands.map((item) => item.code).join(", ")
+              : (row[action] ?? ""),
+      type: "textarea",
+    };
+  }
+
+  return {
+    fieldLabel: labels.fields[action],
+    initialValue: row[action] ?? "",
+    type: "text",
+  };
+}
+
+function buildProductPayload(
+  row: ProductManagementRow,
+  action: ProductBatchAction,
+  value: boolean | number | string,
+) {
+  const next = {
+    brandCodes: row.brands.map((brand) => brand.code),
+    categoryCodes: (row.categories ?? row.categoryCods ?? []).map(
+      (category) => category.code,
+    ),
+    datasheetUrl: row.datasheetUrl,
+    deliveryFee: row.deliveryFee,
+    descriptionEn: row.descriptionEn,
+    descriptionTh: row.descriptionTh,
+    discountedPrice: row.discountedPrice,
+    googleCategoryId: row.googleCategoryId,
+    imgUrl: row.imgUrl,
+    isActive: row.isActive,
+    isBestSeller: row.isBestSeller,
+    isNewProduct: row.isNewProduct,
+    isPromotion: row.isPromotion,
+    model: row.model,
+    nameEn: row.nameEn,
+    nameTh: row.nameTh,
+    price: row.price,
+    rank: row.rank,
+    seoDescriptionEn: row.seoDescriptionEn,
+    seoDescriptionTh: row.seoDescriptionTh,
+    seoTitleEn: row.seoTitleEn,
+    seoTitleTh: row.seoTitleTh,
+    shortDescriptionEn: row.shortDescriptionEn,
+    shortDescriptionTh: row.shortDescriptionTh,
+    slug: row.slug,
+    subCategoryCodes: row.subCategories.map((subCategory) => subCategory.code),
+  };
+
+  if (
+    action === "isActive" ||
+    action === "isBestSeller" ||
+    action === "isNewProduct" ||
+    action === "isPromotion"
+  ) {
+    next[action] = Boolean(value);
+  } else if (
+    action === "rank" ||
+    action === "price" ||
+    action === "deliveryFee" ||
+    action === "discountedPrice"
+  ) {
+    next[action] = Number(value || 0);
+  } else if (
+    action === "categoryCodes" ||
+    action === "subCategoryCodes" ||
+    action === "brandCodes"
+  ) {
+    next[action] = String(value)
+      .split(/[\n,]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  } else {
+    next[action] = String(value);
+  }
+
+  return next;
 }
 
 function ProductUploadModal({

@@ -124,17 +124,21 @@ export async function ContentListSection({
       <AdminDataTable
         columns={columns}
         emptyLabel={response ? labels.empty[section] : labels.fetchError[section]}
+        editActionLabel={labels.edit}
         getRowId={(row) => row.id}
         pagination={{
           currentPage: response?.meta.page ?? page,
+          currentPageSize: response?.meta.pageSize ?? 50,
           totalPages: response?.meta.totalPages ?? 1,
           getPageHref: (page) => `/${locale}/admin?section=${section}&page=${page}`,
           previousLabel: labels.previousPage,
           nextLabel: labels.nextPage,
+          rowsPerPageLabel: locale === "th" ? "จำนวนต่อหน้า" : "Rows per page",
         }}
         rows={rows}
         selectAllLabel={labels.selectAll}
         selectRowLabel={(row) => `${labels.selectRow} ${row.slug}`}
+        tableId={`content-list-${section}`}
         wide
       />
     </div>

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AdminTableEnhancer } from "./admin-table-enhancer";
+import { AdminTablePageSizeControl } from "./admin-table-page-size-control";
 
 export type AdminDataTableColumn<Row> = {
   key: string;
@@ -9,21 +11,25 @@ export type AdminDataTableColumn<Row> = {
   render: (row: Row) => ReactNode;
 };
 
+export type AdminDataTableContextAction = {
+  id: string;
+  label: string;
+};
+
 export type AdminDataTablePagination = {
   currentPage: number;
   currentPageSize?: number;
-  getPageSizeHref?: (pageSize: number) => string;
   totalPages: number;
   getPageHref: (page: number) => string;
   previousLabel: string;
   nextLabel: string;
   rowsPerPageLabel?: string;
-  pageSizeOptions?: number[];
 };
 
 type AdminDataTableProps<Row> = {
   rows: Row[];
   columns: AdminDataTableColumn<Row>[];
+  tableId: string;
   getRowId: (row: Row) => string;
   getRowClassName?: (row: Row) => string | undefined;
   emptyLabel?: string;
@@ -31,6 +37,8 @@ type AdminDataTableProps<Row> = {
   selectRowLabel: (row: Row) => string;
   pagination?: AdminDataTablePagination;
   wide?: boolean;
+  contextMenuActions?: AdminDataTableContextAction[];
+  editActionLabel?: string;
 };
 
 export function AdminStatusBadge({
@@ -77,6 +85,8 @@ export function AdminCategoryChip({ children }: { children: ReactNode }) {
 
 export function AdminDataTable<Row>({
   columns,
+  contextMenuActions,
+  editActionLabel,
   emptyLabel,
   getRowId,
   getRowClassName,
@@ -84,10 +94,11 @@ export function AdminDataTable<Row>({
   rows,
   selectAllLabel,
   selectRowLabel,
+  tableId,
   wide = false,
 }: AdminDataTableProps<Row>) {
   return (
-    <div className="admin-table-shell">
+    <div className="admin-table-shell" data-admin-table-id={tableId}>
       <div className="admin-table-scroll">
         <table
           className={
@@ -107,7 +118,7 @@ export function AdminDataTable<Row>({
               <th className="admin-table-select-cell" scope="col">
                 <label className="admin-table-checkbox-label">
                   <span className="sr-only">{selectAllLabel}</span>
-                  <input type="checkbox" />
+                  <input data-admin-table-select-all type="checkbox" />
                 </label>
               </th>
               {columns.map((column) => (
@@ -120,11 +131,15 @@ export function AdminDataTable<Row>({
           <tbody>
             {rows.length > 0 ? (
               rows.map((row) => (
-                <tr className={getRowClassName?.(row)} key={getRowId(row)}>
+                <tr
+                  className={getRowClassName?.(row)}
+                  data-admin-table-row-id={getRowId(row)}
+                  key={getRowId(row)}
+                >
                   <td className="admin-table-select-cell">
                     <label className="admin-table-checkbox-label">
                       <span className="sr-only">{selectRowLabel(row)}</span>
-                      <input type="checkbox" />
+                      <input data-admin-table-row-select type="checkbox" />
                     </label>
                   </td>
                   {columns.map((column) => (
@@ -145,6 +160,13 @@ export function AdminDataTable<Row>({
         </table>
       </div>
 
+      <AdminTableEnhancer
+        contextMenuActions={
+          contextMenuActions ??
+          (editActionLabel ? [{ id: "edit", label: editActionLabel }] : undefined)
+        }
+        tableId={tableId}
+      />
       {pagination ? <AdminTablePagination pagination={pagination} /> : null}
     </div>
   );
@@ -162,32 +184,16 @@ function AdminTablePagination({
     { length: pageEnd - pageStart + 1 },
     (_, index) => pageStart + index,
   );
-  const getPageSizeHref = pagination.getPageSizeHref;
   const previousPage = Math.max(1, pagination.currentPage - 1);
   const nextPage = Math.min(totalPages, pagination.currentPage + 1);
 
   return (
     <nav className="admin-table-pagination" aria-label="Table pagination">
-      {getPageSizeHref ? (
-        <div className="admin-table-page-size" aria-label={pagination.rowsPerPageLabel}>
-          <span>{pagination.rowsPerPageLabel ?? "Rows per page"}</span>
-          {(pagination.pageSizeOptions ?? [10, 20, 50, 100]).map((pageSize) => (
-            <Link
-              aria-current={
-                pageSize === pagination.currentPageSize ? true : undefined
-              }
-              className={
-                pageSize === pagination.currentPageSize
-                  ? "admin-table-page-size-link admin-table-page-size-link-active"
-                  : "admin-table-page-size-link"
-              }
-              href={getPageSizeHref(pageSize)}
-              key={pageSize}
-            >
-              {pageSize}
-            </Link>
-          ))}
-        </div>
+      {pagination.currentPageSize ? (
+        <AdminTablePageSizeControl
+          currentPageSize={pagination.currentPageSize}
+          rowsPerPageLabel={pagination.rowsPerPageLabel}
+        />
       ) : null}
       <Link
         aria-label={pagination.previousLabel}
