@@ -21,20 +21,24 @@ type BrandRow = {
 export async function BrandsSection({
   locale,
   page,
+  pageSize,
   search,
 }: {
   locale: Locale;
   page: number;
+  pageSize?: number;
   search?: string;
 }) {
   const response = await fetchAdminList<BrandRow>("/brands", {
     page,
+    pageSize,
     search,
   });
 
   return (
     <BrandsSectionClient
       initialResponse={response}
+      initialPageSize={response?.meta.pageSize ?? pageSize ?? 50}
       initialSearch={search}
       locale={locale}
       page={page}

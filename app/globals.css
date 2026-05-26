@@ -880,6 +880,10 @@ input {
   background: #fee2e2;
 }
 
+.admin-data-table .admin-table-row-selected td {
+  background: #fff3ea;
+}
+
 .admin-data-table th,
 .admin-data-table td {
   min-width: 0;
@@ -1404,25 +1408,38 @@ input {
   font-weight: 600;
 }
 
-.admin-table-page-size-link {
+.admin-table-page-size-label {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 34px;
-  height: 32px;
-  padding: 0 8px;
-  color: #475569;
+  gap: 8px;
+}
+
+.admin-table-page-size input {
+  width: 88px;
+  height: 38px;
+  padding: 0 10px;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 2px;
 }
 
-.admin-table-page-size-link:hover,
-.admin-table-page-size-link:focus-visible,
-.admin-table-page-size-link-active {
+.admin-table-page-size-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 38px;
+  padding: 0 12px;
   color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
   background: #f97316;
-  border-color: #f97316;
+  border: 1px solid #f97316;
+  border-radius: 2px;
+  cursor: pointer;
 }
 
 .admin-table-page-link {
@@ -1817,15 +1834,42 @@ input {
   border-radius: 6px;
 }
 
-.admin-table-page-size select {
-  height: 38px;
-  padding: 0 30px 0 10px;
-  color: #0f172a;
+.admin-table-context-menu {
+  position: fixed;
+  z-index: 1200;
+  min-width: 180px;
+  max-width: min(320px, calc(100vw - 24px));
+  max-height: min(70vh, calc(100vh - 24px));
+  padding: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.22);
+  scrollbar-width: thin;
+}
+
+.admin-table-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  color: #ffffff;
   font-size: 14px;
-  font-weight: 700;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 2px;
+  font-weight: 600;
+  text-align: left;
+  white-space: normal;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.admin-table-context-menu-item:hover,
+.admin-table-context-menu-item:focus-visible {
+  background: rgba(249, 115, 22, 0.18);
 }
 
 button.admin-table-page-link {

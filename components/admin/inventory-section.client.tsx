@@ -3,7 +3,14 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useRef, useState, useTransition } from "react";
 import { ProductSearch, type ProductSearchSuggestion } from "@/components/product-search";
+import {
+  AdminBatchFieldModal,
+  type AdminBatchFieldModalConfig,
+} from "./admin-batch-field-modal";
+import { useAdminTableEditRequest } from "./admin-table-events";
 import type { InventoryLabels, InventoryManagementRow } from "./inventory-section";
+
+type InventoryBatchAction = "isActive" | "lowStockThreshold" | "stockQuantity";
 
 export function InventorySearchBar({
   initialSearch = "",
@@ -174,6 +181,154 @@ export function InventoryRowActions({
       ) : null}
     </>
   );
+}
+
+export function InventoryTableEditController({
+  labels,
+  locale,
+  rows,
+}: {
+  labels: InventoryLabels;
+  locale: "th" | "en";
+  rows: InventoryManagementRow[];
+}) {
+  const router = useRouter();
+  const [editingInventory, setEditingInventory] =
+    useState<InventoryManagementRow | null>(null);
+  const [bulkEditingInventories, setBulkEditingInventories] = useState<
+    InventoryManagementRow[]
+  >([]);
+  const [bulkEditingAction, setBulkEditingAction] =
+    useState<InventoryBatchAction | null>(null);
+
+  useAdminTableEditRequest("inventory", (actionId, rowIds) => {
+    const matchedRows = rows.filter((row) => rowIds.includes(row.id));
+
+    if (matchedRows.length === 1 && actionId === "edit") {
+      setEditingInventory(matchedRows[0]);
+      return;
+    }
+
+    if (matchedRows.length > 0) {
+      setBulkEditingAction(actionId as InventoryBatchAction);
+      setBulkEditingInventories(matchedRows);
+    }
+  });
+
+  return (
+    <>
+      {editingInventory ? (
+        <InventoryFormModal
+          inventory={editingInventory}
+          labels={labels}
+          locale={locale}
+          onClose={() => setEditingInventory(null)}
+          onSaved={() => {
+            setEditingInventory(null);
+            router.refresh();
+          }}
+        />
+      ) : null}
+      {bulkEditingInventories.length > 0 && bulkEditingAction ? (
+        <AdminBatchFieldModal
+          cancelLabel={labels.cancel}
+          config={getInventoryBatchFieldConfig(labels, bulkEditingAction, bulkEditingInventories[0])}
+          description={labels.bulkEditDescription(
+            bulkEditingInventories.length,
+            getInventoryBatchFieldLabel(labels, bulkEditingAction),
+          )}
+          errorMessage={labels.error}
+          items={bulkEditingInventories.map((row) => row.productSku)}
+          onClose={() => {
+            setBulkEditingAction(null);
+            setBulkEditingInventories([]);
+          }}
+          onSubmit={async (value) => {
+            const responses = await Promise.all(
+              bulkEditingInventories.map((row) =>
+                fetch(`/api/admin/inventory-stocks/${encodeURIComponent(row.id)}`, {
+                  method: "PATCH",
+                  headers: {
+                    "content-type": "application/json",
+                  },
+                  body: JSON.stringify(
+                    buildInventoryPayload(row, bulkEditingAction, value),
+                  ),
+                }),
+              ),
+            );
+
+            if (responses.some((response) => !response.ok)) {
+              throw new Error("bulk-edit-failed");
+            }
+
+            setBulkEditingAction(null);
+            setBulkEditingInventories([]);
+            router.refresh();
+          }}
+          saveLabel={labels.save}
+          savingLabel={labels.saving}
+          title={labels.bulkEditTitle(
+            getInventoryBatchFieldLabel(labels, bulkEditingAction),
+          )}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function getInventoryBatchFieldLabel(
+  labels: InventoryLabels,
+  action: InventoryBatchAction,
+) {
+  if (action === "isActive") {
+    return labels.activeToggle;
+  }
+
+  return action === "stockQuantity"
+    ? labels.columns.stockQuantity
+    : labels.columns.lowStockThreshold;
+}
+
+function getInventoryBatchFieldConfig(
+  labels: InventoryLabels,
+  action: InventoryBatchAction,
+  row: InventoryManagementRow,
+): AdminBatchFieldModalConfig {
+  if (action === "isActive") {
+    return {
+      fieldLabel: labels.activeToggle,
+      initialValue: row.isActive,
+      options: [
+        { label: labels.active, value: "true" },
+        { label: labels.inactive, value: "false" },
+      ],
+      type: "boolean",
+    };
+  }
+
+  return {
+    fieldLabel: getInventoryBatchFieldLabel(labels, action),
+    initialValue: row[action],
+    type: "number",
+  };
+}
+
+function buildInventoryPayload(
+  row: InventoryManagementRow,
+  action: InventoryBatchAction,
+  value: boolean | number | string,
+) {
+  return {
+    isActive: action === "isActive" ? Boolean(value) : row.isActive,
+    lowStockThreshold:
+      action === "lowStockThreshold"
+        ? Number(value || 0)
+        : row.lowStockThreshold,
+    productSku: row.productSku,
+    stockQuantity:
+      action === "stockQuantity" ? Number(value || 0) : row.stockQuantity,
+  };
 }
 
 function InventoryFormModal({

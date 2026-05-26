@@ -41,20 +41,22 @@ type TabValue = "categories" | "sub-categories";
 export async function CategoriesSection({
   locale,
   page,
+  pageSize,
   tab,
 }: {
   locale: Locale;
   page: number;
+  pageSize?: number;
   tab?: string;
 }) {
   const activeTab: TabValue = tab === "sub-categories" ? "sub-categories" : "categories";
   const [categoriesResponse, subCategoriesResponse, categoryOptionsResponse] =
     await Promise.all([
       activeTab === "categories"
-        ? fetchAdminList<CategoryRow>("/categories", { page })
+        ? fetchAdminList<CategoryRow>("/categories", { page, pageSize })
         : Promise.resolve(null),
       activeTab === "sub-categories"
-        ? fetchAdminList<SubCategoryRow>("/sub-categories", { page })
+        ? fetchAdminList<SubCategoryRow>("/sub-categories", { page, pageSize })
         : Promise.resolve(null),
       fetchAdminList<CategoryRow>("/categories", { page: 1, pageSize: 100 }),
     ]);
@@ -64,6 +66,13 @@ export async function CategoriesSection({
       activeTab={activeTab}
       categories={categoriesResponse}
       categoryOptions={categoryOptionsResponse?.items ?? []}
+      currentPageSize={
+        (activeTab === "categories"
+          ? categoriesResponse?.meta.pageSize
+          : subCategoriesResponse?.meta.pageSize) ??
+        pageSize ??
+        50
+      }
       locale={locale}
       page={page}
       subCategories={subCategoriesResponse}

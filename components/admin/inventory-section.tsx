@@ -5,11 +5,13 @@ import { fetchAdminList, type AdminListResponse, createSantaApiUrl } from "@/lib
 import { getDictionary, type Locale } from "@/lib/i18n";
 import {
   AdminDataTable,
+  type AdminDataTableContextAction,
   type AdminDataTableColumn,
 } from "./admin-data-table";
 import {
   InventorySearchBar,
   InventoryRowActions,
+  InventoryTableEditController,
   InventoryToolbarActions,
 } from "./inventory-section.client";
 
@@ -64,13 +66,13 @@ export async function InventorySection({
     fetchAdminList<InventoryRow>("/inventory-stocks", {
       lowStockOnly: filters?.lowStockOnly,
       page,
-      pageSize: filters?.pageSize ?? 10,
+      pageSize: filters?.pageSize ?? 50,
       search: filters?.search,
     }),
     getInventorySummary(),
   ]);
   const rows = response?.items ?? [];
-  const currentPageSize = response?.meta.pageSize ?? filters?.pageSize ?? 10;
+  const currentPageSize = response?.meta.pageSize ?? filters?.pageSize ?? 50;
   const lowStockHref = createInventoryHref(locale, {
     lowStockOnly: true,
     page: 1,
@@ -162,6 +164,11 @@ export async function InventorySection({
       ),
     },
   ];
+  const contextMenuActions: AdminDataTableContextAction[] = [
+    { id: "stockQuantity", label: labels.columns.stockQuantity },
+    { id: "lowStockThreshold", label: labels.columns.lowStockThreshold },
+    { id: "isActive", label: labels.activeToggle },
+  ];
 
   return (
     <div className="admin-section-panel">
@@ -193,6 +200,7 @@ export async function InventorySection({
 
       <AdminDataTable
         columns={columns}
+        contextMenuActions={contextMenuActions}
         emptyLabel={response ? labels.empty : labels.fetchError}
         getRowId={(row) => row.id}
         getRowClassName={(row) =>
@@ -202,6 +210,7 @@ export async function InventorySection({
         }
         pagination={{
           currentPage: response?.meta.page ?? page,
+          currentPageSize,
           totalPages: response?.meta.totalPages ?? 1,
           getPageHref: (nextPage) =>
             createInventoryHref(locale, {
@@ -212,11 +221,14 @@ export async function InventorySection({
             }),
           previousLabel: labels.previousPage,
           nextLabel: labels.nextPage,
+          rowsPerPageLabel: labels.rowsPerPage,
         }}
         rows={rows}
         selectAllLabel={labels.selectAll}
         selectRowLabel={(row) => `${labels.selectRow} ${row.productSku}`}
+        tableId="inventory"
       />
+      <InventoryTableEditController labels={labels} locale={locale} rows={rows} />
     </div>
   );
 }
@@ -309,6 +321,12 @@ function getInventoryLabels(locale: Locale) {
         deleteBodyTemplate: "ยืนยันการลบข้อมูลสต๊อคของ {sku}",
         deleteTitle: "ยืนยันการลบข้อมูลสต๊อค",
         download: "ดาวน์โหลด",
+        active: "ACTIVE",
+        activeToggle: "การแสดงผล",
+        bulkEditDescription: (count: number, fieldLabel: string) =>
+          `อัปเดตฟิลด์ ${fieldLabel} ของสต๊อคพร้อมกัน ${count} รายการ`,
+        bulkEditTitle: (fieldLabel: string) =>
+          `แก้ไขข้อมูลสต๊อคหลายรายการ: ${fieldLabel}`,
         edit: "แก้ไข",
         editTitle: "แก้ไขข้อมูลสต๊อค",
         empty: "ไม่พบข้อมูลสต๊อค",
@@ -319,6 +337,7 @@ function getInventoryLabels(locale: Locale) {
         nextPage: "หน้าถัดไป",
         noSuggestions: "ไม่พบสินค้า",
         previousPage: "หน้าก่อนหน้า",
+        rowsPerPage: "จำนวนต่อหน้า",
         save: "บันทึก",
         saving: "กำลังบันทึก...",
         search: "ค้นหา",
@@ -326,6 +345,7 @@ function getInventoryLabels(locale: Locale) {
         searchTooShort: "พิมพ์อย่างน้อย 3 ตัวอักษร",
         selectAll: "เลือกรายการทั้งหมด",
         selectRow: "เลือกรายการ",
+        inactive: "INACTIVE",
         summary: {
           alert: "ดูรายการ",
           lowStock: "รายการสินค้าคงเหลือน้อย",
@@ -356,6 +376,12 @@ function getInventoryLabels(locale: Locale) {
         deleteBodyTemplate: "Please confirm deleting inventory stock for {sku}",
         deleteTitle: "Confirm Inventory Delete",
         download: "Download",
+        active: "ACTIVE",
+        activeToggle: "Visibility",
+        bulkEditDescription: (count: number, fieldLabel: string) =>
+          `Update ${fieldLabel} for ${count} stock records at once.`,
+        bulkEditTitle: (fieldLabel: string) =>
+          `Bulk edit inventory: ${fieldLabel}`,
         edit: "Edit",
         editTitle: "Edit Stock",
         empty: "No inventory stocks found",
@@ -366,6 +392,7 @@ function getInventoryLabels(locale: Locale) {
         nextPage: "Next page",
         noSuggestions: "No products found",
         previousPage: "Previous page",
+        rowsPerPage: "Rows per page",
         save: "Save",
         saving: "Saving...",
         search: "Search",
@@ -373,6 +400,7 @@ function getInventoryLabels(locale: Locale) {
         searchTooShort: "Enter at least 3 characters",
         selectAll: "Select all rows",
         selectRow: "Select row",
+        inactive: "INACTIVE",
         summary: {
           alert: "View",
           lowStock: "Low stock items",

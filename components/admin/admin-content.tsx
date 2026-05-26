@@ -39,6 +39,7 @@ export function AdminContent({
         <CategoriesSection
           locale={locale}
           page={page}
+          pageSize={productFilters?.pageSize}
           tab={productFilters?.tab}
         />
       );
@@ -47,6 +48,7 @@ export function AdminContent({
         <BrandsSection
           locale={locale}
           page={page}
+          pageSize={productFilters?.pageSize}
           search={productFilters?.search}
         />
       );
@@ -67,6 +69,7 @@ export function AdminContent({
         <NewsActivitiesSection
           locale={locale}
           page={page}
+          pageSize={productFilters?.pageSize}
           search={productFilters?.search}
         />
       );
@@ -75,6 +78,7 @@ export function AdminContent({
         <ArticlesSection
           locale={locale}
           page={page}
+          pageSize={productFilters?.pageSize}
           search={productFilters?.search}
         />
       );
@@ -83,6 +87,8 @@ export function AdminContent({
         <SettingsSection
           canManageUsers={canManageUsers}
           locale={locale}
+          page={page}
+          pageSize={productFilters?.pageSize}
           tab={productFilters?.tab}
         />
       );

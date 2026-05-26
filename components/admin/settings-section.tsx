@@ -60,10 +60,14 @@ type AdminUserRow = {
 export async function SettingsSection({
   canManageUsers = false,
   locale,
+  page = 1,
+  pageSize = 50,
   tab,
 }: {
   canManageUsers?: boolean;
   locale: Locale;
+  page?: number;
+  pageSize?: number;
   tab?: string;
 }) {
   const activeTab =
@@ -71,8 +75,8 @@ export async function SettingsSection({
   const [users, homeSettings, aboutSettings, socialContacts, faqs, categories] = await Promise.all([
     fetchAdminList<AdminUserRow>("/admin-users", {
       isActive: true,
-      page: 1,
-      pageSize: 50,
+      page: activeTab === "users" ? page : 1,
+      pageSize: activeTab === "users" ? pageSize : 50,
     }),
     fetchAdminList<HomeSettingRow>("/home-section-settings", {
       page: 1,
@@ -88,8 +92,8 @@ export async function SettingsSection({
       pageSize: 20,
     }),
     fetchAdminList<FaqRow>("/faqs", {
-      page: 1,
-      pageSize: 50,
+      page: activeTab === "faq" ? page : 1,
+      pageSize: activeTab === "faq" ? pageSize : 50,
     }),
     fetchAdminList<CategoryOption>("/categories", {
       page: 1,
@@ -103,10 +107,14 @@ export async function SettingsSection({
       activeTab={activeTab}
       canManageUsers={canManageUsers}
       categories={categories?.items ?? []}
+      faqMeta={faqs?.meta}
       faqs={faqs?.items ?? []}
       homeSettings={homeSettings?.items ?? []}
+      page={page}
+      pageSize={pageSize}
       locale={locale}
       socialContacts={socialContacts?.items ?? []}
+      userMeta={users?.meta}
       users={users?.items ?? []}
     />
   );
