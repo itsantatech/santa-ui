@@ -2,6 +2,7 @@ import Image from "next/image";
 import { ProductFilter, type ProductFilterOption } from "@/components/product-filter";
 import { ProductSearch } from "@/components/product-search";
 import {
+  type ProductEditorOption,
   ProductRowManagementActions,
   ProductToolbarActions,
 } from "./products-services-section";
@@ -108,6 +109,16 @@ export async function ProductsServicesSection({
     locale,
   );
   const brandOptions = toProductFilterOptions(brandResponse?.items ?? [], locale);
+  const productEditorCategoryOptions = toProductEditorOptions(
+    categoryResponse?.items ?? [],
+  );
+  const productEditorSubCategoryOptions = toProductEditorOptions(
+    subCategoryResponse?.items ?? [],
+    true,
+  );
+  const productEditorBrandOptions = toProductEditorOptions(
+    brandResponse?.items ?? [],
+  );
   const selectedCategory = findSelectedOption(categoryOptions, filters?.categoryCode);
   const selectedSubCategory = findSelectedOption(
     subCategoryOptions,
@@ -310,7 +321,14 @@ export async function ProductsServicesSection({
       className: "admin-table-actions-column",
       width: "96px",
       render: (row) => (
-        <ProductRowManagementActions labels={productUi} product={row} />
+        <ProductRowManagementActions
+          brandOptions={productEditorBrandOptions}
+          categoryOptions={productEditorCategoryOptions}
+          labels={productUi}
+          locale={locale}
+          product={row}
+          subCategoryOptions={productEditorSubCategoryOptions}
+        />
       ),
     },
   ];
@@ -325,7 +343,14 @@ export async function ProductsServicesSection({
           labels={productUi}
           locale={locale}
         />
-        <ProductToolbarActions labels={productUi} rows={rows} />
+        <ProductToolbarActions
+          brandOptions={productEditorBrandOptions}
+          categoryOptions={productEditorCategoryOptions}
+          labels={productUi}
+          locale={locale}
+          rows={rows}
+          subCategoryOptions={productEditorSubCategoryOptions}
+        />
       </div>
       <ProductFilter
         key={filterStateKey}
@@ -407,6 +432,18 @@ function findSelectedOption(
   }
 
   return options.find((option) => option.value === value);
+}
+
+function toProductEditorOptions(
+  items: ProductRelation[],
+  withParentCode = false,
+): ProductEditorOption[] {
+  return items.map((item) => ({
+    code: item.code,
+    nameEn: item.nameEn,
+    nameTh: item.nameTh,
+    parentCode: withParentCode ? item.categoryCode : undefined,
+  }));
 }
 
 function createProductsPageHref(
@@ -555,14 +592,50 @@ function getProductAdminUiLabels(locale: Locale) {
       editTitle: "แก้ไขสินค้า",
       error: "ไม่สามารถบันทึกข้อมูลได้",
       fileSelected: "ไฟล์ที่เลือก",
+      fields: {
+        brandCodes: "แบรนด์",
+        categoryCodes: "หมวดหมู่",
+        datasheetUrl: "Datasheet",
+        deliveryFee: "ค่าส่ง",
+        descriptionEn: "รายละเอียดภาษาอังกฤษ",
+        descriptionTh: "รายละเอียดภาษาไทย",
+        discountedPrice: "ราคาลด",
+        googleCategoryId: "Google Category ID",
+        imgUrl: "Image",
+        isActive: "แสดงผล",
+        isBestSeller: "Best seller",
+        isNewProduct: "New product",
+        isPromotion: "Promotion",
+        model: "Model",
+        nameEn: "ชื่อภาษาอังกฤษ",
+        nameTh: "ชื่อภาษาไทย",
+        price: "ราคา",
+        rank: "ลำดับ",
+        seoDescriptionEn: "SEO Description EN",
+        seoDescriptionTh: "SEO Description TH",
+        seoTitleEn: "SEO Title EN",
+        seoTitleTh: "SEO Title TH",
+        shortDescriptionEn: "คำอธิบายสั้นภาษาอังกฤษ",
+        shortDescriptionTh: "คำอธิบายสั้นภาษาไทย",
+        slug: "Slug",
+        subCategoryCodes: "หมวดหมู่ย่อย",
+      },
+      noDatasheet: "ยังไม่มีไฟล์ PDF",
       noImage: "ไม่มีรูป",
+      noMedia: "ยังไม่มีรูปภาพหรือวิดีโอ",
       noSuggestions: "ไม่พบสินค้า",
       rowsPerPage: "แถวต่อหน้า",
       save: "บันทึก",
+      saving: "กำลังบันทึก...",
       search: "ค้นหา",
       searchPlaceholder: "ค้นหาด้วย SKU, ชื่อ หรือรุ่น",
       searchTooShort: "พิมพ์อย่างน้อย 3 ตัวอักษร",
       template: "เทมเพลต",
+      uploadDatasheet: "อัปโหลด PDF",
+      uploadError: "ไม่สามารถอัปโหลดไฟล์ได้",
+      uploadImage: "อัปโหลดรูปภาพและวิดีโอ",
+      uploadingDatasheet: "กำลังอัปโหลด PDF...",
+      uploadingMedia: "กำลังอัปโหลดไฟล์...",
       upload: "อัปโหลด",
     }
   : {
@@ -583,14 +656,50 @@ function getProductAdminUiLabels(locale: Locale) {
       editTitle: "Edit product",
       error: "Unable to save product",
       fileSelected: "Selected file",
+      fields: {
+        brandCodes: "Brand",
+        categoryCodes: "Category",
+        datasheetUrl: "Datasheet",
+        deliveryFee: "Delivery Fee",
+        descriptionEn: "English Description",
+        descriptionTh: "Thai Description",
+        discountedPrice: "Discounted Price",
+        googleCategoryId: "Google Category ID",
+        imgUrl: "Image",
+        isActive: "Active",
+        isBestSeller: "Best seller",
+        isNewProduct: "New product",
+        isPromotion: "Promotion",
+        model: "Model",
+        nameEn: "English Name",
+        nameTh: "Thai Name",
+        price: "Price",
+        rank: "Rank",
+        seoDescriptionEn: "SEO Description EN",
+        seoDescriptionTh: "SEO Description TH",
+        seoTitleEn: "SEO Title EN",
+        seoTitleTh: "SEO Title TH",
+        shortDescriptionEn: "English Short Description",
+        shortDescriptionTh: "Thai Short Description",
+        slug: "Slug",
+        subCategoryCodes: "Sub-category",
+      },
+      noDatasheet: "No PDF uploaded",
       noImage: "No image",
+      noMedia: "No images or videos uploaded",
       noSuggestions: "No products found",
       rowsPerPage: "Rows per page",
       save: "Save",
+      saving: "Saving...",
       search: "Search",
       searchPlaceholder: "Search by SKU, name, or model",
       searchTooShort: "Enter at least 3 characters",
       template: "Template",
+      uploadDatasheet: "Upload PDF",
+      uploadError: "Unable to upload file",
+      uploadImage: "Upload images and videos",
+      uploadingDatasheet: "Uploading PDF...",
+      uploadingMedia: "Uploading files...",
       upload: "Upload",
     };
 }

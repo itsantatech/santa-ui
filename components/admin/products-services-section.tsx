@@ -1,8 +1,16 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, useMemo, useState } from "react";
+import {
+  type FormEvent,
+  type RefObject,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { ProductSearchSuggestion } from "@/components/product-search";
+import { RichTextEditor } from "@/components/rich-text-editor";
 
 export type ProductManagementRow = ProductSearchSuggestion & {
   rank: number;
@@ -31,6 +39,18 @@ export type ProductManagementRow = ProductSearchSuggestion & {
   brands: { code: string }[];
 };
 
+type UploadedFileResponse = {
+  signedUrl?: string;
+  url?: string;
+};
+
+export type ProductEditorOption = {
+  code: string;
+  nameEn: string;
+  nameTh: string;
+  parentCode?: string;
+};
+
 type ProductFormValue = {
   rank: string;
   nameTh: string;
@@ -40,7 +60,7 @@ type ProductFormValue = {
   descriptionTh: string;
   descriptionEn: string;
   datasheetUrl: string;
-  imgUrl: string;
+  imgUrl: string[];
   slug: string;
   price: string;
   deliveryFee: string;
@@ -55,9 +75,9 @@ type ProductFormValue = {
   isBestSeller: boolean;
   isPromotion: boolean;
   discountedPrice: string;
-  categoryCodes: string;
-  subCategoryCodes: string;
-  brandCodes: string;
+  categoryCodes: string[];
+  subCategoryCodes: string[];
+  brandCodes: string[];
 };
 
 type ProductLabels = {
@@ -73,20 +93,64 @@ type ProductLabels = {
   editTitle: string;
   error: string;
   fileSelected: string;
+  fields: {
+    brandCodes: string;
+    categoryCodes: string;
+    datasheetUrl: string;
+    deliveryFee: string;
+    descriptionEn: string;
+    descriptionTh: string;
+    discountedPrice: string;
+    googleCategoryId: string;
+    imgUrl: string;
+    isActive: string;
+    isBestSeller: string;
+    isNewProduct: string;
+    isPromotion: string;
+    model: string;
+    nameEn: string;
+    nameTh: string;
+    price: string;
+    rank: string;
+    seoDescriptionEn: string;
+    seoDescriptionTh: string;
+    seoTitleEn: string;
+    seoTitleTh: string;
+    shortDescriptionEn: string;
+    shortDescriptionTh: string;
+    slug: string;
+    subCategoryCodes: string;
+  };
+  noDatasheet: string;
+  noMedia: string;
   noSuggestions: string;
   save: string;
+  saving: string;
   search: string;
   searchPlaceholder: string;
   searchTooShort: string;
   template: string;
+  uploadDatasheet: string;
+  uploadError: string;
+  uploadImage: string;
+  uploadingDatasheet: string;
+  uploadingMedia: string;
   upload: string;
 };
 
 export function ProductToolbarActions({
+  brandOptions,
+  categoryOptions,
   labels,
+  locale,
+  subCategoryOptions,
 }: {
+  brandOptions: ProductEditorOption[];
+  categoryOptions: ProductEditorOption[];
   labels: ProductLabels;
+  locale: "th" | "en";
   rows?: ProductManagementRow[];
+  subCategoryOptions: ProductEditorOption[];
 }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -161,9 +225,13 @@ export function ProductToolbarActions({
       </button>
       {isAddOpen ? (
         <ProductFormModal
+          brandOptions={brandOptions}
+          categoryOptions={categoryOptions}
           labels={labels}
+          locale={locale}
           mode="add"
           onClose={() => setIsAddOpen(false)}
+          subCategoryOptions={subCategoryOptions}
         />
       ) : null}
       {isUploadOpen ? (
@@ -174,11 +242,19 @@ export function ProductToolbarActions({
 }
 
 export function ProductRowManagementActions({
+  brandOptions,
+  categoryOptions,
   labels,
+  locale,
   product,
+  subCategoryOptions,
 }: {
+  brandOptions: ProductEditorOption[];
+  categoryOptions: ProductEditorOption[];
   labels: ProductLabels;
+  locale: "th" | "en";
   product: ProductManagementRow;
+  subCategoryOptions: ProductEditorOption[];
 }) {
   const [mode, setMode] = useState<"edit" | "delete" | null>(null);
 
@@ -208,10 +284,14 @@ export function ProductRowManagementActions({
       </div>
       {mode === "edit" ? (
         <ProductFormModal
+          brandOptions={brandOptions}
+          categoryOptions={categoryOptions}
           labels={labels}
+          locale={locale}
           mode="edit"
           onClose={() => setMode(null)}
           product={product}
+          subCategoryOptions={subCategoryOptions}
         />
       ) : null}
       {mode === "delete" ? (
@@ -345,33 +425,143 @@ function ProductUploadModal({
 }
 
 function ProductFormModal({
+  brandOptions,
+  categoryOptions,
   labels,
+  locale,
   mode,
   onClose,
   product,
+  subCategoryOptions,
 }: {
+  brandOptions: ProductEditorOption[];
+  categoryOptions: ProductEditorOption[];
   labels: ProductLabels;
+  locale: "th" | "en";
   mode: "add" | "edit";
   onClose: () => void;
   product?: ProductManagementRow;
+  subCategoryOptions: ProductEditorOption[];
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const initialValue = useMemo(() => getInitialFormValue(product), [product]);
-  const [isPromotion, setIsPromotion] = useState(initialValue.isPromotion);
-  const [discountedPrice, setDiscountedPrice] = useState(initialValue.discountedPrice);
+  const [isUploadingDatasheet, setIsUploadingDatasheet] = useState(false);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const datasheetInputRef = useRef<HTMLInputElement | null>(null);
+  const mediaInputRef = useRef<HTMLInputElement | null>(null);
+  const [form, setForm] = useState<ProductFormValue>(() =>
+    getInitialFormValue(product),
+  );
+  const availableSubCategoryOptions = useMemo(
+    () =>
+      form.categoryCodes.length > 0
+        ? subCategoryOptions.filter((option) =>
+            form.categoryCodes.includes(option.parentCode ?? ""),
+          )
+        : [],
+    [form.categoryCodes, subCategoryOptions],
+  );
+
+  async function uploadFile({
+    file,
+    folder,
+  }: {
+    file: File;
+    folder: string;
+  }) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("visibility", "public");
+    formData.append("folder", folder);
+
+    const response = await fetch("/api/admin/files/upload", {
+      body: formData,
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      throw new Error(labels.uploadError);
+    }
+
+    const result = (await response.json()) as UploadedFileResponse;
+    const nextUrl = result.url ?? result.signedUrl;
+
+    if (!nextUrl) {
+      throw new Error(labels.uploadError);
+    }
+
+    return nextUrl;
+  }
+
+  async function handleDatasheetSelected(files: FileList | null) {
+    const file = files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (file.type !== "application/pdf") {
+      setError(labels.uploadError);
+      return;
+    }
+
+    setError("");
+    setIsUploadingDatasheet(true);
+
+    try {
+      const url = await uploadFile({ file, folder: "products/datasheets" });
+      setForm((current) => ({ ...current, datasheetUrl: url }));
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error ? uploadError.message : labels.uploadError,
+      );
+    } finally {
+      setIsUploadingDatasheet(false);
+      if (datasheetInputRef.current) {
+        datasheetInputRef.current.value = "";
+      }
+    }
+  }
+
+  async function handleMediaSelected(files: FileList | null) {
+    if (!files?.length) {
+      return;
+    }
+
+    setError("");
+    setIsUploadingMedia(true);
+
+    try {
+      const uploadedUrls: string[] = [];
+
+      for (const file of Array.from(files)) {
+        uploadedUrls.push(
+          await uploadFile({ file, folder: "products/media" }),
+        );
+      }
+
+      setForm((current) => ({
+        ...current,
+        imgUrl: [...current.imgUrl, ...uploadedUrls],
+      }));
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error ? uploadError.message : labels.uploadError,
+      );
+    } finally {
+      setIsUploadingMedia(false);
+      if (mediaInputRef.current) {
+        mediaInputRef.current.value = "";
+      }
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSaving(true);
     setError("");
-
-    const form = new FormData(event.currentTarget);
-    const payload = getProductPayload(form, {
-      discountedPrice,
-      isPromotion,
-    });
+    const payload = getProductPayload(form);
     const response = await fetch(
       product ? `/api/admin/products/${encodeURIComponent(product.sku)}` : "/api/admin/products",
       {
@@ -417,16 +607,20 @@ function ProductFormModal({
         </div>
         <form className="admin-product-form" onSubmit={handleSubmit}>
           <ProductFormFields
-            discountedPrice={discountedPrice}
-            initialValue={initialValue}
-            isPromotion={isPromotion}
-            onDiscountedPriceChange={setDiscountedPrice}
-            onPromotionChange={(nextValue) => {
-              setIsPromotion(nextValue);
-              if (!nextValue) {
-                setDiscountedPrice("");
-              }
-            }}
+            availableSubCategoryOptions={availableSubCategoryOptions}
+            brandOptions={brandOptions}
+            categoryOptions={categoryOptions}
+            datasheetInputRef={datasheetInputRef}
+            form={form}
+            isUploadingDatasheet={isUploadingDatasheet}
+            isUploadingMedia={isUploadingMedia}
+            labels={labels}
+            locale={locale}
+            mediaInputRef={mediaInputRef}
+            onChange={setForm}
+            onDatasheetSelected={handleDatasheetSelected}
+            onMediaSelected={handleMediaSelected}
+            subCategoryOptions={subCategoryOptions}
           />
           {error ? <p className="admin-product-form-error">{error}</p> : null}
           <div className="admin-product-modal-actions">
@@ -437,8 +631,12 @@ function ProductFormModal({
             >
               {labels.cancel}
             </button>
-            <button className="admin-product-add-button" disabled={isSaving} type="submit">
-              {labels.save}
+            <button
+              className="admin-product-add-button"
+              disabled={isSaving || isUploadingDatasheet || isUploadingMedia}
+              type="submit"
+            >
+              {isSaving ? labels.saving : labels.save}
             </button>
           </div>
         </form>
@@ -448,62 +646,150 @@ function ProductFormModal({
 }
 
 function ProductFormFields({
-  discountedPrice,
-  initialValue,
-  isPromotion,
-  onDiscountedPriceChange,
-  onPromotionChange,
+  availableSubCategoryOptions,
+  brandOptions,
+  categoryOptions,
+  datasheetInputRef,
+  form,
+  isUploadingDatasheet,
+  isUploadingMedia,
+  labels,
+  locale,
+  mediaInputRef,
+  onChange,
+  onDatasheetSelected,
+  onMediaSelected,
+  subCategoryOptions,
 }: {
-  discountedPrice: string;
-  initialValue: ProductFormValue;
-  isPromotion: boolean;
-  onDiscountedPriceChange: (value: string) => void;
-  onPromotionChange: (value: boolean) => void;
+  availableSubCategoryOptions: ProductEditorOption[];
+  brandOptions: ProductEditorOption[];
+  categoryOptions: ProductEditorOption[];
+  datasheetInputRef: RefObject<HTMLInputElement | null>;
+  form: ProductFormValue;
+  isUploadingDatasheet: boolean;
+  isUploadingMedia: boolean;
+  labels: ProductLabels;
+  locale: "th" | "en";
+  mediaInputRef: RefObject<HTMLInputElement | null>;
+  onChange: (
+    updater: ProductFormValue | ((current: ProductFormValue) => ProductFormValue),
+  ) => void;
+  onDatasheetSelected: (files: FileList | null) => Promise<void>;
+  onMediaSelected: (files: FileList | null) => Promise<void>;
+  subCategoryOptions: ProductEditorOption[];
 }) {
+  const localeName = (option: ProductEditorOption) =>
+    locale === "th" ? option.nameTh : option.nameEn;
+
   return (
     <div className="admin-product-form-grid">
-      <TextField label="Rank" name="rank" type="number" value={initialValue.rank} />
-      <TextField label="Slug" name="slug" required value={initialValue.slug} />
-      <TextField label="Thai Name" name="nameTh" required value={initialValue.nameTh} />
-      <TextField label="English Name" name="nameEn" required value={initialValue.nameEn} />
-      <TextField label="Model" name="model" value={initialValue.model} />
-      <TextField label="Price" name="price" type="number" value={initialValue.price} />
-      <TextField
-        label="Delivery Fee"
-        name="deliveryFee"
-        type="number"
-        value={initialValue.deliveryFee}
-      />
+      <ControlledTextField label={labels.fields.rank} value={form.rank} type="number" onChange={(value) => onChange((current) => ({ ...current, rank: value }))} />
+      <ControlledTextField label={labels.fields.slug} required value={form.slug} onChange={(value) => onChange((current) => ({ ...current, slug: value }))} />
+      <ControlledTextField label={labels.fields.nameTh} required value={form.nameTh} onChange={(value) => onChange((current) => ({ ...current, nameTh: value }))} />
+      <ControlledTextField label={labels.fields.nameEn} required value={form.nameEn} onChange={(value) => onChange((current) => ({ ...current, nameEn: value }))} />
+      <ControlledTextField label={labels.fields.model} value={form.model} onChange={(value) => onChange((current) => ({ ...current, model: value }))} />
+      <ControlledTextField label={labels.fields.price} value={form.price} type="number" onChange={(value) => onChange((current) => ({ ...current, price: value }))} />
+      <ControlledTextField label={labels.fields.deliveryFee} value={form.deliveryFee} type="number" onChange={(value) => onChange((current) => ({ ...current, deliveryFee: value }))} />
       <ControlledTextField
-        label="Discounted Price"
-        name="discountedPrice"
+        disabled={!form.isPromotion}
+        label={labels.fields.discountedPrice}
         type="number"
-        value={discountedPrice}
-        disabled={!isPromotion}
-        onChange={onDiscountedPriceChange}
+        value={form.discountedPrice}
+        onChange={(value) => onChange((current) => ({ ...current, discountedPrice: value }))}
       />
-      <TextField label="Datasheet URL" name="datasheetUrl" value={initialValue.datasheetUrl} />
-      <TextField label="Image URLs" name="imgUrl" value={initialValue.imgUrl} />
-      <TextField label="Google Category ID" name="googleCategoryId" value={initialValue.googleCategoryId} />
-      <TextField label="Category Codes" name="categoryCodes" value={initialValue.categoryCodes} />
-      <TextField label="Sub-category Codes" name="subCategoryCodes" value={initialValue.subCategoryCodes} />
-      <TextField label="Brand Codes" name="brandCodes" value={initialValue.brandCodes} />
-      <TextArea label="Thai Short Description" name="shortDescriptionTh" required value={initialValue.shortDescriptionTh} />
-      <TextArea label="English Short Description" name="shortDescriptionEn" required value={initialValue.shortDescriptionEn} />
-      <TextArea label="Thai Description" name="descriptionTh" required value={initialValue.descriptionTh} />
-      <TextArea label="English Description" name="descriptionEn" required value={initialValue.descriptionEn} />
-      <TextField label="Thai SEO Title" name="seoTitleTh" required value={initialValue.seoTitleTh} />
-      <TextField label="English SEO Title" name="seoTitleEn" required value={initialValue.seoTitleEn} />
-      <TextArea label="Thai SEO Description" name="seoDescriptionTh" required value={initialValue.seoDescriptionTh} />
-      <TextArea label="English SEO Description" name="seoDescriptionEn" required value={initialValue.seoDescriptionEn} />
-      <CheckboxField label="Active" name="isActive" checked={initialValue.isActive} />
-      <CheckboxField label="New product" name="isNewProduct" checked={initialValue.isNewProduct} />
-      <CheckboxField label="Best seller" name="isBestSeller" checked={initialValue.isBestSeller} />
+      <DatasheetUploader
+        fileInputRef={datasheetInputRef}
+        isUploading={isUploadingDatasheet}
+        label={labels.fields.datasheetUrl}
+        labels={labels}
+        onClear={() => onChange((current) => ({ ...current, datasheetUrl: "" }))}
+        onFilesSelected={onDatasheetSelected}
+        url={form.datasheetUrl}
+      />
+      <MediaUploader
+        fileInputRef={mediaInputRef}
+        files={form.imgUrl}
+        isUploading={isUploadingMedia}
+        label={labels.fields.imgUrl}
+        labels={labels}
+        onFilesSelected={onMediaSelected}
+        onRemove={(targetUrl) =>
+          onChange((current) => ({
+            ...current,
+            imgUrl: current.imgUrl.filter((url) => url !== targetUrl),
+          }))
+        }
+      />
+      <ControlledTextField label={labels.fields.googleCategoryId} value={form.googleCategoryId} onChange={(value) => onChange((current) => ({ ...current, googleCategoryId: value }))} />
+      <MultiSelectField
+        label={labels.fields.categoryCodes}
+        options={categoryOptions}
+        selectedValues={form.categoryCodes}
+        getOptionLabel={localeName}
+        noResultsLabel={labels.noSuggestions}
+        searchPlaceholder={labels.search}
+        onChange={(values) => {
+          const nextSubCategoryOptions = subCategoryOptions.filter((option) =>
+            values.includes(option.parentCode ?? ""),
+          );
+
+          onChange((current) => ({
+            ...current,
+            categoryCodes: values,
+            subCategoryCodes: current.subCategoryCodes.filter((code) =>
+              nextSubCategoryOptions.some((option) => option.code === code),
+            ),
+          }));
+        }}
+      />
+      <MultiSelectField
+        disabled={form.categoryCodes.length === 0}
+        label={labels.fields.subCategoryCodes}
+        options={availableSubCategoryOptions}
+        selectedValues={form.subCategoryCodes}
+        getOptionLabel={localeName}
+        noResultsLabel={labels.noSuggestions}
+        onChange={(values) => onChange((current) => ({ ...current, subCategoryCodes: values }))}
+        searchPlaceholder={labels.search}
+      />
+      <MultiSelectField
+        label={labels.fields.brandCodes}
+        options={brandOptions}
+        selectedValues={form.brandCodes}
+        getOptionLabel={localeName}
+        noResultsLabel={labels.noSuggestions}
+        onChange={(values) => onChange((current) => ({ ...current, brandCodes: values }))}
+        searchPlaceholder={labels.search}
+      />
+      <ControlledTextArea label={labels.fields.shortDescriptionTh} required value={form.shortDescriptionTh} onChange={(value) => onChange((current) => ({ ...current, shortDescriptionTh: value }))} />
+      <ControlledTextArea label={labels.fields.shortDescriptionEn} required value={form.shortDescriptionEn} onChange={(value) => onChange((current) => ({ ...current, shortDescriptionEn: value }))} />
+      <RichTextEditor
+        label={labels.fields.descriptionTh}
+        onChange={(value) => onChange((current) => ({ ...current, descriptionTh: value }))}
+        value={form.descriptionTh}
+      />
+      <RichTextEditor
+        label={labels.fields.descriptionEn}
+        onChange={(value) => onChange((current) => ({ ...current, descriptionEn: value }))}
+        value={form.descriptionEn}
+      />
+      <ControlledTextField label={labels.fields.seoTitleTh} required value={form.seoTitleTh} onChange={(value) => onChange((current) => ({ ...current, seoTitleTh: value }))} />
+      <ControlledTextField label={labels.fields.seoTitleEn} required value={form.seoTitleEn} onChange={(value) => onChange((current) => ({ ...current, seoTitleEn: value }))} />
+      <ControlledTextArea label={labels.fields.seoDescriptionTh} required value={form.seoDescriptionTh} onChange={(value) => onChange((current) => ({ ...current, seoDescriptionTh: value }))} />
+      <ControlledTextArea label={labels.fields.seoDescriptionEn} required value={form.seoDescriptionEn} onChange={(value) => onChange((current) => ({ ...current, seoDescriptionEn: value }))} />
+      <ControlledCheckboxField checked={form.isActive} label={labels.fields.isActive} onChange={(checked) => onChange((current) => ({ ...current, isActive: checked }))} />
+      <ControlledCheckboxField checked={form.isNewProduct} label={labels.fields.isNewProduct} onChange={(checked) => onChange((current) => ({ ...current, isNewProduct: checked }))} />
+      <ControlledCheckboxField checked={form.isBestSeller} label={labels.fields.isBestSeller} onChange={(checked) => onChange((current) => ({ ...current, isBestSeller: checked }))} />
       <ControlledCheckboxField
-        checked={isPromotion}
-        label="Promotion"
-        name="isPromotion"
-        onChange={onPromotionChange}
+        checked={form.isPromotion}
+        label={labels.fields.isPromotion}
+        onChange={(checked) =>
+          onChange((current) => ({
+            ...current,
+            discountedPrice: checked ? current.discountedPrice : "",
+            isPromotion: checked,
+          }))
+        }
       />
     </div>
   );
@@ -586,39 +872,9 @@ function DeleteProductModal({
   );
 }
 
-function TextField({
-  disabled = false,
-  label,
-  name,
-  required = false,
-  type = "text",
-  value,
-}: {
-  disabled?: boolean;
-  label: string;
-  name: keyof ProductFormValue;
-  required?: boolean;
-  type?: "number" | "text";
-  value: string;
-}) {
-  return (
-    <label className="admin-product-form-field">
-      <span>{label}</span>
-      <input
-        defaultValue={value}
-        disabled={disabled}
-        name={name}
-        required={required}
-        type={type}
-      />
-    </label>
-  );
-}
-
 function ControlledTextField({
   disabled = false,
   label,
-  name,
   required = false,
   type = "text",
   value,
@@ -626,7 +882,6 @@ function ControlledTextField({
 }: {
   disabled?: boolean;
   label: string;
-  name: keyof ProductFormValue;
   required?: boolean;
   type?: "number" | "text";
   value: string;
@@ -637,7 +892,6 @@ function ControlledTextField({
       <span>{label}</span>
       <input
         disabled={disabled}
-        name={name}
         onChange={(event) => onChange(event.target.value)}
         required={required}
         type={type}
@@ -647,63 +901,338 @@ function ControlledTextField({
   );
 }
 
-function TextArea({
-  label,
-  name,
-  required = false,
-  value,
-}: {
-  label: string;
-  name: keyof ProductFormValue;
-  required?: boolean;
-  value: string;
-}) {
-  return (
-    <label className="admin-product-form-field admin-product-form-field-wide">
-      <span>{label}</span>
-      <textarea defaultValue={value} name={name} required={required} rows={3} />
-    </label>
-  );
-}
-
-function CheckboxField({
-  checked,
-  label,
-  name,
-}: {
-  checked: boolean;
-  label: string;
-  name: keyof ProductFormValue;
-}) {
-  return (
-    <label className="admin-product-checkbox-field">
-      <input defaultChecked={checked} name={name} type="checkbox" value="true" />
-      <span>{label}</span>
-    </label>
-  );
-}
-
 function ControlledCheckboxField({
   checked,
   label,
-  name,
   onChange,
 }: {
   checked: boolean;
   label: string;
-  name: keyof ProductFormValue;
   onChange: (checked: boolean) => void;
 }) {
   return (
     <label className="admin-product-checkbox-field">
       <input
         checked={checked}
-        name={name}
         onChange={(event) => onChange(event.target.checked)}
         type="checkbox"
         value="true"
       />
       <span>{label}</span>
+    </label>
+  );
+}
+
+function ControlledTextArea({
+  label,
+  required = false,
+  value,
+  onChange,
+}: {
+  label: string;
+  required?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="admin-product-form-field admin-product-form-field-wide">
+      <span>{label}</span>
+      <textarea
+        onChange={(event) => onChange(event.target.value)}
+        required={required}
+        rows={3}
+        value={value}
+      />
+    </label>
+  );
+}
+
+function DatasheetUploader({
+  fileInputRef,
+  isUploading,
+  label,
+  labels,
+  onClear,
+  onFilesSelected,
+  url,
+}: {
+  fileInputRef: RefObject<HTMLInputElement | null>;
+  isUploading: boolean;
+  label: string;
+  labels: ProductLabels;
+  onClear: () => void;
+  onFilesSelected: (files: FileList | null) => Promise<void>;
+  url: string;
+}) {
+  return (
+    <div className="admin-product-field admin-product-field-wide">
+      <span>{label}</span>
+      <div className="admin-content-media-uploader">
+        <input
+          accept="application/pdf"
+          className="admin-inventory-file-input"
+          hidden
+          onChange={(event) => void onFilesSelected(event.target.files)}
+          ref={fileInputRef}
+          type="file"
+        />
+        <button
+          className="admin-product-secondary-button"
+          onClick={() => fileInputRef.current?.click()}
+          type="button"
+        >
+          <span className="material-symbols-outlined" aria-hidden="true">
+            upload_file
+          </span>
+          {isUploading ? labels.uploadingDatasheet : labels.uploadDatasheet}
+        </button>
+        {url ? (
+          <div className="admin-content-media-list">
+            <div className="admin-content-media-item">
+              <a href={url} rel="noreferrer" target="_blank">
+                {url}
+              </a>
+              <button onClick={onClear} type="button">
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  close
+                </span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="admin-table-muted">{labels.noDatasheet}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MediaUploader({
+  fileInputRef,
+  files,
+  isUploading,
+  label,
+  labels,
+  onFilesSelected,
+  onRemove,
+}: {
+  fileInputRef: RefObject<HTMLInputElement | null>;
+  files: string[];
+  isUploading: boolean;
+  label: string;
+  labels: ProductLabels;
+  onFilesSelected: (files: FileList | null) => Promise<void>;
+  onRemove: (url: string) => void;
+}) {
+  return (
+    <div className="admin-product-field admin-product-field-wide">
+      <span>{label}</span>
+      <div className="admin-content-media-uploader">
+        <input
+          accept="image/*,video/mp4,video/quicktime,video/webm,video/x-m4v"
+          className="admin-inventory-file-input"
+          hidden
+          multiple
+          onChange={(event) => void onFilesSelected(event.target.files)}
+          ref={fileInputRef}
+          type="file"
+        />
+        <button
+          className="admin-product-secondary-button"
+          onClick={() => fileInputRef.current?.click()}
+          type="button"
+        >
+          <span className="material-symbols-outlined" aria-hidden="true">
+            upload_file
+          </span>
+          {isUploading ? labels.uploadingMedia : labels.uploadImage}
+        </button>
+        {files.length > 0 ? (
+          <div className="admin-content-media-list">
+            {files.map((url) => (
+              <div className="admin-content-media-item" key={url}>
+                <a href={url} rel="noreferrer" target="_blank">
+                  {url}
+                </a>
+                <button onClick={() => onRemove(url)} type="button">
+                  <span className="material-symbols-outlined" aria-hidden="true">
+                    close
+                  </span>
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="admin-table-muted">{labels.noMedia}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MultiSelectField({
+  disabled = false,
+  getOptionLabel,
+  label,
+  noResultsLabel,
+  onChange,
+  options,
+  searchPlaceholder,
+  selectedValues,
+}: {
+  disabled?: boolean;
+  getOptionLabel: (option: ProductEditorOption) => string;
+  label: string;
+  noResultsLabel: string;
+  onChange: (values: string[]) => void;
+  options: ProductEditorOption[];
+  searchPlaceholder?: string;
+  selectedValues: string[];
+}) {
+  const inputId = `${label.replace(/\s+/g, "-").toLowerCase()}-combobox`;
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selectedOptions = options.filter((option) => selectedValues.includes(option.code));
+  const filteredOptions = options.filter((option) =>
+    getOptionLabel(option).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
+  );
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
+
+  function toggleValue(code: string) {
+    if (selectedValues.includes(code)) {
+      onChange(selectedValues.filter((value) => value !== code));
+      return;
+    }
+
+    onChange([code]);
+  }
+
+  const summary =
+    selectedOptions.length > 0
+      ? selectedOptions.map(getOptionLabel).join(", ")
+      : label;
+
+  return (
+    <label className="admin-product-form-field admin-product-form-field-wide">
+      <span>{label}</span>
+      <div
+        className={`admin-product-multiselect${disabled ? " is-disabled" : ""}`}
+        ref={containerRef}
+      >
+        <div className="admin-product-multiselect-combobox">
+          <span className="material-symbols-outlined" aria-hidden="true">
+            search
+          </span>
+          <input
+            aria-autocomplete="list"
+            aria-controls={`${inputId}-suggestions`}
+            aria-expanded={isOpen}
+            autoComplete="off"
+            className="admin-product-multiselect-input"
+            disabled={disabled}
+            id={inputId}
+            onBlur={() => {
+              window.setTimeout(() => setIsOpen(false), 120);
+            }}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setIsOpen(true);
+            }}
+            onFocus={() => setIsOpen(true)}
+            placeholder={selectedOptions.length > 0 ? summary : searchPlaceholder ?? label}
+            role="combobox"
+            type="search"
+            value={query}
+          />
+          <span className="material-symbols-outlined" aria-hidden="true">
+            arrow_drop_down
+          </span>
+        </div>
+        {selectedOptions.length > 0 ? (
+          <div className="admin-product-multiselect-tags">
+            {selectedOptions.map((option) => (
+              <button
+                className="admin-product-multiselect-tag"
+                disabled={disabled}
+                key={option.code}
+                onClick={() => toggleValue(option.code)}
+                type="button"
+              >
+                <span>{getOptionLabel(option)}</span>
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  close
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {isOpen ? (
+          <div
+            className="admin-product-multiselect-panel"
+            id={`${inputId}-suggestions`}
+            role="listbox"
+          >
+            <div className="admin-product-multiselect-options">
+              {filteredOptions.length > 0 ? (
+                filteredOptions.map((option) => {
+                  const checked = selectedValues.includes(option.code);
+
+                  return (
+                    <button
+                      aria-selected={checked}
+                      className={`admin-product-multiselect-option${checked ? " is-selected" : ""}`}
+                      key={option.code}
+                      onClick={() => {
+                        toggleValue(option.code);
+                        setQuery("");
+                        setIsOpen(false);
+                      }}
+                      onMouseDown={(event) => event.preventDefault()}
+                      role="option"
+                      type="button"
+                    >
+                      <span>{getOptionLabel(option)}</span>
+                      {checked ? (
+                        <span className="material-symbols-outlined" aria-hidden="true">
+                          check
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })
+              ) : (
+                <p className="admin-product-multiselect-empty">{noResultsLabel}</p>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
     </label>
   );
 }
@@ -718,7 +1247,7 @@ function getInitialFormValue(product?: ProductManagementRow): ProductFormValue {
     descriptionTh: product?.descriptionTh ?? "",
     descriptionEn: product?.descriptionEn ?? "",
     datasheetUrl: product?.datasheetUrl ?? "",
-    imgUrl: product?.imgUrl.join(", ") ?? "",
+    imgUrl: product?.imgUrl ?? [],
     slug: product?.slug ?? "",
     price: product?.price === null || product?.price === undefined ? "" : String(product.price),
     deliveryFee:
@@ -740,50 +1269,43 @@ function getInitialFormValue(product?: ProductManagementRow): ProductFormValue {
         ? ""
         : String(product.discountedPrice),
     categoryCodes: (product?.categories ?? product?.categoryCods ?? [])
-      .map((category) => category.code)
-      .join(", "),
-    subCategoryCodes: product?.subCategories.map((subCategory) => subCategory.code).join(", ") ?? "",
-    brandCodes: product?.brands.map((brand) => brand.code).join(", ") ?? "",
+      .slice(0, 1)
+      .map((category) => category.code),
+    subCategoryCodes: (product?.subCategories ?? [])
+      .slice(0, 1)
+      .map((subCategory) => subCategory.code),
+    brandCodes: (product?.brands ?? []).slice(0, 1).map((brand) => brand.code),
   };
 }
 
-function getProductPayload(
-  form: FormData,
-  {
-    discountedPrice,
-    isPromotion,
-  }: {
-    discountedPrice: string;
-    isPromotion: boolean;
-  },
-) {
+function getProductPayload(form: ProductFormValue) {
   return {
-    rank: getNumber(form, "rank") ?? 0,
-    nameTh: getString(form, "nameTh"),
-    nameEn: getString(form, "nameEn"),
-    shortDescriptionTh: getString(form, "shortDescriptionTh"),
-    shortDescriptionEn: getString(form, "shortDescriptionEn"),
-    descriptionTh: getString(form, "descriptionTh"),
-    descriptionEn: getString(form, "descriptionEn"),
-    datasheetUrl: getNullableString(form, "datasheetUrl"),
-    imgUrl: getList(form, "imgUrl"),
-    slug: getString(form, "slug"),
-    price: getNumber(form, "price"),
-    deliveryFee: getNumber(form, "deliveryFee"),
-    model: getNullableString(form, "model"),
-    seoTitleTh: getString(form, "seoTitleTh"),
-    seoTitleEn: getString(form, "seoTitleEn"),
-    seoDescriptionTh: getString(form, "seoDescriptionTh"),
-    seoDescriptionEn: getString(form, "seoDescriptionEn"),
-    googleCategoryId: getNullableString(form, "googleCategoryId"),
-    isActive: form.get("isActive") === "true",
-    isNewProduct: form.get("isNewProduct") === "true",
-    isBestSeller: form.get("isBestSeller") === "true",
-    isPromotion,
-    discountedPrice: isPromotion ? getNumberFromValue(discountedPrice) : null,
-    categoryCodes: getList(form, "categoryCodes"),
-    subCategoryCodes: getList(form, "subCategoryCodes"),
-    brandCodes: getList(form, "brandCodes"),
+    rank: getNumberFromValue(form.rank) ?? 0,
+    nameTh: form.nameTh.trim(),
+    nameEn: form.nameEn.trim(),
+    shortDescriptionTh: form.shortDescriptionTh.trim(),
+    shortDescriptionEn: form.shortDescriptionEn.trim(),
+    descriptionTh: form.descriptionTh,
+    descriptionEn: form.descriptionEn,
+    datasheetUrl: form.datasheetUrl.trim() || null,
+    imgUrl: form.imgUrl,
+    slug: form.slug.trim(),
+    price: getNumberFromValue(form.price),
+    deliveryFee: getNumberFromValue(form.deliveryFee),
+    model: form.model.trim() || null,
+    seoTitleTh: form.seoTitleTh.trim(),
+    seoTitleEn: form.seoTitleEn.trim(),
+    seoDescriptionTh: form.seoDescriptionTh.trim(),
+    seoDescriptionEn: form.seoDescriptionEn.trim(),
+    googleCategoryId: form.googleCategoryId.trim() || null,
+    isActive: form.isActive,
+    isNewProduct: form.isNewProduct,
+    isBestSeller: form.isBestSeller,
+    isPromotion: form.isPromotion,
+    discountedPrice: form.isPromotion ? getNumberFromValue(form.discountedPrice) : null,
+    categoryCodes: form.categoryCodes,
+    subCategoryCodes: form.subCategoryCodes,
+    brandCodes: form.brandCodes,
   };
 }
 
@@ -792,20 +1314,6 @@ function getDownloadFilename(response: Response, fallbackFilename: string) {
   const filename = disposition?.match(/filename="?([^";]+)"?/)?.[1];
 
   return filename ? decodeURIComponent(filename) : fallbackFilename;
-}
-
-function getString(form: FormData, name: string) {
-  return String(form.get(name) ?? "").trim();
-}
-
-function getNullableString(form: FormData, name: string) {
-  const value = getString(form, name);
-
-  return value || null;
-}
-
-function getNumber(form: FormData, name: string) {
-  return getNumberFromValue(getString(form, name));
 }
 
 function getNumberFromValue(value: string) {
@@ -817,11 +1325,4 @@ function getNumberFromValue(value: string) {
   const numberValue = Number(value);
 
   return Number.isFinite(numberValue) ? numberValue : null;
-}
-
-function getList(form: FormData, name: string) {
-  return getString(form, name)
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
 }
