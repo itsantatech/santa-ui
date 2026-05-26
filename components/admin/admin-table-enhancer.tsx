@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { dispatchAdminTableEditRequest } from "./admin-table-events";
 import type { AdminDataTableContextAction } from "./admin-data-table";
 
@@ -10,6 +10,11 @@ type ContextMenuState = {
   y: number;
 } | null;
 
+type MenuPosition = {
+  left: number;
+  top: number;
+};
+
 export function AdminTableEnhancer({
   contextMenuActions,
   tableId,
@@ -18,11 +23,36 @@ export function AdminTableEnhancer({
   tableId: string;
 }) {
   const [menu, setMenu] = useState<ContextMenuState>(null);
+  const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const actions = contextMenuActions ?? [];
   const selectedCountSuffix = useMemo(
     () => (menu && menu.rowIds.length > 1 ? ` (${menu.rowIds.length})` : ""),
     [menu],
   );
+
+  useLayoutEffect(() => {
+    if (!menu || !menuRef.current) {
+      setMenuPosition(null);
+      return;
+    }
+
+    const menuElement = menuRef.current;
+    const viewportPadding = 12;
+    const { innerHeight, innerWidth } = window;
+    const rect = menuElement.getBoundingClientRect();
+
+    const left = Math.max(
+      viewportPadding,
+      Math.min(menu.x, innerWidth - rect.width - viewportPadding),
+    );
+    const top = Math.max(
+      viewportPadding,
+      Math.min(menu.y, innerHeight - rect.height - viewportPadding),
+    );
+
+    setMenuPosition({ left, top });
+  }, [menu]);
 
   useEffect(() => {
     const tableShell = document.querySelector<HTMLElement>(
@@ -194,7 +224,12 @@ export function AdminTableEnhancer({
     <div
       className="admin-table-context-menu"
       role="menu"
-      style={{ left: menu.x, top: menu.y }}
+      ref={menuRef}
+      style={{
+        left: menuPosition?.left ?? menu.x,
+        top: menuPosition?.top ?? menu.y,
+        visibility: menuPosition ? "visible" : "hidden",
+      }}
     >
       {actions.map((action) => (
         <button
