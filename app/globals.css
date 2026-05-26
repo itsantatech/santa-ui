@@ -1281,16 +1281,89 @@ input {
 }
 
 .admin-content-media-uploader,
-.admin-content-related-sku {
+.admin-content-related-sku,
+.admin-upload-surface {
   display: grid;
   gap: 12px;
 }
 
 .admin-content-media-list,
+.admin-upload-media-grid,
 .admin-content-sku-chip-list {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.admin-upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-upload-media-grid {
+  align-items: stretch;
+}
+
+.admin-upload-preview-card {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 420px);
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #d6deeb;
+  border-radius: 12px;
+}
+
+.admin-upload-preview-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  min-height: 180px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.admin-upload-preview-image,
+.admin-upload-preview-video {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+}
+
+.admin-upload-preview-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-upload-preview-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  color: #c2410c;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  background: #ffffff;
+  border: 1px solid #fdba74;
+  border-radius: 8px;
+}
+
+.admin-upload-preview-link:hover {
+  text-decoration: underline;
+}
+
+.admin-upload-empty {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .admin-content-media-item,
@@ -1350,6 +1423,112 @@ input {
 .admin-resource-thumbnail-logo {
   background-color: #ffffff;
   border-color: #e2e8f0;
+}
+
+.admin-category-icon-picker {
+  gap: 10px;
+}
+
+.admin-category-icon-picker-shell {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.admin-category-icon-picker-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-category-icon-preview-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  flex: 0 0 auto;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  border-radius: 14px;
+}
+
+.admin-category-icon-preview-symbol {
+  color: #c2410c;
+  font-size: 42px;
+  font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 40;
+}
+
+.admin-category-icon-preview-image {
+  width: 56px;
+  height: 56px;
+}
+
+.admin-category-icon-picker-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-category-icon-picker-copy strong {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.admin-category-icon-picker-copy span {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-category-icon-search {
+  min-height: 42px;
+  padding: 0 12px !important;
+  background: #ffffff !important;
+  border: 1px solid #d6deeb !important;
+  border-radius: 10px;
+}
+
+.admin-category-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.admin-category-icon-option {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 14px 10px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid #d6deeb;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.admin-category-icon-option .material-symbols-outlined {
+  font-size: 28px;
+}
+
+.admin-category-icon-option span:last-child {
+  word-break: break-word;
+}
+
+.admin-category-icon-option:hover,
+.admin-category-icon-option.is-selected {
+  color: #c2410c;
+  border-color: #fdba74;
+  box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.12);
 }
 
 .admin-role-pill {
@@ -2030,10 +2209,8 @@ button.admin-table-page-link:disabled {
 }
 
 .admin-inventory-file-picker {
-  display: flex;
-  align-items: center;
+  display: grid;
   gap: 14px;
-  flex-wrap: wrap;
 }
 
 .admin-inventory-file-button {
@@ -2041,9 +2218,16 @@ button.admin-table-page-link:disabled {
 }
 
 .admin-inventory-file-name {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
   color: #0f172a;
   font-size: 15px;
   font-weight: 500;
+  background: #ffffff;
+  border: 1px solid #d6deeb;
+  border-radius: 8px;
 }
 
 .admin-inventory-file-name-muted {
@@ -2327,6 +2511,75 @@ button.admin-table-page-link:disabled {
   gap: 18px 16px;
 }
 
+.admin-settings-about-grid {
+  grid-template-columns: 1fr;
+}
+
+.admin-settings-about-image-card {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 14px;
+  padding: 16px 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.admin-settings-about-image-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-settings-about-image-copy strong {
+  color: #232323;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.admin-settings-about-image-copy span {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.admin-settings-about-image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-settings-hidden-file-input {
+  display: none;
+}
+
+.admin-settings-about-image-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-settings-about-image {
+  width: min(100%, 420px);
+  height: auto;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.admin-settings-about-image-preview a {
+  color: #c2410c;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.admin-settings-about-image-preview a:hover {
+  text-decoration: underline;
+}
+
+.admin-settings-about-image-empty {
+  text-align: left;
+}
+
 .admin-settings-card-grid .admin-product-field,
 .admin-settings-social-grid .admin-product-field {
   gap: 8px;
@@ -2362,6 +2615,10 @@ button.admin-table-page-link:disabled {
 .admin-settings-richtext-field {
   display: grid;
   gap: 8px;
+}
+
+.admin-settings-about-content-row {
+  grid-column: 1 / -1;
 }
 
 .admin-settings-richtext-field .admin-rich-text-editor {

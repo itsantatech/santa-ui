@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { type FormEvent, type RefObject, useMemo, useRef, useState } from "react";
 import { ProductSearch, type ProductSearchSuggestion } from "@/components/product-search";
@@ -565,7 +566,7 @@ function MediaUploader({
   return (
     <div className="admin-product-field admin-product-field-wide">
       <span>{labels.fields.imgUrl}</span>
-      <div className="admin-content-media-uploader">
+      <div className="admin-upload-surface">
         <input
           accept="image/*,video/mp4,video/quicktime,video/webm,video/x-m4v"
           className="admin-inventory-file-input"
@@ -586,26 +587,49 @@ function MediaUploader({
           {isUploading ? labels.uploadingMedia : labels.addMedia}
         </button>
         {files.length > 0 ? (
-          <div className="admin-content-media-list">
+          <div className="admin-upload-media-grid">
             {files.map((url) => (
-              <div className="admin-content-media-item" key={url}>
-                <a href={url} rel="noreferrer" target="_blank">
-                  {url}
-                </a>
-                <button onClick={() => onRemove(url)} type="button">
-                  <span className="material-symbols-outlined" aria-hidden="true">
-                    close
-                  </span>
-                </button>
+              <div className="admin-upload-preview-card" key={url}>
+                <div className="admin-upload-preview-frame">
+                  {isVideoAssetUrl(url) ? (
+                    <video
+                      className="admin-upload-preview-video"
+                      controls
+                      playsInline
+                      src={url}
+                    />
+                  ) : (
+                    <Image
+                      alt={labels.fields.imgUrl}
+                      className="admin-upload-preview-image"
+                      height={220}
+                      src={url}
+                      unoptimized
+                      width={420}
+                    />
+                  )}
+                </div>
+                <div className="admin-upload-preview-meta">
+                  <a className="admin-upload-preview-link" href={url} rel="noreferrer" target="_blank">
+                    Open file
+                  </a>
+                  <button className="admin-product-secondary-button" onClick={() => onRemove(url)} type="button">
+                    Remove
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="admin-table-muted">{labels.noMedia}</p>
+          <p className="admin-upload-empty">{labels.noMedia}</p>
         )}
       </div>
     </div>
   );
+}
+
+function isVideoAssetUrl(url: string) {
+  return /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(url);
 }
 
 function RelatedSkuPicker({

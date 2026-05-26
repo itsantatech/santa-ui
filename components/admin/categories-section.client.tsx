@@ -42,6 +42,7 @@ type CategoryFormState = {
   coverImgUrl: string;
   descriptionEn: string;
   descriptionTh: string;
+  googleIconName: string;
   iconImgUrl: string;
   isActive: boolean;
   nameEn: string;
@@ -81,6 +82,38 @@ type SubCategoryBatchAction =
   | "nameTh"
   | "rank"
   | "slug";
+
+type UploadedFileResponse = {
+  signedUrl?: string;
+  url?: string;
+};
+
+const googleCategoryIconOptions = [
+  "home_repair_service",
+  "inventory_2",
+  "category",
+  "biotech",
+  "science",
+  "construction",
+  "precision_manufacturing",
+  "memory",
+  "devices",
+  "computer",
+  "electrical_services",
+  "handyman",
+  "health_and_safety",
+  "labs",
+  "monitor_heart",
+  "shield",
+  "local_shipping",
+  "storefront",
+  "factory",
+  "rocket_launch",
+  "settings",
+  "build",
+  "battery_charging_full",
+  "medical_services",
+];
 
 export function CategoriesSectionClient({
   activeTab,
@@ -752,6 +785,7 @@ function CategoryModal({
           coverImgUrl: initialRow.coverImgUrl ?? "",
           descriptionEn: initialRow.descriptionEn ?? "",
           descriptionTh: initialRow.descriptionTh ?? "",
+          googleIconName: "",
           iconImgUrl: initialRow.iconImgUrl ?? "",
           isActive: initialRow.isActive,
           nameEn: initialRow.nameEn,
@@ -763,6 +797,7 @@ function CategoryModal({
           coverImgUrl: "",
           descriptionEn: "",
           descriptionTh: "",
+          googleIconName: googleCategoryIconOptions[0] ?? "",
           iconImgUrl: "",
           isActive: true,
           nameEn: "",
@@ -771,11 +806,29 @@ function CategoryModal({
           slug: "",
         },
   );
+  const [isUploadingIcon, setIsUploadingIcon] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSaving(true);
     setError("");
+
+    let iconImgUrl = form.iconImgUrl;
+
+    if (form.googleIconName) {
+      setIsUploadingIcon(true);
+
+      try {
+        iconImgUrl = await uploadGoogleIconAsset(form.googleIconName);
+      } catch {
+        setIsSaving(false);
+        setIsUploadingIcon(false);
+        setError(labels.common.error);
+        return;
+      }
+
+      setIsUploadingIcon(false);
+    }
 
     const payload = {
       rank: Number(form.rank || 1),
@@ -784,7 +837,7 @@ function CategoryModal({
       descriptionTh: form.descriptionTh || undefined,
       descriptionEn: form.descriptionEn || undefined,
       slug: form.slug,
-      iconImgUrl: form.iconImgUrl,
+      iconImgUrl,
       coverImgUrl: form.coverImgUrl || undefined,
       seoTitleTh: form.nameTh,
       seoTitleEn: form.nameEn,
@@ -854,19 +907,19 @@ function CategoryModal({
               value={form.rank}
             />
             <LabeledInput
-              label={labels.category.fields.iconImgUrl}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, iconImgUrl: value }))
-              }
-              required
-              value={form.iconImgUrl}
-            />
-            <LabeledInput
               label={labels.category.fields.coverImgUrl}
               onChange={(value) =>
                 setForm((current) => ({ ...current, coverImgUrl: value }))
               }
               value={form.coverImgUrl}
+            />
+            <GoogleIconPicker
+              currentIconUrl={form.iconImgUrl}
+              label={labels.category.fields.iconImgUrl}
+              onChange={(value) =>
+                setForm((current) => ({ ...current, googleIconName: value }))
+              }
+              selectedIconName={form.googleIconName}
             />
             <LabeledTextarea
               label={labels.category.fields.descriptionTh}
@@ -895,7 +948,7 @@ function CategoryModal({
             <button className="admin-product-secondary-button" onClick={onClose} type="button">
               {labels.common.cancel}
             </button>
-            <button className="admin-product-add-button" disabled={isSaving} type="submit">
+            <button className="admin-product-add-button" disabled={isSaving || isUploadingIcon} type="submit">
               {isSaving ? labels.common.saving : labels.common.save}
             </button>
           </div>
@@ -1202,6 +1255,80 @@ function LabeledTextarea({
   );
 }
 
+function GoogleIconPicker({
+  currentIconUrl,
+  label,
+  onChange,
+  selectedIconName,
+}: {
+  currentIconUrl: string;
+  label: string;
+  onChange: (value: string) => void;
+  selectedIconName: string;
+}) {
+  const [query, setQuery] = useState("");
+  const filteredIcons = googleCategoryIconOptions.filter((iconName) =>
+    iconName.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+
+  return (
+    <div className="admin-product-field admin-product-field-wide admin-category-icon-picker">
+      <span>{label}</span>
+      <div className="admin-category-icon-picker-shell">
+        <div className="admin-category-icon-picker-header">
+          <div className="admin-category-icon-preview-card">
+            {selectedIconName ? (
+              <span className="material-symbols-outlined admin-category-icon-preview-symbol" aria-hidden="true">
+                {selectedIconName}
+              </span>
+            ) : currentIconUrl ? (
+              <span
+                aria-hidden="true"
+                className="admin-resource-thumbnail admin-category-icon-preview-image"
+                style={{ backgroundImage: `url(${currentIconUrl})` }}
+              />
+            ) : (
+              <span className="material-symbols-outlined admin-category-icon-preview-symbol" aria-hidden="true">
+                image_not_supported
+              </span>
+            )}
+          </div>
+          <div className="admin-category-icon-picker-copy">
+            <strong>{selectedIconName || "Current icon"}</strong>
+            <span>{currentIconUrl || "Choose a Google icon to generate an image."}</span>
+          </div>
+        </div>
+        <input
+          className="admin-product-multiselect-input admin-category-icon-search"
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search Google icons"
+          type="search"
+          value={query}
+        />
+        <div className="admin-category-icon-grid">
+          {filteredIcons.map((iconName) => {
+            const isSelected = iconName === selectedIconName;
+
+            return (
+              <button
+                className={`admin-category-icon-option${isSelected ? " is-selected" : ""}`}
+                key={iconName}
+                onClick={() => onChange(iconName)}
+                type="button"
+              >
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  {iconName}
+                </span>
+                <span>{iconName}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LabeledSelect({
   label,
   onChange,
@@ -1253,6 +1380,70 @@ function CategoryIconPreview({ src, title }: { src: string | null; title: string
       title={title}
     />
   );
+}
+
+async function uploadGoogleIconAsset(iconName: string) {
+  const file = await createGoogleIconImageFile(iconName);
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("visibility", "public");
+  formData.append("folder", "categories/icons");
+
+  const response = await fetch("/api/admin/files/upload", {
+    body: formData,
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error("upload-failed");
+  }
+
+  const result = (await response.json()) as UploadedFileResponse;
+  const nextUrl = result.url ?? result.signedUrl;
+
+  if (!nextUrl) {
+    throw new Error("missing-upload-url");
+  }
+
+  return nextUrl;
+}
+
+async function createGoogleIconImageFile(iconName: string) {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("canvas-unavailable");
+  }
+
+  await document.fonts.load('80px "Material Symbols Outlined"');
+
+  context.clearRect(0, 0, size, size);
+  context.fillStyle = "#fff7ed";
+  context.beginPath();
+  context.roundRect(8, 8, size - 16, size - 16, 18);
+  context.fill();
+  context.strokeStyle = "#fdba74";
+  context.lineWidth = 2;
+  context.stroke();
+  context.fillStyle = "#c2410c";
+  context.font = '80px "Material Symbols Outlined"';
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(iconName, size / 2, size / 2);
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/png"),
+  );
+
+  if (!blob) {
+    throw new Error("blob-unavailable");
+  }
+
+  return new File([blob], `${iconName}.png`, { type: "image/png" });
 }
 
 function AdminSectionTabs({

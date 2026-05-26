@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   type FormEvent,
@@ -101,6 +102,7 @@ type ProductLabels = {
   add: string;
   addTitle: string;
   cancel: string;
+  chooseFile: string;
   confirmDelete: string;
   delete: string;
   deleteBodyTemplate: string;
@@ -139,6 +141,7 @@ type ProductLabels = {
     subCategoryCodes: string;
   };
   noDatasheet: string;
+  noFileChosen: string;
   noMedia: string;
   googleCategoryEmpty: string;
   googleCategoryLoading: string;
@@ -548,6 +551,8 @@ function ProductUploadModal({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [summary, setSummary] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -574,12 +579,19 @@ function ProductUploadModal({
 
   async function handleUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!file) {
+      return;
+    }
+
     setError("");
     setSummary("");
     setIsUploading(true);
 
+    const formData = new FormData();
+    formData.append("file", file);
+
     const response = await fetch("/api/admin/products/import", {
-      body: new FormData(event.currentTarget),
+      body: formData,
       method: "POST",
     });
 
@@ -625,7 +637,7 @@ function ProductUploadModal({
         </div>
         <form className="admin-product-upload-body" onSubmit={handleUpload}>
           <button
-            className="admin-product-secondary-button"
+            className="admin-product-secondary-button admin-inventory-template-button"
             onClick={() => void handleTemplateDownload()}
             type="button"
           >
@@ -634,7 +646,29 @@ function ProductUploadModal({
             </span>
             {labels.template}
           </button>
-          <input accept=".csv,.xlsx" name="file" required type="file" />
+          <div className="admin-inventory-file-picker">
+            <input
+              accept=".csv,.xlsx"
+              className="admin-inventory-file-input"
+              hidden
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              ref={fileInputRef}
+              type="file"
+            />
+            <button
+              className="admin-product-secondary-button admin-inventory-file-button"
+              onClick={() => fileInputRef.current?.click()}
+              type="button"
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">
+                upload_file
+              </span>
+              {labels.chooseFile}
+            </button>
+            <span className={file ? "admin-inventory-file-name" : "admin-inventory-file-name admin-inventory-file-name-muted"}>
+              {file ? file.name : labels.noFileChosen}
+            </span>
+          </div>
           {error ? <p className="admin-product-form-error">{error}</p> : null}
           {summary ? <p className="admin-product-file-note">{summary}</p> : null}
           <div className="admin-product-modal-actions">
@@ -647,7 +681,7 @@ function ProductUploadModal({
             </button>
             <button
               className="admin-product-add-button"
-              disabled={isUploading}
+              disabled={!file || isUploading}
               type="submit"
             >
               {labels.upload}
@@ -1213,7 +1247,7 @@ function DatasheetUploader({
   return (
     <div className="admin-product-field admin-product-field-wide">
       <span>{label}</span>
-      <div className="admin-content-media-uploader">
+      <div className="admin-upload-surface">
         <input
           accept="application/pdf"
           className="admin-inventory-file-input"
@@ -1233,20 +1267,25 @@ function DatasheetUploader({
           {isUploading ? labels.uploadingDatasheet : labels.uploadDatasheet}
         </button>
         {url ? (
-          <div className="admin-content-media-list">
-            <div className="admin-content-media-item">
-              <a href={url} rel="noreferrer" target="_blank">
-                {url}
-              </a>
-              <button onClick={onClear} type="button">
+          <div className="admin-upload-media-grid">
+            <div className="admin-upload-preview-card">
+              <div className="admin-upload-preview-frame">
                 <span className="material-symbols-outlined" aria-hidden="true">
-                  close
+                  picture_as_pdf
                 </span>
-              </button>
+              </div>
+              <div className="admin-upload-preview-meta">
+                <a className="admin-upload-preview-link" href={url} rel="noreferrer" target="_blank">
+                  Open PDF
+                </a>
+                <button className="admin-product-secondary-button" onClick={onClear} type="button">
+                  Remove
+                </button>
+              </div>
             </div>
           </div>
         ) : (
-          <p className="admin-table-muted">{labels.noDatasheet}</p>
+          <p className="admin-upload-empty">{labels.noDatasheet}</p>
         )}
       </div>
     </div>
@@ -1273,7 +1312,7 @@ function MediaUploader({
   return (
     <div className="admin-product-field admin-product-field-wide">
       <span>{label}</span>
-      <div className="admin-content-media-uploader">
+      <div className="admin-upload-surface">
         <input
           accept="image/*,video/mp4,video/quicktime,video/webm,video/x-m4v"
           className="admin-inventory-file-input"
@@ -1294,26 +1333,49 @@ function MediaUploader({
           {isUploading ? labels.uploadingMedia : labels.uploadImage}
         </button>
         {files.length > 0 ? (
-          <div className="admin-content-media-list">
+          <div className="admin-upload-media-grid">
             {files.map((url) => (
-              <div className="admin-content-media-item" key={url}>
-                <a href={url} rel="noreferrer" target="_blank">
-                  {url}
-                </a>
-                <button onClick={() => onRemove(url)} type="button">
-                  <span className="material-symbols-outlined" aria-hidden="true">
-                    close
-                  </span>
-                </button>
+              <div className="admin-upload-preview-card" key={url}>
+                <div className="admin-upload-preview-frame">
+                  {isVideoAssetUrl(url) ? (
+                    <video
+                      className="admin-upload-preview-video"
+                      controls
+                      playsInline
+                      src={url}
+                    />
+                  ) : (
+                    <Image
+                      alt={label}
+                      className="admin-upload-preview-image"
+                      height={220}
+                      src={url}
+                      unoptimized
+                      width={420}
+                    />
+                  )}
+                </div>
+                <div className="admin-upload-preview-meta">
+                  <a className="admin-upload-preview-link" href={url} rel="noreferrer" target="_blank">
+                    Open file
+                  </a>
+                  <button className="admin-product-secondary-button" onClick={() => onRemove(url)} type="button">
+                    Remove
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="admin-table-muted">{labels.noMedia}</p>
+          <p className="admin-upload-empty">{labels.noMedia}</p>
         )}
       </div>
     </div>
   );
+}
+
+function isVideoAssetUrl(url: string) {
+  return /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(url);
 }
 
 function MultiSelectField({
