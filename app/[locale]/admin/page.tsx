@@ -135,9 +135,8 @@ function getPositiveInteger(value: string | undefined, fallback = 1) {
 
 function getPageSize(value: string | undefined) {
   const parsed = Number(value);
-  const allowedPageSizes = [10, 20, 50, 100];
 
-  return allowedPageSizes.includes(parsed) ? parsed : 20;
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 100 ? parsed : 50;
 }
 
 function getSingleQueryParam(value: string | string[] | undefined) {

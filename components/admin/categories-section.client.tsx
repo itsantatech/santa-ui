@@ -4,11 +4,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 import {
+  AdminBatchFieldModal,
+  type AdminBatchFieldModalConfig,
+} from "./admin-batch-field-modal";
+import {
   AdminCategoryChip,
   AdminDataTable,
   type AdminDataTableColumn,
+  type AdminDataTableContextAction,
   AdminStatusBadge,
 } from "./admin-data-table";
+import { useAdminTableEditRequest } from "./admin-table-events";
 import type {
   CategoryListResponse,
   SubCategoryListResponse,
@@ -55,10 +61,32 @@ type SubCategoryFormState = {
   slug: string;
 };
 
+type CategoryBatchAction =
+  | "coverImgUrl"
+  | "descriptionEn"
+  | "descriptionTh"
+  | "iconImgUrl"
+  | "isActive"
+  | "nameEn"
+  | "nameTh"
+  | "rank"
+  | "slug";
+
+type SubCategoryBatchAction =
+  | "categoryCode"
+  | "descriptionEn"
+  | "descriptionTh"
+  | "isActive"
+  | "nameEn"
+  | "nameTh"
+  | "rank"
+  | "slug";
+
 export function CategoriesSectionClient({
   activeTab,
   categories,
   categoryOptions,
+  currentPageSize,
   locale,
   page,
   subCategories,
@@ -66,6 +94,7 @@ export function CategoriesSectionClient({
   activeTab: TabValue;
   categories: CategoryListResponse | null;
   categoryOptions: CategoryOption[];
+  currentPageSize: number;
   locale: Locale;
   page: number;
   subCategories: SubCategoryListResponse | null;
@@ -73,8 +102,69 @@ export function CategoriesSectionClient({
   const labels = getLabels(locale);
   const router = useRouter();
   const [mode, setMode] = useState<Mode | null>(null);
+  const [bulkCategoryRows, setBulkCategoryRows] = useState<CategoryRow[]>([]);
+  const [bulkCategoryAction, setBulkCategoryAction] =
+    useState<CategoryBatchAction | null>(null);
+  const [bulkSubCategoryRows, setBulkSubCategoryRows] = useState<SubCategoryRow[]>([]);
+  const [bulkSubCategoryAction, setBulkSubCategoryAction] =
+    useState<SubCategoryBatchAction | null>(null);
   const categoryRows = categories?.items ?? [];
   const subCategoryRows = subCategories?.items ?? [];
+  const categoryContextMenuActions = useMemo<AdminDataTableContextAction[]>(
+    () => [
+      { id: "nameTh", label: labels.category.fields.nameTh },
+      { id: "nameEn", label: labels.category.fields.nameEn },
+      { id: "slug", label: labels.category.fields.slug },
+      { id: "rank", label: labels.category.fields.rank },
+      { id: "iconImgUrl", label: labels.category.fields.iconImgUrl },
+      { id: "coverImgUrl", label: labels.category.fields.coverImgUrl },
+      { id: "descriptionTh", label: labels.category.fields.descriptionTh },
+      { id: "descriptionEn", label: labels.category.fields.descriptionEn },
+      { id: "isActive", label: labels.common.activeToggle },
+    ],
+    [labels],
+  );
+  const subCategoryContextMenuActions = useMemo<AdminDataTableContextAction[]>(
+    () => [
+      { id: "nameTh", label: labels.subCategory.fields.nameTh },
+      { id: "nameEn", label: labels.subCategory.fields.nameEn },
+      { id: "slug", label: labels.subCategory.fields.slug },
+      { id: "rank", label: labels.subCategory.fields.rank },
+      { id: "categoryCode", label: labels.subCategory.fields.category },
+      { id: "descriptionTh", label: labels.subCategory.fields.descriptionTh },
+      { id: "descriptionEn", label: labels.subCategory.fields.descriptionEn },
+      { id: "isActive", label: labels.common.activeToggle },
+    ],
+    [labels],
+  );
+
+  useAdminTableEditRequest("categories", (actionId, rowIds) => {
+    const matchedRows = categoryRows.filter((row) => rowIds.includes(row.code));
+
+    if (matchedRows.length === 1 && actionId === "edit") {
+      setMode({ row: matchedRows[0], type: "edit-category" });
+      return;
+    }
+
+    if (matchedRows.length > 0) {
+      setBulkCategoryAction(actionId as CategoryBatchAction);
+      setBulkCategoryRows(matchedRows);
+    }
+  });
+
+  useAdminTableEditRequest("sub-categories", (actionId, rowIds) => {
+    const matchedRows = subCategoryRows.filter((row) => rowIds.includes(row.code));
+
+    if (matchedRows.length === 1 && actionId === "edit") {
+      setMode({ row: matchedRows[0], type: "edit-sub-category" });
+      return;
+    }
+
+    if (matchedRows.length > 0) {
+      setBulkSubCategoryAction(actionId as SubCategoryBatchAction);
+      setBulkSubCategoryRows(matchedRows);
+    }
+  });
 
   const categoryColumns = useMemo<AdminDataTableColumn<CategoryRow>[]>(
     () => [
@@ -239,35 +329,48 @@ export function CategoriesSectionClient({
         <AdminDataTable
           columns={categoryColumns}
           emptyLabel={categories ? labels.category.empty : labels.common.fetchError}
+          contextMenuActions={categoryContextMenuActions}
           getRowId={(row) => row.code}
           pagination={{
             currentPage: categories?.meta.page ?? page,
+            currentPageSize,
             totalPages: categories?.meta.totalPages ?? 1,
             getPageHref: (nextPage) =>
-              `/${locale}/admin?section=categories&tab=categories&page=${nextPage}`,
+              createCategoriesPageHref(locale, "categories", nextPage, currentPageSize),
             previousLabel: labels.common.previousPage,
             nextLabel: labels.common.nextPage,
+            rowsPerPageLabel: labels.common.rowsPerPage,
           }}
           rows={categoryRows}
           selectAllLabel={labels.common.selectAll}
           selectRowLabel={(row) => `${labels.common.selectRow} ${row.code}`}
+          tableId="categories"
         />
       ) : (
         <AdminDataTable
           columns={subCategoryColumns}
           emptyLabel={subCategories ? labels.subCategory.empty : labels.common.fetchError}
+          contextMenuActions={subCategoryContextMenuActions}
           getRowId={(row) => row.code}
           pagination={{
             currentPage: subCategories?.meta.page ?? page,
+            currentPageSize,
             totalPages: subCategories?.meta.totalPages ?? 1,
             getPageHref: (nextPage) =>
-              `/${locale}/admin?section=categories&tab=sub-categories&page=${nextPage}`,
+              createCategoriesPageHref(
+                locale,
+                "sub-categories",
+                nextPage,
+                currentPageSize,
+              ),
             previousLabel: labels.common.previousPage,
             nextLabel: labels.common.nextPage,
+            rowsPerPageLabel: labels.common.rowsPerPage,
           }}
           rows={subCategoryRows}
           selectAllLabel={labels.common.selectAll}
           selectRowLabel={(row) => `${labels.common.selectRow} ${row.code}`}
+          tableId="sub-categories"
         />
       )}
 
@@ -345,8 +448,289 @@ export function CategoriesSectionClient({
           title={labels.subCategory.deleteTitle}
         />
       ) : null}
+      {bulkCategoryRows.length > 0 && bulkCategoryAction ? (
+        <AdminBatchFieldModal
+          cancelLabel={labels.common.cancel}
+          config={getCategoryBatchFieldConfig(labels, bulkCategoryAction, bulkCategoryRows[0])}
+          description={labels.category.bulkEditDescription(
+            bulkCategoryRows.length,
+            getCategoryBatchFieldLabel(labels, bulkCategoryAction),
+          )}
+          errorMessage={labels.common.error}
+          items={bulkCategoryRows.map((row) => row.code)}
+          onClose={() => {
+            setBulkCategoryAction(null);
+            setBulkCategoryRows([]);
+          }}
+          onSubmit={async (value) => {
+            const responses = await Promise.all(
+              bulkCategoryRows.map((row) =>
+                fetch(`/api/admin/categories/${encodeURIComponent(row.code)}`, {
+                  method: "PATCH",
+                  headers: {
+                    "content-type": "application/json",
+                  },
+                  body: JSON.stringify(
+                    buildCategoryPayload(row, bulkCategoryAction, value),
+                  ),
+                }),
+              ),
+            );
+
+            if (responses.some((response) => !response.ok)) {
+              throw new Error("bulk-edit-failed");
+            }
+
+            setBulkCategoryAction(null);
+            setBulkCategoryRows([]);
+            router.refresh();
+          }}
+          saveLabel={labels.common.save}
+          savingLabel={labels.common.saving}
+          title={labels.category.bulkEditTitle(
+            getCategoryBatchFieldLabel(labels, bulkCategoryAction),
+          )}
+        />
+      ) : null}
+      {bulkSubCategoryRows.length > 0 && bulkSubCategoryAction ? (
+        <AdminBatchFieldModal
+          cancelLabel={labels.common.cancel}
+          description={labels.subCategory.bulkEditDescription(
+            bulkSubCategoryRows.length,
+            getSubCategoryBatchFieldLabel(labels, bulkSubCategoryAction),
+          )}
+          config={getSubCategoryBatchFieldConfig(
+            labels,
+            bulkSubCategoryAction,
+            bulkSubCategoryRows[0],
+          )}
+          errorMessage={labels.common.error}
+          items={bulkSubCategoryRows.map((row) => row.code)}
+          onClose={() => {
+            setBulkSubCategoryAction(null);
+            setBulkSubCategoryRows([]);
+          }}
+          onSubmit={async (value) => {
+            const responses = await Promise.all(
+              bulkSubCategoryRows.map((row) =>
+                fetch(`/api/admin/sub-categories/${encodeURIComponent(row.code)}`, {
+                  method: "PATCH",
+                  headers: {
+                    "content-type": "application/json",
+                  },
+                  body: JSON.stringify(
+                    buildSubCategoryPayload(row, bulkSubCategoryAction, value),
+                  ),
+                }),
+              ),
+            );
+
+            if (responses.some((response) => !response.ok)) {
+              throw new Error("bulk-edit-failed");
+            }
+
+            setBulkSubCategoryAction(null);
+            setBulkSubCategoryRows([]);
+            router.refresh();
+          }}
+          saveLabel={labels.common.save}
+          savingLabel={labels.common.saving}
+          title={labels.subCategory.bulkEditTitle(
+            getSubCategoryBatchFieldLabel(labels, bulkSubCategoryAction),
+          )}
+        />
+      ) : null}
     </div>
   );
+}
+
+function createCategoriesPageHref(
+  locale: Locale,
+  tab: TabValue,
+  page: number,
+  pageSize: number,
+) {
+  const searchParams = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+    section: "categories",
+    tab,
+  });
+
+  return `/${locale}/admin?${searchParams.toString()}`;
+}
+
+function buildCategoryPayload(
+  row: CategoryRow,
+  action: CategoryBatchAction,
+  value: boolean | number | string,
+) {
+  const next = {
+    coverImgUrl: row.coverImgUrl ?? undefined,
+    descriptionEn: row.descriptionEn ?? undefined,
+    descriptionTh: row.descriptionTh ?? undefined,
+    iconImgUrl: row.iconImgUrl ?? "",
+    isActive: row.isActive,
+    nameEn: row.nameEn,
+    nameTh: row.nameTh,
+    rank: row.rank ?? 1,
+    slug: row.slug,
+  };
+
+  if (action === "rank") {
+    next.rank = Number(value || 1);
+  } else if (action === "isActive") {
+    next.isActive = Boolean(value);
+  } else {
+    next[action] = String(value);
+  }
+
+  return {
+    ...next,
+    seoDescriptionEn: next.descriptionEn || next.nameEn,
+    seoDescriptionTh: next.descriptionTh || next.nameTh,
+    seoTitleEn: next.nameEn,
+    seoTitleTh: next.nameTh,
+  };
+}
+
+function buildSubCategoryPayload(
+  row: SubCategoryRow,
+  action: SubCategoryBatchAction,
+  value: boolean | number | string,
+) {
+  const next = {
+    categoryCode: row.categoryCode,
+    descriptionEn: row.descriptionEn ?? undefined,
+    descriptionTh: row.descriptionTh ?? undefined,
+    isActive: row.isActive,
+    nameEn: row.nameEn,
+    nameTh: row.nameTh,
+    rank: row.rank ?? 1,
+    slug: row.slug,
+  };
+
+  if (action === "rank") {
+    next.rank = Number(value || 1);
+  } else if (action === "isActive") {
+    next.isActive = Boolean(value);
+  } else {
+    next[action] = String(value);
+  }
+
+  return {
+    ...next,
+    seoDescriptionEn: next.descriptionEn || next.nameEn,
+    seoDescriptionTh: next.descriptionTh || next.nameTh,
+    seoTitleEn: next.nameEn,
+    seoTitleTh: next.nameTh,
+  };
+}
+
+function getCategoryBatchFieldLabel(
+  labels: ReturnType<typeof getLabels>,
+  action: CategoryBatchAction,
+) {
+  if (action === "isActive") {
+    return labels.common.activeToggle;
+  }
+
+  return labels.category.fields[action];
+}
+
+function getSubCategoryBatchFieldLabel(
+  labels: ReturnType<typeof getLabels>,
+  action: SubCategoryBatchAction,
+) {
+  if (action === "isActive") {
+    return labels.common.activeToggle;
+  }
+
+  if (action === "categoryCode") {
+    return labels.subCategory.fields.category;
+  }
+
+  return labels.subCategory.fields[action];
+}
+
+function getCategoryBatchFieldConfig(
+  labels: ReturnType<typeof getLabels>,
+  action: CategoryBatchAction,
+  row: CategoryRow,
+): AdminBatchFieldModalConfig {
+  if (action === "rank") {
+    return {
+      fieldLabel: labels.category.fields.rank,
+      initialValue: row.rank ?? 1,
+      type: "number",
+    };
+  }
+
+  if (action === "isActive") {
+    return {
+      fieldLabel: labels.common.activeToggle,
+      initialValue: row.isActive,
+      options: [
+        { label: labels.common.active, value: "true" },
+        { label: labels.common.inactive, value: "false" },
+      ],
+      type: "boolean",
+    };
+  }
+
+  if (action === "descriptionEn" || action === "descriptionTh") {
+    return {
+      fieldLabel: labels.category.fields[action],
+      initialValue: row[action] ?? "",
+      type: "textarea",
+    };
+  }
+
+  return {
+    fieldLabel: getCategoryBatchFieldLabel(labels, action),
+    initialValue: row[action] ?? "",
+    type: "text",
+  };
+}
+
+function getSubCategoryBatchFieldConfig(
+  labels: ReturnType<typeof getLabels>,
+  action: SubCategoryBatchAction,
+  row: SubCategoryRow,
+): AdminBatchFieldModalConfig {
+  if (action === "rank") {
+    return {
+      fieldLabel: labels.subCategory.fields.rank,
+      initialValue: row.rank ?? 1,
+      type: "number",
+    };
+  }
+
+  if (action === "isActive") {
+    return {
+      fieldLabel: labels.common.activeToggle,
+      initialValue: row.isActive,
+      options: [
+        { label: labels.common.active, value: "true" },
+        { label: labels.common.inactive, value: "false" },
+      ],
+      type: "boolean",
+    };
+  }
+
+  if (action === "descriptionEn" || action === "descriptionTh") {
+    return {
+      fieldLabel: labels.subCategory.fields[action],
+      initialValue: row[action] ?? "",
+      type: "textarea",
+    };
+  }
+
+  return {
+    fieldLabel: getSubCategoryBatchFieldLabel(labels, action),
+    initialValue: row[action] ?? "",
+    type: "text",
+  };
 }
 
 function CategoryModal({
@@ -923,6 +1307,7 @@ function getLabels(locale: Locale) {
         inactive: "INACTIVE",
         nextPage: "หน้าถัดไป",
         previousPage: "หน้าก่อนหน้า",
+        rowsPerPage: "จำนวนต่อหน้า",
         save: "บันทึก",
         saving: "กำลังบันทึก...",
         selectAll: "เลือกรายการทั้งหมด",
@@ -941,6 +1326,9 @@ function getLabels(locale: Locale) {
         deleteTitle: "ยืนยันการลบหมวดหมู่",
         editTitle: "แก้ไขหมวดหมู่",
         empty: "ไม่พบข้อมูลหมวดหมู่",
+        bulkEditTitle: (fieldLabel: string) => `แก้ไขหลายหมวดหมู่: ${fieldLabel}`,
+        bulkEditDescription: (count: number, fieldLabel: string) =>
+          `อัปเดตฟิลด์ ${fieldLabel} พร้อมกัน ${count} รายการ`,
         fields: {
           coverImgUrl: "Cover Image URL",
           descriptionEn: "คำอธิบายภาษาอังกฤษ",
@@ -967,6 +1355,9 @@ function getLabels(locale: Locale) {
         deleteTitle: "ยืนยันการลบหมวดหมู่ย่อย",
         editTitle: "แก้ไขหมวดหมู่ย่อย",
         empty: "ไม่พบข้อมูลหมวดหมู่ย่อย",
+        bulkEditTitle: (fieldLabel: string) => `แก้ไขหลายหมวดหมู่ย่อย: ${fieldLabel}`,
+        bulkEditDescription: (count: number, fieldLabel: string) =>
+          `อัปเดตฟิลด์ ${fieldLabel} พร้อมกัน ${count} รายการ`,
         fields: {
           category: "หมวดหมู่หลัก",
           descriptionEn: "คำอธิบายภาษาอังกฤษ",
@@ -1001,6 +1392,7 @@ function getLabels(locale: Locale) {
       inactive: "INACTIVE",
       nextPage: "Next page",
       previousPage: "Previous page",
+      rowsPerPage: "Rows per page",
       save: "Save",
       saving: "Saving...",
       selectAll: "Select all rows",
@@ -1019,6 +1411,9 @@ function getLabels(locale: Locale) {
       deleteTitle: "Confirm Category Delete",
       editTitle: "Edit Category",
       empty: "No categories found",
+      bulkEditTitle: (fieldLabel: string) => `Bulk edit categories: ${fieldLabel}`,
+      bulkEditDescription: (count: number, fieldLabel: string) =>
+        `Update ${fieldLabel} for ${count} categories at once.`,
       fields: {
         coverImgUrl: "Cover Image URL",
         descriptionEn: "English Description",
@@ -1044,6 +1439,9 @@ function getLabels(locale: Locale) {
       deleteTitle: "Confirm Sub Category Delete",
       editTitle: "Edit Sub Category",
       empty: "No sub-categories found",
+      bulkEditTitle: (fieldLabel: string) => `Bulk edit sub categories: ${fieldLabel}`,
+      bulkEditDescription: (count: number, fieldLabel: string) =>
+        `Update ${fieldLabel} for ${count} sub categories at once.`,
       fields: {
         category: "Parent Category",
         descriptionEn: "English Description",

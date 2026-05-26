@@ -2,9 +2,11 @@ import Image from "next/image";
 import { ProductFilter, type ProductFilterOption } from "@/components/product-filter";
 import { ProductSearch } from "@/components/product-search";
 import {
+  ProductTableEditController,
   ProductRowManagementActions,
   ProductToolbarActions,
 } from "./products-services-section";
+import { getProductContextMenuActions } from "./products-services-shared";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import {
   fetchAdminList,
@@ -95,7 +97,7 @@ export async function ProductsServicesSection({
   const rows = response?.items ?? [];
   const totalPages = response?.meta.totalPages ?? 1;
   const currentPage = response?.meta.page ?? page;
-  const currentPageSize = response?.meta.pageSize ?? filters?.pageSize ?? 20;
+  const currentPageSize = response?.meta.pageSize ?? filters?.pageSize ?? 50;
   const totalItems = response?.meta.totalItems ?? 0;
   const isThaiLocale = locale === "th";
   const productUi = getProductAdminUiLabels(locale);
@@ -341,6 +343,7 @@ export async function ProductsServicesSection({
       />
       <AdminDataTable
         columns={columns}
+        contextMenuActions={getProductContextMenuActions(productUi)}
         emptyLabel={response ? table.empty : table.fetchError}
         getRowId={(row) => row.sku}
         pagination={{
@@ -349,8 +352,6 @@ export async function ProductsServicesSection({
           totalPages,
           getPageHref: (nextPage) =>
             createProductsPageHref(locale, nextPage, filters),
-          getPageSizeHref: (pageSize) =>
-            createProductsPageHref(locale, 1, { ...filters, pageSize }),
           previousLabel: table.previousPage,
           nextLabel: table.nextPage,
           rowsPerPageLabel: productUi.rowsPerPage,
@@ -358,8 +359,10 @@ export async function ProductsServicesSection({
         rows={rows}
         selectAllLabel={table.selectAll}
         selectRowLabel={(row) => `${table.selectRow} ${row.sku}`}
+        tableId="products-services"
         wide
       />
+      <ProductTableEditController labels={productUi} rows={rows} />
     </div>
   );
 }
@@ -555,6 +558,33 @@ function getProductAdminUiLabels(locale: Locale) {
       editTitle: "แก้ไขสินค้า",
       error: "ไม่สามารถบันทึกข้อมูลได้",
       fileSelected: "ไฟล์ที่เลือก",
+      fields: {
+        brandCodes: "แบรนด์",
+        categoryCodes: "หมวดหมู่",
+        datasheetUrl: "Datasheet URL",
+        deliveryFee: "ค่าส่ง",
+        descriptionEn: "รายละเอียดภาษาอังกฤษ",
+        descriptionTh: "รายละเอียดภาษาไทย",
+        discountedPrice: "ราคาลด",
+        googleCategoryId: "Google Category ID",
+        isActive: "สถานะ",
+        isBestSeller: "สินค้าแนะนำ",
+        isNewProduct: "สินค้าใหม่",
+        isPromotion: "โปรโมชั่น",
+        model: "รุ่น",
+        nameEn: "ชื่อภาษาอังกฤษ",
+        nameTh: "ชื่อภาษาไทย",
+        price: "ราคา",
+        rank: "ลำดับ",
+        seoDescriptionEn: "SEO Description EN",
+        seoDescriptionTh: "SEO Description TH",
+        seoTitleEn: "SEO Title EN",
+        seoTitleTh: "SEO Title TH",
+        shortDescriptionEn: "คำอธิบายสั้นภาษาอังกฤษ",
+        shortDescriptionTh: "คำอธิบายสั้นภาษาไทย",
+        slug: "Slug",
+        subCategoryCodes: "หมวดหมู่ย่อย",
+      },
       noImage: "ไม่มีรูป",
       noSuggestions: "ไม่พบสินค้า",
       rowsPerPage: "แถวต่อหน้า",
@@ -583,6 +613,33 @@ function getProductAdminUiLabels(locale: Locale) {
       editTitle: "Edit product",
       error: "Unable to save product",
       fileSelected: "Selected file",
+      fields: {
+        brandCodes: "Brands",
+        categoryCodes: "Categories",
+        datasheetUrl: "Datasheet URL",
+        deliveryFee: "Delivery Fee",
+        descriptionEn: "Description EN",
+        descriptionTh: "Description TH",
+        discountedPrice: "Discounted Price",
+        googleCategoryId: "Google Category ID",
+        isActive: "Active",
+        isBestSeller: "Best seller",
+        isNewProduct: "New product",
+        isPromotion: "Promotion",
+        model: "Model",
+        nameEn: "Name EN",
+        nameTh: "Name TH",
+        price: "Price",
+        rank: "Rank",
+        seoDescriptionEn: "SEO Description EN",
+        seoDescriptionTh: "SEO Description TH",
+        seoTitleEn: "SEO Title EN",
+        seoTitleTh: "SEO Title TH",
+        shortDescriptionEn: "Short description EN",
+        shortDescriptionTh: "Short description TH",
+        slug: "Slug",
+        subCategoryCodes: "Sub categories",
+      },
       noImage: "No image",
       noSuggestions: "No products found",
       rowsPerPage: "Rows per page",

@@ -7,7 +7,17 @@ import { ContentSearch } from "@/components/content-search";
 import { RichTextEditor } from "@/components/rich-text-editor";
 import { formatAdminDateTime } from "@/lib/admin-api";
 import type { Locale } from "@/lib/i18n";
-import { AdminDataTable, type AdminDataTableColumn, AdminStatusBadge } from "./admin-data-table";
+import {
+  AdminBatchFieldModal,
+  type AdminBatchFieldModalConfig,
+} from "./admin-batch-field-modal";
+import {
+  AdminDataTable,
+  type AdminDataTableColumn,
+  type AdminDataTableContextAction,
+  AdminStatusBadge,
+} from "./admin-data-table";
+import { useAdminTableEditRequest } from "./admin-table-events";
 import type {
   ContentListResponse,
   ContentResource,
@@ -32,7 +42,18 @@ type ContentFormState = {
   topicTh: string;
 };
 
+type ContentBatchAction =
+  | "contentEn"
+  | "contentTh"
+  | "isActive"
+  | "rank"
+  | "relatedSku"
+  | "slug"
+  | "topicEn"
+  | "topicTh";
+
 export function ContentManagementSectionClient({
+  initialPageSize,
   initialResponse,
   initialSearch,
   locale,
@@ -40,6 +61,7 @@ export function ContentManagementSectionClient({
   resource,
   section,
 }: {
+  initialPageSize: number;
   initialResponse: ContentListResponse | null;
   initialSearch?: string;
   locale: Locale;
@@ -50,9 +72,39 @@ export function ContentManagementSectionClient({
   const labels = getLabels(locale, section);
   const router = useRouter();
   const [editingRow, setEditingRow] = useState<ContentRow | null>(null);
+  const [bulkEditingRows, setBulkEditingRows] = useState<ContentRow[]>([]);
+  const [bulkEditingAction, setBulkEditingAction] =
+    useState<ContentBatchAction | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deletingRow, setDeletingRow] = useState<ContentRow | null>(null);
   const rows = initialResponse?.items ?? [];
+  const contextMenuActions = useMemo<AdminDataTableContextAction[]>(
+    () => [
+      { id: "topicTh", label: labels.fields.topicTh },
+      { id: "topicEn", label: labels.fields.topicEn },
+      { id: "slug", label: labels.fields.slug },
+      { id: "rank", label: labels.fields.rank },
+      { id: "contentTh", label: labels.fields.contentTh },
+      { id: "contentEn", label: labels.fields.contentEn },
+      { id: "relatedSku", label: labels.fields.relatedSku },
+      { id: "isActive", label: labels.activeToggle },
+    ],
+    [labels],
+  );
+
+  useAdminTableEditRequest(section, (actionId, rowIds) => {
+    const matchedRows = rows.filter((row) => rowIds.includes(row.id));
+
+    if (matchedRows.length === 1 && actionId === "edit") {
+      setEditingRow(matchedRows[0]);
+      return;
+    }
+
+    if (matchedRows.length > 0) {
+      setBulkEditingAction(actionId as ContentBatchAction);
+      setBulkEditingRows(matchedRows);
+    }
+  });
   const columns = useMemo<AdminDataTableColumn<ContentRow>[]>(
     () => [
       {
@@ -161,18 +213,28 @@ export function ContentManagementSectionClient({
       <AdminDataTable
         columns={columns}
         emptyLabel={initialResponse ? labels.empty : labels.fetchError}
+        contextMenuActions={contextMenuActions}
         getRowId={(row) => row.id}
         pagination={{
           currentPage: initialResponse?.meta.page ?? page,
+          currentPageSize: initialPageSize,
           totalPages: initialResponse?.meta.totalPages ?? 1,
           getPageHref: (nextPage) =>
-            createContentPageHref(locale, section, nextPage, initialSearch),
+            createContentPageHref(
+              locale,
+              section,
+              nextPage,
+              initialPageSize,
+              initialSearch,
+            ),
           previousLabel: labels.previousPage,
           nextLabel: labels.nextPage,
+          rowsPerPageLabel: labels.rowsPerPage,
         }}
         rows={rows}
         selectAllLabel={labels.selectAll}
         selectRowLabel={(row) => `${labels.selectRow} ${row.slug}`}
+        tableId={section}
       />
 
       {isAddOpen ? (
@@ -215,6 +277,50 @@ export function ContentManagementSectionClient({
             router.refresh();
           }}
           title={labels.deleteTitle}
+        />
+      ) : null}
+      {bulkEditingRows.length > 0 && bulkEditingAction ? (
+        <AdminBatchFieldModal
+          cancelLabel={labels.cancel}
+          config={getContentBatchFieldConfig(labels, bulkEditingAction, bulkEditingRows[0])}
+          description={labels.bulkEditDescription(
+            bulkEditingRows.length,
+            getContentBatchFieldLabel(labels, bulkEditingAction),
+          )}
+          errorMessage={labels.error}
+          items={bulkEditingRows.map((row) => row.slug)}
+          onClose={() => {
+            setBulkEditingAction(null);
+            setBulkEditingRows([]);
+          }}
+          onSubmit={async (value) => {
+            const responses = await Promise.all(
+              bulkEditingRows.map((row) =>
+                fetch(`/api/admin/${resource}/${encodeURIComponent(row.id)}`, {
+                  method: "PATCH",
+                  headers: {
+                    "content-type": "application/json",
+                  },
+                  body: JSON.stringify(
+                    buildContentPayload(row, bulkEditingAction, value),
+                  ),
+                }),
+              ),
+            );
+
+            if (responses.some((response) => !response.ok)) {
+              throw new Error("bulk-edit-failed");
+            }
+
+            setBulkEditingAction(null);
+            setBulkEditingRows([]);
+            router.refresh();
+          }}
+          saveLabel={labels.save}
+          savingLabel={labels.saving}
+          title={labels.bulkEditTitle(
+            getContentBatchFieldLabel(labels, bulkEditingAction),
+          )}
         />
       ) : null}
     </div>
@@ -634,10 +740,12 @@ function createContentPageHref(
   locale: Locale,
   section: ContentSection,
   page: number,
+  pageSize: number,
   search?: string,
 ) {
   const searchParams = new URLSearchParams({
     page: String(page),
+    pageSize: String(pageSize),
     section,
   });
 
@@ -646,6 +754,95 @@ function createContentPageHref(
   }
 
   return `/${locale}/admin?${searchParams.toString()}`;
+}
+
+function buildContentPayload(
+  row: ContentRow,
+  action: ContentBatchAction,
+  value: boolean | number | string,
+) {
+  const next = {
+    contentEn: row.contentEn,
+    contentTh: row.contentTh,
+    imgUrl: row.imgUrl,
+    isActive: row.isActive,
+    rank: row.rank ?? 1,
+    relatedSku: row.relatedSku,
+    slug: row.slug,
+    topicEn: row.topicEn,
+    topicTh: row.topicTh,
+  };
+
+  if (action === "rank") {
+    next.rank = Number(value || 1);
+  } else if (action === "isActive") {
+    next.isActive = Boolean(value);
+  } else if (action === "relatedSku") {
+    next.relatedSku = String(value)
+      .split(/[\n,]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  } else {
+    next[action] = String(value);
+  }
+
+  return next;
+}
+
+function getContentBatchFieldLabel(
+  labels: ReturnType<typeof getLabels>,
+  action: ContentBatchAction,
+) {
+  if (action === "isActive") {
+    return labels.activeToggle;
+  }
+
+  return labels.fields[action];
+}
+
+function getContentBatchFieldConfig(
+  labels: ReturnType<typeof getLabels>,
+  action: ContentBatchAction,
+  row: ContentRow,
+): AdminBatchFieldModalConfig {
+  if (action === "rank") {
+    return {
+      fieldLabel: labels.fields.rank,
+      initialValue: row.rank ?? 1,
+      type: "number",
+    };
+  }
+
+  if (action === "isActive") {
+    return {
+      fieldLabel: labels.activeToggle,
+      initialValue: row.isActive,
+      options: [
+        { label: labels.active, value: "true" },
+        { label: labels.inactive, value: "false" },
+      ],
+      type: "boolean",
+    };
+  }
+
+  if (
+    action === "contentEn" ||
+    action === "contentTh" ||
+    action === "relatedSku"
+  ) {
+    return {
+      fieldLabel: labels.fields[action],
+      initialValue:
+        action === "relatedSku" ? row.relatedSku.join(", ") : row[action],
+      type: "textarea",
+    };
+  }
+
+  return {
+    fieldLabel: labels.fields[action],
+    initialValue: row[action] ?? "",
+    type: "text",
+  };
 }
 
 function getLabels(locale: Locale, section: ContentSection) {
@@ -716,10 +913,17 @@ function getLabels(locale: Locale, section: ContentSection) {
           : "ไม่สามารถโหลดข้อมูลข่าวสารและกิจกรรมได้",
         nextPage: "หน้าถัดไป",
         previousPage: "หน้าก่อนหน้า",
+        rowsPerPage: "จำนวนต่อหน้า",
         save: "บันทึก",
         saving: "กำลังบันทึก...",
         selectAll: "เลือกรายการทั้งหมด",
         selectRow: "เลือกรายการ",
+        bulkEditTitle: (fieldLabel: string) =>
+          `${isArticle ? "แก้ไขหลายบทความ" : "แก้ไขหลายข่าวสารและกิจกรรม"}: ${fieldLabel}`,
+        bulkEditDescription: (count: number, fieldLabel: string) =>
+          isArticle
+            ? `อัปเดตฟิลด์ ${fieldLabel} ของบทความพร้อมกัน ${count} รายการ`
+            : `อัปเดตฟิลด์ ${fieldLabel} ของข่าวสารและกิจกรรมพร้อมกัน ${count} รายการ`,
       }
     : {
         title: isArticle ? "Articles & Knowledge" : "News & Activities",
@@ -783,9 +987,16 @@ function getLabels(locale: Locale, section: ContentSection) {
         fetchError: isArticle ? "Unable to load articles" : "Unable to load news and activities",
         nextPage: "Next page",
         previousPage: "Previous page",
+        rowsPerPage: "Rows per page",
         save: "Save",
         saving: "Saving...",
         selectAll: "Select all rows",
         selectRow: "Select row",
+        bulkEditTitle: (fieldLabel: string) =>
+          `${isArticle ? "Bulk edit articles" : "Bulk edit news and activities"}: ${fieldLabel}`,
+        bulkEditDescription: (count: number, fieldLabel: string) =>
+          isArticle
+            ? `Update ${fieldLabel} for ${count} articles at once.`
+            : `Update ${fieldLabel} for ${count} news and activity entries at once.`,
       };
 }

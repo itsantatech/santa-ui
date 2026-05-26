@@ -4,7 +4,17 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 import { BrandSearch } from "@/components/brand-search";
 import type { BrandListResponse } from "./brands-section";
-import { AdminDataTable, type AdminDataTableColumn, AdminStatusBadge } from "./admin-data-table";
+import {
+  AdminBatchFieldModal,
+  type AdminBatchFieldModalConfig,
+} from "./admin-batch-field-modal";
+import {
+  AdminDataTable,
+  type AdminDataTableColumn,
+  type AdminDataTableContextAction,
+  AdminStatusBadge,
+} from "./admin-data-table";
+import { useAdminTableEditRequest } from "./admin-table-events";
 import type { Locale } from "@/lib/i18n";
 
 type BrandRow = NonNullable<BrandListResponse>["items"][number];
@@ -20,13 +30,25 @@ type BrandFormState = {
   slug: string;
 };
 
+type BrandBatchAction =
+  | "descriptionEn"
+  | "descriptionTh"
+  | "imgUrl"
+  | "isActive"
+  | "nameEn"
+  | "nameTh"
+  | "rank"
+  | "slug";
+
 export function BrandsSectionClient({
   initialResponse,
+  initialPageSize,
   initialSearch,
   locale,
   page,
 }: {
   initialResponse: BrandListResponse | null;
+  initialPageSize: number;
   initialSearch?: string;
   locale: Locale;
   page: number;
@@ -35,9 +57,40 @@ export function BrandsSectionClient({
   const router = useRouter();
   const [selectedBrand, setSelectedBrand] = useState<BrandRow | null>(null);
   const [editingBrand, setEditingBrand] = useState<BrandRow | null>(null);
+  const [bulkEditingBrands, setBulkEditingBrands] = useState<BrandRow[]>([]);
+  const [bulkEditingAction, setBulkEditingAction] =
+    useState<BrandBatchAction | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deletingBrand, setDeletingBrand] = useState<BrandRow | null>(null);
   const rows = selectedBrand ? [selectedBrand] : initialResponse?.items ?? [];
+  const contextMenuActions = useMemo<AdminDataTableContextAction[]>(
+    () => [
+      { id: "nameTh", label: labels.fields.nameTh },
+      { id: "nameEn", label: labels.fields.nameEn },
+      { id: "slug", label: labels.fields.slug },
+      { id: "rank", label: labels.fields.rank },
+      { id: "imgUrl", label: labels.fields.imgUrl },
+      { id: "descriptionTh", label: labels.fields.descriptionTh },
+      { id: "descriptionEn", label: labels.fields.descriptionEn },
+      { id: "isActive", label: labels.activeToggle },
+    ],
+    [labels],
+  );
+
+  useAdminTableEditRequest("brands", (actionId, rowIds) => {
+    const matchedRows = rows.filter((row) => rowIds.includes(row.code));
+    const normalizedAction = actionId as BrandBatchAction;
+
+    if (matchedRows.length === 1 && actionId === "edit") {
+      setEditingBrand(matchedRows[0]);
+      return;
+    }
+
+    if (matchedRows.length > 0) {
+      setBulkEditingAction(normalizedAction);
+      setBulkEditingBrands(matchedRows);
+    }
+  });
   const columns = useMemo<AdminDataTableColumn<BrandRow>[]>(
     () => [
       {
@@ -147,20 +200,24 @@ export function BrandsSectionClient({
       <AdminDataTable
         columns={columns}
         emptyLabel={initialResponse ? labels.empty : labels.fetchError}
+        contextMenuActions={contextMenuActions}
         getRowId={(row) => row.code}
         pagination={{
           currentPage: initialResponse?.meta.page ?? page,
+          currentPageSize: initialPageSize,
           totalPages: selectedBrand ? 1 : initialResponse?.meta.totalPages ?? 1,
           getPageHref: (nextPage) =>
             selectedBrand
               ? `/${locale}/admin?section=brands&search=${encodeURIComponent(selectedBrand.code)}`
-              : createBrandsPageHref(locale, nextPage, initialSearch),
+              : createBrandsPageHref(locale, nextPage, initialPageSize, initialSearch),
           previousLabel: labels.previousPage,
           nextLabel: labels.nextPage,
+          rowsPerPageLabel: labels.rowsPerPage,
         }}
         rows={rows}
         selectAllLabel={labels.selectAll}
         selectRowLabel={(row) => `${labels.selectRow} ${row.code}`}
+        tableId="brands"
       />
 
       {isAddOpen ? (
@@ -199,8 +256,141 @@ export function BrandsSectionClient({
           title={labels.deleteTitle}
         />
       ) : null}
+      {bulkEditingBrands.length > 0 && bulkEditingAction ? (
+        <AdminBatchFieldModal
+          cancelLabel={labels.cancel}
+          config={getBrandBatchFieldConfig(labels, bulkEditingAction, bulkEditingBrands[0])}
+          description={labels.bulkEditDescription(
+            bulkEditingBrands.length,
+            getBrandBatchFieldLabel(labels, bulkEditingAction),
+          )}
+          errorMessage={labels.error}
+          items={bulkEditingBrands.map((row) => row.code)}
+          onClose={() => {
+            setBulkEditingAction(null);
+            setBulkEditingBrands([]);
+          }}
+          onSubmit={async (value) => {
+            const responses = await Promise.all(
+              bulkEditingBrands.map((row) =>
+                fetch(`/api/admin/brands/${encodeURIComponent(row.code)}`, {
+                  method: "PATCH",
+                  headers: {
+                    "content-type": "application/json",
+                  },
+                  body: JSON.stringify(
+                    buildBrandPayload(row, bulkEditingAction, value),
+                  ),
+                }),
+              ),
+            );
+
+            if (responses.some((response) => !response.ok)) {
+              throw new Error("bulk-edit-failed");
+            }
+
+            setBulkEditingAction(null);
+            setBulkEditingBrands([]);
+            router.refresh();
+          }}
+          saveLabel={labels.save}
+          savingLabel={labels.saving}
+          title={labels.bulkEditTitle(getBrandBatchFieldLabel(labels, bulkEditingAction))}
+        />
+      ) : null}
     </div>
   );
+}
+
+function buildBrandPayload(
+  row: BrandRow,
+  action: BrandBatchAction,
+  value: boolean | number | string,
+) {
+  const next = {
+    descriptionEn: row.descriptionEn ?? "",
+    descriptionTh: row.descriptionTh ?? "",
+    imgUrl: row.imgUrl ?? "",
+    isActive: row.isActive,
+    nameEn: row.nameEn,
+    nameTh: row.nameTh,
+    rank: row.rank ?? 1,
+    slug: row.slug,
+  };
+
+  switch (action) {
+    case "rank":
+      next.rank = Number(value || 1);
+      break;
+    case "isActive":
+      next.isActive = Boolean(value);
+      break;
+    case "descriptionEn":
+    case "descriptionTh":
+    case "imgUrl":
+    case "nameEn":
+    case "nameTh":
+    case "slug":
+      next[action] = String(value);
+      break;
+  }
+
+  return {
+    ...next,
+    seoDescriptionEn: next.descriptionEn || next.nameEn,
+    seoDescriptionTh: next.descriptionTh || next.nameTh,
+    seoTitleEn: next.nameEn,
+    seoTitleTh: next.nameTh,
+  };
+}
+
+function getBrandBatchFieldLabel(
+  labels: ReturnType<typeof getLabels>,
+  action: BrandBatchAction,
+) {
+  if (action === "isActive") {
+    return labels.activeToggle;
+  }
+
+  return labels.fields[action];
+}
+
+function getBrandBatchFieldConfig(
+  labels: ReturnType<typeof getLabels>,
+  action: BrandBatchAction,
+  row: BrandRow,
+): AdminBatchFieldModalConfig {
+  switch (action) {
+    case "rank":
+      return {
+        fieldLabel: labels.fields.rank,
+        initialValue: row.rank ?? 1,
+        type: "number",
+      };
+    case "isActive":
+      return {
+        fieldLabel: labels.activeToggle,
+        initialValue: row.isActive,
+        options: [
+          { label: labels.active, value: "true" },
+          { label: labels.inactive, value: "false" },
+        ],
+        type: "boolean",
+      };
+    case "descriptionEn":
+    case "descriptionTh":
+      return {
+        fieldLabel: labels.fields[action],
+        initialValue: row[action] ?? "",
+        type: "textarea",
+      };
+    default:
+      return {
+        fieldLabel: getBrandBatchFieldLabel(labels, action),
+        initialValue: row[action] ?? "",
+        type: action === "imgUrl" ? "text" : "text",
+      };
+  }
 }
 
 function BrandModal({
@@ -437,9 +627,15 @@ function BrandLogoPreview({ src, title }: { src: string | null; title: string })
   );
 }
 
-function createBrandsPageHref(locale: Locale, page: number, search?: string) {
+function createBrandsPageHref(
+  locale: Locale,
+  page: number,
+  pageSize: number,
+  search?: string,
+) {
   const searchParams = new URLSearchParams({
     page: String(page),
+    pageSize: String(pageSize),
     section: "brands",
   });
 
@@ -496,10 +692,14 @@ function getLabels(locale: Locale) {
         fetchError: "ไม่สามารถโหลดข้อมูลแบรนด์ได้",
         nextPage: "หน้าถัดไป",
         previousPage: "หน้าก่อนหน้า",
+        rowsPerPage: "จำนวนต่อหน้า",
         save: "บันทึก",
         saving: "กำลังบันทึก...",
         selectAll: "เลือกรายการทั้งหมด",
         selectRow: "เลือกรายการ",
+        bulkEditTitle: (fieldLabel: string) => `แก้ไขหลายแบรนด์: ${fieldLabel}`,
+        bulkEditDescription: (count: number, fieldLabel: string) =>
+          `อัปเดตฟิลด์ ${fieldLabel} พร้อมกัน ${count} รายการ`,
       }
     : {
         title: "Brands",
@@ -545,9 +745,13 @@ function getLabels(locale: Locale) {
         fetchError: "Unable to load brands",
         nextPage: "Next page",
         previousPage: "Previous page",
+        rowsPerPage: "Rows per page",
         save: "Save",
         saving: "Saving...",
         selectAll: "Select all rows",
         selectRow: "Select row",
+        bulkEditTitle: (fieldLabel: string) => `Bulk edit brands: ${fieldLabel}`,
+        bulkEditDescription: (count: number, fieldLabel: string) =>
+          `Update ${fieldLabel} for ${count} brands at once.`,
       };
 }

@@ -4,7 +4,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { RichTextEditor } from "@/components/rich-text-editor";
-import { AdminDataTable, type AdminDataTableColumn, AdminStatusBadge } from "./admin-data-table";
+import {
+  AdminBatchFieldModal,
+  type AdminBatchFieldModalConfig,
+} from "./admin-batch-field-modal";
+import {
+  AdminDataTable,
+  type AdminDataTableColumn,
+  type AdminDataTableContextAction,
+  AdminStatusBadge,
+} from "./admin-data-table";
+import { useAdminTableEditRequest } from "./admin-table-events";
 import type { Locale } from "@/lib/i18n";
 import { formatAdminDateTime } from "@/lib/admin-api";
 
@@ -70,34 +80,66 @@ type AdminUserRow = {
 type UserRoleOption = string;
 
 type TabValue = "users" | "home-content" | "social-media" | "faq";
+type PaginationMeta = {
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+};
+
+type UserBatchAction =
+  "displayName" | "email" | "isActive" | "role" | "username";
+type FaqBatchAction =
+  | "answerEn"
+  | "answerTh"
+  | "categoryCode"
+  | "isActive"
+  | "questionEn"
+  | "questionTh"
+  | "rank"
+  | "url";
 
 export function SettingsSectionClient({
   aboutSettings,
   activeTab,
   canManageUsers = false,
   categories,
+  faqMeta,
   faqs,
   homeSettings,
   locale,
+  page,
+  pageSize,
   socialContacts,
+  userMeta,
   users,
 }: {
   aboutSettings: AboutSettingRow[];
   activeTab: TabValue;
   categories: CategoryOption[];
   canManageUsers?: boolean;
+  faqMeta?: PaginationMeta;
   faqs: FaqRow[];
   homeSettings: HomeSettingRow[];
   locale: Locale;
+  page: number;
+  pageSize: number;
   socialContacts: SocialContactRow[];
+  userMeta?: PaginationMeta;
   users: AdminUserRow[];
 }) {
   const labels = getLabels(locale);
   const router = useRouter();
   const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null);
+  const [bulkEditingUsers, setBulkEditingUsers] = useState<AdminUserRow[]>([]);
+  const [bulkEditingUserAction, setBulkEditingUserAction] =
+    useState<UserBatchAction | null>(null);
   const [deletingUser, setDeletingUser] = useState<AdminUserRow | null>(null);
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
   const [editingFaq, setEditingFaq] = useState<FaqRow | null>(null);
+  const [bulkEditingFaqs, setBulkEditingFaqs] = useState<FaqRow[]>([]);
+  const [bulkEditingFaqAction, setBulkEditingFaqAction] =
+    useState<FaqBatchAction | null>(null);
   const [deletingFaq, setDeletingFaq] = useState<FaqRow | null>(null);
   const [isCreateFaqOpen, setIsCreateFaqOpen] = useState(false);
   const categoryNameByCode = useMemo(
@@ -110,6 +152,62 @@ export function SettingsSectionClient({
       ),
     [categories, locale],
   );
+
+  const userContextMenuActions = useMemo<AdminDataTableContextAction[]>(
+    () => [
+      { id: "displayName", label: labels.user.fields.displayName },
+      { id: "username", label: labels.user.fields.username },
+      { id: "email", label: labels.user.fields.email },
+      { id: "role", label: labels.user.fields.role },
+      { id: "isActive", label: labels.common.activeToggle },
+    ],
+    [labels],
+  );
+  const faqContextMenuActions = useMemo<AdminDataTableContextAction[]>(
+    () => [
+      { id: "rank", label: labels.faq.fields.rank },
+      { id: "questionTh", label: labels.faq.fields.questionTh },
+      { id: "questionEn", label: labels.faq.fields.questionEn },
+      { id: "answerTh", label: labels.faq.fields.answerTh },
+      { id: "answerEn", label: labels.faq.fields.answerEn },
+      { id: "url", label: labels.faq.fields.url },
+      { id: "categoryCode", label: labels.faq.fields.categoryCode },
+      { id: "isActive", label: labels.common.activeToggle },
+    ],
+    [labels],
+  );
+
+  useAdminTableEditRequest("settings-users", (actionId, rowIds) => {
+    if (!canManageUsers) {
+      return;
+    }
+
+    const matchedRows = users.filter((row) => rowIds.includes(row.id));
+
+    if (matchedRows.length === 1 && actionId === "edit") {
+      setEditingUser(matchedRows[0]);
+      return;
+    }
+
+    if (matchedRows.length > 0) {
+      setBulkEditingUserAction(actionId as UserBatchAction);
+      setBulkEditingUsers(matchedRows);
+    }
+  });
+
+  useAdminTableEditRequest("settings-faq", (actionId, rowIds) => {
+    const matchedRows = faqs.filter((row) => rowIds.includes(row.id));
+
+    if (matchedRows.length === 1 && actionId === "edit") {
+      setEditingFaq(matchedRows[0]);
+      return;
+    }
+
+    if (matchedRows.length > 0) {
+      setBulkEditingFaqAction(actionId as FaqBatchAction);
+      setBulkEditingFaqs(matchedRows);
+    }
+  });
   const userColumns = useMemo<AdminDataTableColumn<AdminUserRow>[]>(
     () => {
       const columns: AdminDataTableColumn<AdminUserRow>[] = [
@@ -329,10 +427,22 @@ export function SettingsSectionClient({
           <AdminDataTable
             columns={userColumns}
             emptyLabel={labels.user.empty}
+            contextMenuActions={canManageUsers ? userContextMenuActions : undefined}
             getRowId={(row) => row.id}
+            pagination={{
+              currentPage: userMeta?.page ?? page,
+              currentPageSize: userMeta?.pageSize ?? pageSize,
+              totalPages: userMeta?.totalPages ?? 1,
+              getPageHref: (nextPage) =>
+                createSettingsPageHref(locale, "users", nextPage, userMeta?.pageSize ?? pageSize),
+              previousLabel: labels.common.previousPage,
+              nextLabel: labels.common.nextPage,
+              rowsPerPageLabel: labels.common.rowsPerPage,
+            }}
             rows={users}
             selectAllLabel={labels.common.selectAll}
             selectRowLabel={(row) => `${labels.common.selectRow} ${row.username}`}
+            tableId="settings-users"
           />
           {canManageUsers && isCreateUserOpen ? (
             <UserModal
@@ -370,6 +480,52 @@ export function SettingsSectionClient({
               title={labels.user.deleteTitle}
             />
           ) : null}
+          {canManageUsers && bulkEditingUsers.length > 0 && bulkEditingUserAction ? (
+            <AdminBatchFieldModal
+              cancelLabel={labels.common.cancel}
+              config={getUserBatchFieldConfig(
+                labels,
+                bulkEditingUserAction,
+                bulkEditingUsers[0],
+              )}
+              description={labels.user.bulkEditDescription(
+                bulkEditingUsers.length,
+                getUserBatchFieldLabel(labels, bulkEditingUserAction),
+              )}
+              errorMessage={labels.common.error}
+              items={bulkEditingUsers.map((row) => row.username)}
+              onClose={() => {
+                setBulkEditingUserAction(null);
+                setBulkEditingUsers([]);
+              }}
+              onSubmit={async (value) => {
+                const responses = await Promise.all(
+                  bulkEditingUsers.map((row) =>
+                    fetch(`/api/admin/admin-users/${encodeURIComponent(row.id)}`, {
+                      method: "PATCH",
+                      headers: {
+                        "content-type": "application/json",
+                      },
+                      body: JSON.stringify(buildUserPayload(row, bulkEditingUserAction, value)),
+                    }),
+                  ),
+                );
+
+                if (responses.some((response) => !response.ok)) {
+                  throw new Error("bulk-edit-failed");
+                }
+
+                setBulkEditingUserAction(null);
+                setBulkEditingUsers([]);
+                router.refresh();
+              }}
+              saveLabel={labels.common.save}
+              savingLabel={labels.common.saving}
+              title={labels.user.bulkEditTitle(
+                getUserBatchFieldLabel(labels, bulkEditingUserAction),
+              )}
+            />
+          ) : null}
         </>
       ) : null}
 
@@ -405,10 +561,22 @@ export function SettingsSectionClient({
           <AdminDataTable
             columns={faqColumns}
             emptyLabel={labels.faq.empty}
+            contextMenuActions={faqContextMenuActions}
             getRowId={(row) => row.id}
+            pagination={{
+              currentPage: faqMeta?.page ?? page,
+              currentPageSize: faqMeta?.pageSize ?? pageSize,
+              totalPages: faqMeta?.totalPages ?? 1,
+              getPageHref: (nextPage) =>
+                createSettingsPageHref(locale, "faq", nextPage, faqMeta?.pageSize ?? pageSize),
+              previousLabel: labels.common.previousPage,
+              nextLabel: labels.common.nextPage,
+              rowsPerPageLabel: labels.common.rowsPerPage,
+            }}
             rows={faqs}
             selectAllLabel={labels.common.selectAll}
             selectRowLabel={(row) => `${labels.common.selectRow} ${row.questionTh ?? row.id}`}
+            tableId="settings-faq"
           />
           {isCreateFaqOpen ? (
             <FaqModal
@@ -448,6 +616,52 @@ export function SettingsSectionClient({
                 router.refresh();
               }}
               title={labels.faq.deleteTitle}
+            />
+          ) : null}
+          {bulkEditingFaqs.length > 0 && bulkEditingFaqAction ? (
+            <AdminBatchFieldModal
+              cancelLabel={labels.common.cancel}
+              config={getFaqBatchFieldConfig(
+                labels,
+                bulkEditingFaqAction,
+                bulkEditingFaqs[0],
+              )}
+              description={labels.faq.bulkEditDescription(
+                bulkEditingFaqs.length,
+                getFaqBatchFieldLabel(labels, bulkEditingFaqAction),
+              )}
+              errorMessage={labels.common.error}
+              items={bulkEditingFaqs.map((row) => row.questionTh ?? row.id)}
+              onClose={() => {
+                setBulkEditingFaqAction(null);
+                setBulkEditingFaqs([]);
+              }}
+              onSubmit={async (value) => {
+                const responses = await Promise.all(
+                  bulkEditingFaqs.map((row) =>
+                    fetch(`/api/admin/faqs/${encodeURIComponent(row.id)}`, {
+                      method: "PATCH",
+                      headers: {
+                        "content-type": "application/json",
+                      },
+                      body: JSON.stringify(buildFaqPayload(row, bulkEditingFaqAction, value)),
+                    }),
+                  ),
+                );
+
+                if (responses.some((response) => !response.ok)) {
+                  throw new Error("bulk-edit-failed");
+                }
+
+                setBulkEditingFaqAction(null);
+                setBulkEditingFaqs([]);
+                router.refresh();
+              }}
+              saveLabel={labels.common.save}
+              savingLabel={labels.common.saving}
+              title={labels.faq.bulkEditTitle(
+                getFaqBatchFieldLabel(labels, bulkEditingFaqAction),
+              )}
             />
           ) : null}
         </>
@@ -1464,6 +1678,157 @@ function countRichTextCharacters(html: string) {
     .trim().length;
 }
 
+function createSettingsPageHref(
+  locale: Locale,
+  tab: "faq" | "users",
+  page: number,
+  pageSize: number,
+) {
+  const searchParams = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+    section: "settings",
+    tab,
+  });
+
+  return `/${locale}/admin?${searchParams.toString()}`;
+}
+
+function getUserBatchFieldLabel(
+  labels: ReturnType<typeof getLabels>,
+  action: UserBatchAction,
+) {
+  if (action === "isActive") {
+    return labels.common.activeToggle;
+  }
+
+  return labels.user.fields[action];
+}
+
+function getFaqBatchFieldLabel(
+  labels: ReturnType<typeof getLabels>,
+  action: FaqBatchAction,
+) {
+  if (action === "isActive") {
+    return labels.common.activeToggle;
+  }
+
+  return labels.faq.fields[action];
+}
+
+function getUserBatchFieldConfig(
+  labels: ReturnType<typeof getLabels>,
+  action: UserBatchAction,
+  row: AdminUserRow,
+): AdminBatchFieldModalConfig {
+  if (action === "isActive") {
+    return {
+      fieldLabel: labels.common.activeToggle,
+      initialValue: row.isActive,
+      options: [
+        { label: labels.common.active, value: "true" },
+        { label: labels.common.inactive, value: "false" },
+      ],
+      type: "boolean",
+    };
+  }
+
+  return {
+    fieldLabel: labels.user.fields[action],
+    initialValue: row[action],
+    type: "text",
+  };
+}
+
+function getFaqBatchFieldConfig(
+  labels: ReturnType<typeof getLabels>,
+  action: FaqBatchAction,
+  row: FaqRow,
+): AdminBatchFieldModalConfig {
+  if (action === "isActive") {
+    return {
+      fieldLabel: labels.common.activeToggle,
+      initialValue: row.isActive,
+      options: [
+        { label: labels.common.active, value: "true" },
+        { label: labels.common.inactive, value: "false" },
+      ],
+      type: "boolean",
+    };
+  }
+
+  if (action === "rank") {
+    return {
+      fieldLabel: labels.faq.fields.rank,
+      initialValue: row.rank ?? 1,
+      type: "number",
+    };
+  }
+
+  if (action === "answerTh" || action === "answerEn") {
+    return {
+      fieldLabel: labels.faq.fields[action],
+      initialValue: row[action] ?? "",
+      type: "textarea",
+    };
+  }
+
+  return {
+    fieldLabel: labels.faq.fields[action],
+    initialValue: row[action] ?? "",
+    type: "text",
+  };
+}
+
+function buildUserPayload(
+  row: AdminUserRow,
+  action: UserBatchAction,
+  value: boolean | number | string,
+) {
+  const next = {
+    displayName: row.displayName,
+    email: row.email,
+    isActive: row.isActive,
+    role: row.role,
+    username: row.username,
+  };
+
+  if (action === "isActive") {
+    next.isActive = Boolean(value);
+  } else {
+    next[action] = String(value);
+  }
+
+  return next;
+}
+
+function buildFaqPayload(
+  row: FaqRow,
+  action: FaqBatchAction,
+  value: boolean | number | string,
+) {
+  const next = {
+    answerEn: row.answerEn ?? undefined,
+    answerTh: row.answerTh ?? undefined,
+    categoryCode: row.categoryCode ?? undefined,
+    isActive: row.isActive,
+    questionEn: row.questionEn ?? undefined,
+    questionTh: row.questionTh ?? undefined,
+    rank: row.rank ?? 1,
+    url: row.url ?? undefined,
+  };
+
+  if (action === "isActive") {
+    next.isActive = Boolean(value);
+  } else if (action === "rank") {
+    next.rank = Number(value || 1);
+  } else {
+    next[action] = String(value);
+  }
+
+  return next;
+}
+
 function getLabels(locale: Locale) {
   return locale === "th"
     ? {
@@ -1476,11 +1841,15 @@ function getLabels(locale: Locale) {
         },
         common: {
           active: "ACTIVE",
+          activeToggle: "การแสดงผล",
           cancel: "ยกเลิก",
           delete: "ลบ",
           edit: "แก้ไข",
           error: "ไม่สามารถบันทึกข้อมูลได้",
           inactive: "INACTIVE",
+          nextPage: "หน้าถัดไป",
+          previousPage: "หน้าก่อนหน้า",
+          rowsPerPage: "จำนวนต่อหน้า",
           save: "บันทึก",
           saving: "กำลังบันทึก...",
           selectAll: "เลือกรายการทั้งหมด",
@@ -1500,6 +1869,9 @@ function getLabels(locale: Locale) {
           deleteBody: (username: string) =>
             `ยืนยันการลบผู้ใช้งาน ${username} อีกครั้งก่อนดำเนินการ`,
           deleteTitle: "ยืนยันการลบผู้ใช้งาน",
+          bulkEditDescription: (count: number, fieldLabel: string) =>
+            `อัปเดตฟิลด์ ${fieldLabel} ของผู้ใช้งานพร้อมกัน ${count} รายการ`,
+          bulkEditTitle: (fieldLabel: string) => `แก้ไขผู้ใช้งานหลายรายการ: ${fieldLabel}`,
           deleting: "กำลังลบ...",
           editTitle: "แก้ไขผู้ใช้งาน",
           empty: "ไม่พบข้อมูลผู้ใช้งาน",
@@ -1559,6 +1931,9 @@ function getLabels(locale: Locale) {
           },
           deleteBody: (question: string) => `ยืนยันการลบ FAQ ${question} อีกครั้งก่อนดำเนินการ`,
           deleteTitle: "ยืนยันการลบ FAQ",
+          bulkEditDescription: (count: number, fieldLabel: string) =>
+            `อัปเดตฟิลด์ ${fieldLabel} ของ FAQ พร้อมกัน ${count} รายการ`,
+          bulkEditTitle: (fieldLabel: string) => `แก้ไข FAQ หลายรายการ: ${fieldLabel}`,
           deleting: "กำลังลบ...",
           editTitle: "แก้ไข FAQ",
           empty: "ไม่พบข้อมูล FAQ",
@@ -1587,11 +1962,15 @@ function getLabels(locale: Locale) {
         },
         common: {
           active: "ACTIVE",
+          activeToggle: "Visibility",
           cancel: "Cancel",
           delete: "Delete",
           edit: "Edit",
           error: "Unable to save data",
           inactive: "INACTIVE",
+          nextPage: "Next page",
+          previousPage: "Previous page",
+          rowsPerPage: "Rows per page",
           save: "Save",
           saving: "Saving...",
           selectAll: "Select all rows",
@@ -1611,6 +1990,9 @@ function getLabels(locale: Locale) {
           deleteBody: (username: string) =>
             `Please confirm deleting user ${username}.`,
           deleteTitle: "Confirm User Delete",
+          bulkEditDescription: (count: number, fieldLabel: string) =>
+            `Update ${fieldLabel} for ${count} users at once.`,
+          bulkEditTitle: (fieldLabel: string) => `Bulk edit users: ${fieldLabel}`,
           deleting: "Deleting...",
           editTitle: "Edit User",
           empty: "No users found",
@@ -1670,6 +2052,9 @@ function getLabels(locale: Locale) {
           },
           deleteBody: (question: string) => `Please confirm deleting FAQ ${question}.`,
           deleteTitle: "Confirm FAQ Delete",
+          bulkEditDescription: (count: number, fieldLabel: string) =>
+            `Update ${fieldLabel} for ${count} FAQ entries at once.`,
+          bulkEditTitle: (fieldLabel: string) => `Bulk edit FAQs: ${fieldLabel}`,
           deleting: "Deleting...",
           editTitle: "Edit FAQ",
           empty: "No FAQ found",

@@ -46,6 +46,7 @@ export function UnavailableApiTable({
       rows={rows}
       selectAllLabel={labels.selectAll}
       selectRowLabel={(row) => `${labels.selectRow} ${row.resource}`}
+      tableId={`unavailable-${resource}`}
     />
   );
 }

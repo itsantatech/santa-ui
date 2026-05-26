@@ -19,7 +19,7 @@ type AdminListOptions = {
   subCategoryCode?: string;
 };
 
-const defaultPageSize = 20;
+const defaultPageSize = 50;
 export const santaApiBaseUrl =
   process.env.SANTA_API_BASE_URL ??
   process.env.NEXT_PUBLIC_SANTA_API_BASE_URL ??

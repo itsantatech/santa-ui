@@ -27,23 +27,27 @@ export type ContentListResponse = AdminListResponse<ContentRow>;
 export async function ContentManagementSection({
   locale,
   page,
+  pageSize,
   resource,
   search,
   section,
 }: {
   locale: Locale;
   page: number;
+  pageSize?: number;
   resource: ContentResource;
   search?: string;
   section: ContentSection;
 }) {
   const response = await fetchAdminList<ContentRow>(`/${resource}`, {
     page,
+    pageSize,
     search,
   });
 
   return (
     <ContentManagementSectionClient
+      initialPageSize={response?.meta.pageSize ?? pageSize ?? 50}
       initialResponse={response}
       initialSearch={search}
       locale={locale}
