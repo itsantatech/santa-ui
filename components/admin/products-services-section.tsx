@@ -44,6 +44,16 @@ type UploadedFileResponse = {
   url?: string;
 };
 
+type GoogleProductCategoryOption = {
+  id: string;
+  fullPathEn: string;
+  fullPathTh?: string | null;
+};
+
+type GoogleProductCategoryListResponse = {
+  items: GoogleProductCategoryOption[];
+};
+
 export type ProductEditorOption = {
   code: string;
   nameEn: string;
@@ -123,6 +133,9 @@ type ProductLabels = {
   };
   noDatasheet: string;
   noMedia: string;
+  googleCategoryEmpty: string;
+  googleCategoryLoading: string;
+  googleCategorySearchPlaceholder: string;
   noSuggestions: string;
   save: string;
   saving: string;
@@ -720,7 +733,18 @@ function ProductFormFields({
           }))
         }
       />
-      <ControlledTextField label={labels.fields.googleCategoryId} value={form.googleCategoryId} onChange={(value) => onChange((current) => ({ ...current, googleCategoryId: value }))} />
+      <GoogleCategoryCombobox
+        emptyLabel={labels.googleCategoryEmpty}
+        label={labels.fields.googleCategoryId}
+        loadingLabel={labels.googleCategoryLoading}
+        locale={locale}
+        noResultsLabel={labels.noSuggestions}
+        searchPlaceholder={labels.googleCategorySearchPlaceholder}
+        value={form.googleCategoryId}
+        onChange={(value) =>
+          onChange((current) => ({ ...current, googleCategoryId: value }))
+        }
+      />
       <MultiSelectField
         label={labels.fields.categoryCodes}
         options={categoryOptions}
@@ -1235,6 +1259,236 @@ function MultiSelectField({
       </div>
     </label>
   );
+}
+
+function GoogleCategoryCombobox({
+  emptyLabel,
+  label,
+  loadingLabel,
+  locale,
+  noResultsLabel,
+  onChange,
+  searchPlaceholder,
+  value,
+}: {
+  emptyLabel: string;
+  label: string;
+  loadingLabel: string;
+  locale: "th" | "en";
+  noResultsLabel: string;
+  onChange: (value: string) => void;
+  searchPlaceholder: string;
+  value: string;
+}) {
+  const inputId = `${label.replace(/\s+/g, "-").toLowerCase()}-google-category-combobox`;
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [options, setOptions] = useState<GoogleProductCategoryOption[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const normalizedQuery = query.trim();
+  const selectedOption = options.find((option) => option.id === value);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadCategories(search: string) {
+      setIsLoading(true);
+
+      try {
+        const params = new URLSearchParams({
+          page: "1",
+          pageSize: "20",
+        });
+
+        if (search) {
+          params.set("search", search);
+        }
+
+        const response = await fetch(
+          `/api/admin/google-product-categories?${params.toString()}`,
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
+
+        if (!response.ok) {
+          setOptions([]);
+          return;
+        }
+
+        const data = (await response.json()) as GoogleProductCategoryListResponse;
+        setOptions(data.items ?? []);
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setOptions([]);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (isOpen) {
+      const timer = window.setTimeout(
+        () => void loadCategories(normalizedQuery),
+        normalizedQuery ? 250 : 0,
+      );
+
+      return () => {
+        window.clearTimeout(timer);
+        controller.abort();
+      };
+    }
+
+    if (value && !selectedOption) {
+      void loadCategories(value);
+    }
+
+    return () => {
+      controller.abort();
+    };
+  }, [isOpen, normalizedQuery, selectedOption, value]);
+
+  const selectedLabel = selectedOption
+    ? getGoogleCategoryOptionLabel(selectedOption, locale)
+    : value;
+
+  return (
+    <label className="admin-product-form-field admin-product-form-field-wide">
+      <span>{label}</span>
+      <div className="admin-product-multiselect" ref={containerRef}>
+        <div className="admin-product-multiselect-combobox">
+          <span className="material-symbols-outlined" aria-hidden="true">
+            search
+          </span>
+          <input
+            aria-autocomplete="list"
+            aria-controls={`${inputId}-suggestions`}
+            aria-expanded={isOpen}
+            autoComplete="off"
+            className="admin-product-multiselect-input"
+            id={inputId}
+            onBlur={() => {
+              window.setTimeout(() => setIsOpen(false), 120);
+            }}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setIsOpen(true);
+            }}
+            onFocus={() => setIsOpen(true)}
+            placeholder={selectedLabel || searchPlaceholder}
+            role="combobox"
+            type="search"
+            value={query}
+          />
+          <span className="material-symbols-outlined" aria-hidden="true">
+            arrow_drop_down
+          </span>
+        </div>
+        {value ? (
+          <div className="admin-product-multiselect-tags">
+            <button
+              className="admin-product-multiselect-tag"
+              onClick={() => {
+                onChange("");
+                setQuery("");
+              }}
+              type="button"
+            >
+              <span>{selectedLabel || `${label}: ${value}`}</span>
+              <span className="admin-product-google-category-id">#{value}</span>
+              <span className="material-symbols-outlined" aria-hidden="true">
+                close
+              </span>
+            </button>
+          </div>
+        ) : (
+          <p className="admin-product-google-category-helper">{emptyLabel}</p>
+        )}
+        {isOpen ? (
+          <div
+            className="admin-product-multiselect-panel"
+            id={`${inputId}-suggestions`}
+            role="listbox"
+          >
+            <div className="admin-product-multiselect-options">
+              {isLoading ? (
+                <p className="admin-product-multiselect-empty">{loadingLabel}</p>
+              ) : options.length > 0 ? (
+                options.map((option) => {
+                  const checked = option.id === value;
+
+                  return (
+                    <button
+                      aria-selected={checked}
+                      className={`admin-product-multiselect-option${checked ? " is-selected" : ""}`}
+                      key={option.id}
+                      onClick={() => {
+                        onChange(option.id);
+                        setQuery("");
+                        setIsOpen(false);
+                      }}
+                      onMouseDown={(event) => event.preventDefault()}
+                      role="option"
+                      type="button"
+                    >
+                      <span className="admin-product-google-category-option">
+                        <strong>{getGoogleCategoryOptionLabel(option, locale)}</strong>
+                        <span>ID: {option.id}</span>
+                      </span>
+                      {checked ? (
+                        <span className="material-symbols-outlined" aria-hidden="true">
+                          check
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })
+              ) : (
+                <p className="admin-product-multiselect-empty">{noResultsLabel}</p>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </label>
+  );
+}
+
+function getGoogleCategoryOptionLabel(
+  option: GoogleProductCategoryOption,
+  locale: "th" | "en",
+) {
+  return locale === "th"
+    ? option.fullPathTh?.trim() || option.fullPathEn
+    : option.fullPathEn;
 }
 
 function getInitialFormValue(product?: ProductManagementRow): ProductFormValue {
