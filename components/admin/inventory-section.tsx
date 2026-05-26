@@ -296,9 +296,59 @@ function ProductImage({ alt, src }: { alt: string; src?: string }) {
 }
 
 export type InventoryManagementRow = InventoryRow;
-export type InventoryLabels = ReturnType<typeof getInventoryLabels>;
+export type InventoryLabels = {
+  add: string;
+  addTitle: string;
+  cancel: string;
+  chooseFile: string;
+  columns: {
+    actions: string;
+    brand: string;
+    category: string;
+    image: string;
+    lowStockThreshold: string;
+    nameEn: string;
+    nameTh: string;
+    sku: string;
+    stockQuantity: string;
+    subCategory: string;
+  };
+  delete: string;
+  deleteBodyTemplate: string;
+  deleteTitle: string;
+  download: string;
+  active: string;
+  activeToggle: string;
+  edit: string;
+  editTitle: string;
+  empty: string;
+  error: string;
+  fetchError: string;
+  fileSelected: string;
+  noFileChosen: string;
+  nextPage: string;
+  noSuggestions: string;
+  previousPage: string;
+  rowsPerPage: string;
+  save: string;
+  saving: string;
+  search: string;
+  searchPlaceholder: string;
+  searchTooShort: string;
+  selectAll: string;
+  selectRow: string;
+  inactive: string;
+  summary: {
+    alert: string;
+    lowStock: string;
+    showAll: string;
+    totalStock: string;
+  };
+  template: string;
+  upload: string;
+};
 
-function getInventoryLabels(locale: Locale) {
+function getInventoryLabels(locale: Locale): InventoryLabels {
   return locale === "th"
     ? {
         add: "เพิ่มข้อมูลสต๊อค",
@@ -323,10 +373,6 @@ function getInventoryLabels(locale: Locale) {
         download: "ดาวน์โหลด",
         active: "ACTIVE",
         activeToggle: "การแสดงผล",
-        bulkEditDescription: (count: number, fieldLabel: string) =>
-          `อัปเดตฟิลด์ ${fieldLabel} ของสต๊อคพร้อมกัน ${count} รายการ`,
-        bulkEditTitle: (fieldLabel: string) =>
-          `แก้ไขข้อมูลสต๊อคหลายรายการ: ${fieldLabel}`,
         edit: "แก้ไข",
         editTitle: "แก้ไขข้อมูลสต๊อค",
         empty: "ไม่พบข้อมูลสต๊อค",
@@ -378,10 +424,6 @@ function getInventoryLabels(locale: Locale) {
         download: "Download",
         active: "ACTIVE",
         activeToggle: "Visibility",
-        bulkEditDescription: (count: number, fieldLabel: string) =>
-          `Update ${fieldLabel} for ${count} stock records at once.`,
-        bulkEditTitle: (fieldLabel: string) =>
-          `Bulk edit inventory: ${fieldLabel}`,
         edit: "Edit",
         editTitle: "Edit Stock",
         empty: "No inventory stocks found",

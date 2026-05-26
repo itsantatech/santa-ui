@@ -233,7 +233,8 @@ export function InventoryTableEditController({
         <AdminBatchFieldModal
           cancelLabel={labels.cancel}
           config={getInventoryBatchFieldConfig(labels, bulkEditingAction, bulkEditingInventories[0])}
-          description={labels.bulkEditDescription(
+          description={getInventoryBulkEditDescription(
+            locale,
             bulkEditingInventories.length,
             getInventoryBatchFieldLabel(labels, bulkEditingAction),
           )}
@@ -268,13 +269,33 @@ export function InventoryTableEditController({
           }}
           saveLabel={labels.save}
           savingLabel={labels.saving}
-          title={labels.bulkEditTitle(
+          title={getInventoryBulkEditTitle(
+            locale,
             getInventoryBatchFieldLabel(labels, bulkEditingAction),
           )}
         />
       ) : null}
     </>
   );
+}
+
+function getInventoryBulkEditDescription(
+  locale: "th" | "en",
+  count: number,
+  fieldLabel: string,
+) {
+  return locale === "th"
+    ? `อัปเดตฟิลด์ ${fieldLabel} ของสต๊อคพร้อมกัน ${count} รายการ`
+    : `Update ${fieldLabel} for ${count} stock records at once.`;
+}
+
+function getInventoryBulkEditTitle(
+  locale: "th" | "en",
+  fieldLabel: string,
+) {
+  return locale === "th"
+    ? `แก้ไขข้อมูลสต๊อคหลายรายการ: ${fieldLabel}`
+    : `Bulk edit inventory: ${fieldLabel}`;
 }
 
 function getInventoryBatchFieldLabel(
