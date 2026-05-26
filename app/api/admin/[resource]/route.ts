@@ -9,6 +9,7 @@ const allowedResources = new Set([
   "categories",
   "faqs",
   "files",
+  "google-product-categories",
   "home-section-settings",
   "inventory-stocks",
   "news-and-activities",
