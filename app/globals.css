@@ -1583,6 +1583,135 @@ input {
   border-color: #f97316;
 }
 
+.admin-product-multiselect {
+  position: relative;
+}
+
+.admin-product-multiselect.is-disabled {
+  opacity: 0.7;
+}
+
+.admin-product-multiselect-combobox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 16px;
+  box-shadow: 0 0 0 4px #e5e7eb;
+}
+
+.admin-product-multiselect-combobox:focus-within {
+  border-color: #f97316;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.15);
+}
+
+.admin-product-multiselect-input {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 28px;
+  padding: 0;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+
+.admin-product-multiselect-input::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+.admin-product-multiselect-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.admin-product-multiselect-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 10px;
+  color: #c2410c;
+  font-size: 12px;
+  font-weight: 700;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.admin-product-multiselect-tag span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-product-multiselect-tag .material-symbols-outlined,
+.admin-product-multiselect-combobox .material-symbols-outlined,
+.admin-product-multiselect-option .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.admin-product-multiselect-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  width: 100%;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+}
+
+.admin-product-multiselect-options {
+  display: grid;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.admin-product-multiselect-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.admin-product-multiselect-option:hover,
+.admin-product-multiselect-option.is-selected {
+  background: #f8fafc;
+}
+
+.admin-product-multiselect-empty {
+  margin: 0;
+  padding: 16px 12px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .admin-product-checkbox-field {
   flex-direction: row;
   align-items: center;
