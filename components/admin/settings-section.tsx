@@ -71,7 +71,9 @@ export async function SettingsSection({
   tab?: string;
 }) {
   const activeTab =
-    tab === "home-content" || tab === "social-media" || tab === "faq" ? tab : "users";
+    tab === "home-content" || tab === "about" || tab === "social-media" || tab === "faq"
+      ? tab
+      : "users";
   const [users, homeSettings, aboutSettings, socialContacts, faqs, categories] = await Promise.all([
     fetchAdminList<AdminUserRow>("/admin-users", {
       isActive: true,

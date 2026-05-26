@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { RichTextEditor } from "@/components/rich-text-editor";
 import {
   AdminBatchFieldModal,
@@ -35,6 +36,11 @@ type AboutSettingRow = {
   contentTh: string;
   contentEn: string;
   imgUrl: string[];
+};
+
+type UploadedFileResponse = {
+  signedUrl?: string;
+  url?: string;
 };
 
 type SocialContactRow = {
@@ -79,7 +85,7 @@ type AdminUserRow = {
 
 type UserRoleOption = string;
 
-type TabValue = "users" | "home-content" | "social-media" | "faq";
+type TabValue = "users" | "home-content" | "about" | "social-media" | "faq";
 type PaginationMeta = {
   page: number;
   pageSize: number;
@@ -361,7 +367,8 @@ export function SettingsSectionClient({
     [categoryNameByCode, labels],
   );
 
-  const sections = buildHomeSectionCards(homeSettings, aboutSettings, labels);
+  const sections = buildHomeSectionCards(homeSettings, labels);
+  const aboutCard = buildAboutCard(aboutSettings, labels);
 
   return (
     <div className="admin-section-panel">
@@ -386,6 +393,16 @@ export function SettingsSectionClient({
           href={`/${locale}/admin?section=settings&tab=home-content`}
         >
           {labels.tabs.homeContent}
+        </Link>
+        <Link
+          className={
+            activeTab === "about"
+              ? "admin-section-tab admin-section-tab-active"
+              : "admin-section-tab"
+          }
+          href={`/${locale}/admin?section=settings&tab=about`}
+        >
+          {labels.tabs.about}
         </Link>
         <Link
           className={
@@ -538,6 +555,12 @@ export function SettingsSectionClient({
               labels={labels}
             />
           ))}
+        </div>
+      ) : null}
+
+      {activeTab === "about" ? (
+        <div className="admin-settings-card-stack">
+          <AboutSettingsCard aboutSetting={aboutCard} labels={labels} />
         </div>
       ) : null}
 
@@ -752,7 +775,7 @@ function HomeContentCard({
       <div className="admin-settings-card-header">
         <h2>{card.title}</h2>
       </div>
-      <div className="admin-settings-card-grid">
+      <div className="admin-settings-card-grid admin-settings-about-grid">
         <SettingsField
           label={labels.home.fields.headlineTh}
           maxLength={150}
@@ -831,6 +854,264 @@ function HomeContentCard({
       {error ? <p className="admin-product-form-error">{error}</p> : null}
     </form>
   );
+}
+
+function AboutSettingsCard({
+  aboutSetting,
+  labels,
+}: {
+  aboutSetting: ReturnType<typeof buildAboutCard>;
+  labels: ReturnType<typeof getLabels>;
+}) {
+  const router = useRouter();
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [form, setForm] = useState(() => ({
+    contentEn: aboutSetting.contentEn,
+    contentTh: aboutSetting.contentTh,
+    headlineEn: aboutSetting.headlineEn,
+    headlineTh: aboutSetting.headlineTh,
+    imageUrl: aboutSetting.imgUrl[0] ?? "",
+  }));
+
+  async function handleImageSelected(files: FileList | null) {
+    const file = files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!isMediaFile(file)) {
+      setError(labels.about.validation.imageType);
+      return;
+    }
+
+    setError("");
+    setIsUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("visibility", "public");
+      formData.append("folder", "settings/about");
+
+      const response = await fetch("/api/admin/files/upload", {
+        body: formData,
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error(labels.common.error);
+      }
+
+      const result = (await response.json()) as UploadedFileResponse;
+      const nextUrl = result.url ?? result.signedUrl;
+
+      if (!nextUrl) {
+        throw new Error(labels.common.error);
+      }
+
+      setForm((current) => ({ ...current, imageUrl: nextUrl }));
+    } catch {
+      setError(labels.common.error);
+    } finally {
+      setIsUploading(false);
+      if (imageInputRef.current) {
+        imageInputRef.current.value = "";
+      }
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setIsSaving(true);
+
+    const payload = {
+      headlineTh: form.headlineTh.trim(),
+      headlineEn: form.headlineEn.trim(),
+      contentTh: form.contentTh,
+      contentEn: form.contentEn,
+      imgUrl: form.imageUrl ? [form.imageUrl] : [],
+    };
+
+    const response = await fetch(
+      aboutSetting.id
+        ? `/api/admin/about-page-settings/${aboutSetting.id}`
+        : "/api/admin/about-page-settings",
+      {
+        body: JSON.stringify(payload),
+        headers: {
+          "content-type": "application/json",
+        },
+        method: aboutSetting.id ? "PATCH" : "POST",
+      },
+    );
+
+    setIsSaving(false);
+
+    if (!response.ok) {
+      setError(labels.common.error);
+      return;
+    }
+
+    router.refresh();
+  }
+
+  return (
+    <form className="admin-settings-card" onSubmit={handleSubmit}>
+      <div className="admin-settings-card-header">
+        <h2>{labels.about.title}</h2>
+      </div>
+      <div className="admin-settings-card-grid">
+        <SettingsField
+          label={labels.about.fields.headlineTh}
+          maxLength={200}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, headlineTh: value.slice(0, 200) }))
+          }
+          placeholder={labels.about.placeholders.headlineTh}
+          value={form.headlineTh}
+        />
+        <SettingsField
+          label={labels.about.fields.headlineEn}
+          maxLength={200}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, headlineEn: value.slice(0, 200) }))
+          }
+          placeholder={labels.about.placeholders.headlineEn}
+          value={form.headlineEn}
+        />
+        <div className="admin-settings-richtext-field admin-settings-about-content-row">
+          <RichTextEditor
+            label={labels.about.fields.contentTh}
+            maxCharacters={5000}
+            onChange={(value) => setForm((current) => ({ ...current, contentTh: value }))}
+            placeholder={labels.about.placeholders.contentTh}
+            value={form.contentTh}
+          />
+          <span className="admin-settings-field-hint">
+            {countRichTextCharacters(form.contentTh)}/5000
+          </span>
+        </div>
+        <div className="admin-settings-richtext-field admin-settings-about-content-row">
+          <RichTextEditor
+            label={labels.about.fields.contentEn}
+            maxCharacters={5000}
+            onChange={(value) => setForm((current) => ({ ...current, contentEn: value }))}
+            placeholder={labels.about.placeholders.contentEn}
+            value={form.contentEn}
+          />
+          <span className="admin-settings-field-hint">
+            {countRichTextCharacters(form.contentEn)}/5000
+          </span>
+        </div>
+        <div className="admin-settings-about-image-card">
+          <div className="admin-settings-about-image-copy">
+            <strong>{labels.about.fields.image}</strong>
+          </div>
+          <div className="admin-upload-actions">
+            <input
+              accept="image/*,video/mp4,video/quicktime,video/webm,video/x-m4v"
+              className="admin-settings-hidden-file-input"
+              onChange={(event) => void handleImageSelected(event.target.files)}
+              ref={imageInputRef}
+              type="file"
+            />
+            <button
+              className="admin-product-secondary-button"
+              disabled={isUploading}
+              onClick={() => imageInputRef.current?.click()}
+              type="button"
+            >
+              {isUploading ? labels.about.uploadingImage : labels.about.uploadImage}
+            </button>
+            {form.imageUrl ? (
+              <button
+                className="admin-product-secondary-button"
+                onClick={() => setForm((current) => ({ ...current, imageUrl: "" }))}
+                type="button"
+              >
+                {labels.about.removeImage}
+              </button>
+            ) : null}
+          </div>
+          {form.imageUrl ? (
+            <div className="admin-upload-media-grid">
+              <div className="admin-upload-preview-card">
+                <div className="admin-upload-preview-frame">
+                  {isVideoUrl(form.imageUrl) ? (
+                    <video
+                      className="admin-upload-preview-video"
+                      controls
+                      playsInline
+                      src={form.imageUrl}
+                    />
+                  ) : (
+                    <Image
+                      alt={labels.about.imageAlt}
+                      className="admin-upload-preview-image"
+                      height={220}
+                      src={form.imageUrl}
+                      unoptimized
+                      width={420}
+                    />
+                  )}
+                </div>
+                <div className="admin-upload-preview-meta">
+                  <a className="admin-upload-preview-link" href={form.imageUrl} rel="noreferrer" target="_blank">
+                    {labels.about.previewImage}
+                  </a>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="admin-upload-empty admin-settings-about-image-empty">
+              {labels.about.noImage}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="admin-settings-card-footer">
+        <span />
+        <div className="admin-settings-card-actions">
+          <button
+            className="admin-product-secondary-button"
+            onClick={() =>
+              setForm({
+                contentEn: aboutSetting.contentEn,
+                contentTh: aboutSetting.contentTh,
+                headlineEn: aboutSetting.headlineEn,
+                headlineTh: aboutSetting.headlineTh,
+                imageUrl: aboutSetting.imgUrl[0] ?? "",
+              })
+            }
+            type="button"
+          >
+            {labels.common.cancel}
+          </button>
+          <button
+            className="admin-product-add-button"
+            disabled={isSaving || isUploading}
+            type="submit"
+          >
+            {isSaving ? labels.common.saving : labels.common.save}
+          </button>
+        </div>
+      </div>
+      {error ? <p className="admin-product-form-error">{error}</p> : null}
+    </form>
+  );
+}
+
+function isMediaFile(file: File) {
+  return file.type.startsWith("image/") || file.type.startsWith("video/");
+}
+
+function isVideoUrl(url: string) {
+  return /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(url);
 }
 
 function SocialMediaCard({
@@ -1442,15 +1723,11 @@ function SettingsTextarea({
 
 function buildHomeSectionCards(
   homeSettings: HomeSettingRow[],
-  aboutSettings: AboutSettingRow[],
   labels: ReturnType<typeof getLabels>,
 ) {
   const defaultCards = [
     createFallbackHomeCard("hero-banner", labels.home.sectionTitles.hero),
     createFallbackHomeCard("business-unit", labels.home.sectionTitles.businessUnit),
-    createFallbackHomeCard("about-us", labels.home.sectionTitles.about, {
-      resource: "about-page-settings",
-    }),
     createFallbackHomeCard("brand", labels.home.sectionTitles.brand),
     createFallbackHomeCard("news-activities", labels.home.sectionTitles.news),
     createFallbackHomeCard("recommended-product", labels.home.sectionTitles.recommended),
@@ -1476,21 +1753,6 @@ function buildHomeSectionCards(
     });
   });
 
-  if (aboutSettings[0]) {
-    cardByKey.set("about", {
-      contentEn: aboutSettings[0].contentEn,
-      contentTh: aboutSettings[0].contentTh,
-      headlineEn: aboutSettings[0].headlineEn,
-      headlineTh: aboutSettings[0].headlineTh,
-      id: aboutSettings[0].id,
-      imgUrl: aboutSettings[0].imgUrl,
-      isActive: true,
-      name: "about-us",
-      resource: "about-page-settings" as const,
-      title: labels.home.sectionTitles.about,
-    });
-  }
-
   const orderedCards = defaultCards.map(
     (card) => cardByKey.get(normalizeHomeSectionKey(card.name)) ?? card,
   );
@@ -1514,6 +1776,23 @@ function buildHomeSectionCards(
   return defaultCards
     .map((card) => dedupedCards.get(normalizeHomeSectionKey(card.name)))
     .filter((card): card is (typeof orderedCards)[number] => Boolean(card));
+}
+
+function buildAboutCard(
+  aboutSettings: AboutSettingRow[],
+  labels: ReturnType<typeof getLabels>,
+) {
+  const current = aboutSettings[0];
+
+  return {
+    contentEn: current?.contentEn ?? "",
+    contentTh: current?.contentTh ?? "",
+    headlineEn: current?.headlineEn ?? "",
+    headlineTh: current?.headlineTh ?? "",
+    id: current?.id ?? "",
+    imgUrl: current?.imgUrl ?? ([] as string[]),
+    title: labels.about.title,
+  };
 }
 
 function createFallbackHomeCard(
@@ -1834,6 +2113,7 @@ function getLabels(locale: Locale) {
     ? {
         title: "ตั้งค่า",
         tabs: {
+          about: "เกี่ยวกับเรา",
           faq: "FAQ",
           users: "ผู้ใช้งาน",
           homeContent: "เนื้อหาหน้าแรก",
@@ -1914,6 +2194,31 @@ function getLabels(locale: Locale) {
             headlineMax: "พาดหัวต้องมีความยาวไม่เกิน 150 ตัวอักษร",
           },
         },
+        about: {
+          fields: {
+            contentEn: "เนื้อหา (Content) ภาษาอังกฤษ (EN)",
+            contentTh: "เนื้อหา (Content) ภาษาไทย (TH)",
+            headlineEn: "หัวข้อภาษาอังกฤษ (EN)",
+            headlineTh: "หัวข้อภาษาไทย (TH)",
+            image: "สื่อเกี่ยวกับเรา",
+          },
+          imageAlt: "สื่อเกี่ยวกับเรา",
+          noImage: "ยังไม่ได้อัปโหลดรูปภาพหรือวิดีโอ",
+          placeholders: {
+            contentEn: "ใส่เนื้อหาเกี่ยวกับเรา ภาษาอังกฤษ",
+            contentTh: "ใส่เนื้อหาเกี่ยวกับเรา ภาษาไทย",
+            headlineEn: "ใส่หัวข้อเกี่ยวกับเรา ภาษาอังกฤษ",
+            headlineTh: "ใส่หัวข้อเกี่ยวกับเรา ภาษาไทย",
+          },
+          previewImage: "เปิดดูไฟล์",
+          removeImage: "ลบไฟล์",
+          title: "เกี่ยวกับเรา",
+          uploadImage: "อัปโหลดรูปภาพหรือวิดีโอ",
+          uploadingImage: "กำลังอัปโหลดไฟล์...",
+          validation: {
+            imageType: "กรุณาเลือกไฟล์รูปภาพหรือวิดีโอเท่านั้น",
+          },
+        },
         social: {
           title: "โซเชียลมีเดีย",
         },
@@ -1955,6 +2260,7 @@ function getLabels(locale: Locale) {
     : {
         title: "Settings",
         tabs: {
+          about: "About",
           faq: "FAQ",
           users: "Users",
           homeContent: "Home Content",
@@ -2033,6 +2339,31 @@ function getLabels(locale: Locale) {
           validation: {
             contentMax: "Content must be 500 characters or fewer",
             headlineMax: "Headline must be 150 characters or fewer",
+          },
+        },
+        about: {
+          fields: {
+            contentEn: "Content (EN)",
+            contentTh: "Content (TH)",
+            headlineEn: "Heading (EN)",
+            headlineTh: "Heading (TH)",
+            image: "About media",
+          },
+          imageAlt: "About media",
+          noImage: "No image or video uploaded yet",
+          placeholders: {
+            contentEn: "Enter the English about content",
+            contentTh: "Enter the Thai about content",
+            headlineEn: "Enter the English heading",
+            headlineTh: "Enter the Thai heading",
+          },
+          previewImage: "Open file",
+          removeImage: "Remove file",
+          title: "About",
+          uploadImage: "Upload image or video",
+          uploadingImage: "Uploading file...",
+          validation: {
+            imageType: "Please select an image or video file only",
           },
         },
         social: {
