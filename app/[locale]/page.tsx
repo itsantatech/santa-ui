@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
-import { ProductFilter } from "@/components/product-filter";
 import { fetchAdminList } from "@/lib/admin-api";
 import { SiteNavbar } from "@/components/site-navbar";
 import { getDictionary, isLocale, locales } from "@/lib/i18n";
@@ -100,17 +98,7 @@ export default async function Home({ params }: HomeProps) {
     <main className="site-shell">
       <SiteNavbar locale={locale} />
 
-      <Suspense fallback={null}>
-        <ProductFilter
-          fields={productFilterContent.fields}
-          locale={isThaiLocale ? "th-TH" : "en-US"}
-          removeFilterLabel={productFilterContent.removeFilterLabel}
-          resultCount={289}
-          resultLabel={productFilterContent.resultLabel}
-          resultUnit={productFilterContent.resultUnit}
-          title={productFilterContent.title}
-        />
-      </Suspense>
+     
     </main>
   );
 }
