@@ -17,6 +17,7 @@ type AdminContentProps = {
   productFilters?: {
     brandCode?: string;
     categoryCode?: string;
+    isActive?: boolean;
     lowStockOnly?: boolean;
     pageSize?: number;
     search?: string;

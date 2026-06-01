@@ -71,6 +71,7 @@ type ProductFilterListResponse = AdminListResponse<ProductRelation>;
 type ProductFilters = {
   brandCode?: string;
   categoryCode?: string;
+  isActive?: boolean;
   pageSize?: number;
   search?: string;
   subCategoryCode?: string;
@@ -127,10 +128,19 @@ export async function ProductsServicesSection({
     filters?.subCategoryCode,
   );
   const selectedBrand = findSelectedOption(brandOptions, filters?.brandCode);
+  const statusOptions = [
+    { label: table.active, value: "true" },
+    { label: table.inactive, value: "false" },
+  ];
+  const selectedStatus = findSelectedOption(
+    statusOptions,
+    filters?.isActive === undefined ? undefined : String(filters.isActive),
+  );
   const filterStateKey = [
     filters?.categoryCode ?? "",
     filters?.subCategoryCode ?? "",
     filters?.brandCode ?? "",
+    filters?.isActive === undefined ? "" : String(filters.isActive),
     filters?.search ?? "",
     filters?.pageSize ?? "",
   ].join(":");
@@ -160,6 +170,13 @@ export async function ProductsServicesSection({
         options: brandOptions,
         placeholder: isThaiLocale ? "เลือกแบรนด์" : "Select brand",
         selected: selectedBrand ? [selectedBrand] : undefined,
+      },
+      {
+        id: "isActive",
+        label: isThaiLocale ? "สถานะ" : "Status",
+        options: statusOptions,
+        placeholder: isThaiLocale ? "เลือกสถานะ" : "Select status",
+        selected: selectedStatus ? [selectedStatus] : undefined,
       },
     ],
     removeFilterLabel: isThaiLocale ? "ลบตัวกรอง" : "Remove filter",
@@ -399,6 +416,7 @@ async function getProducts(
   return fetchAdminList<ProductRow>("/products", {
     brandCode: filters?.brandCode,
     categoryCode: filters?.categoryCode,
+    isActive: filters?.isActive,
     page,
     pageSize: filters?.pageSize,
     search: filters?.search,
@@ -469,6 +487,10 @@ function createProductsPageHref(
 
   if (filters?.brandCode) {
     searchParams.set("brandCode", filters.brandCode);
+  }
+
+  if (filters?.isActive !== undefined) {
+    searchParams.set("isActive", String(filters.isActive));
   }
 
   if (filters?.search) {
