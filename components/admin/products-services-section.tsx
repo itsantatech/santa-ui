@@ -1,9 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  type ChangeEvent,
   type FormEvent,
+  type ReactNode,
+  type MouseEvent as ReactMouseEvent,
   type RefObject,
   useEffect,
   useMemo,
@@ -12,14 +15,21 @@ import {
 } from "react";
 import type { ProductSearchSuggestion } from "@/components/product-search";
 import {
+  AdminDataTable,
+  AdminStatusBadge,
+  type AdminDataTableColumn,
+  type AdminDataTablePagination,
+} from "./admin-data-table";
+import {
   AdminBatchFieldModal,
   type AdminBatchFieldModalConfig,
 } from "./admin-batch-field-modal";
 import { useAdminTableEditRequest } from "./admin-table-events";
-import type { ProductLabels } from "./products-services-shared";
+import { getProductContextMenuActions } from "./products-services-shared";
 import { RichTextEditor } from "@/components/rich-text-editor";
 
 export type ProductManagementRow = ProductSearchSuggestion & {
+  id: number;
   rank: number;
   shortDescriptionTh: string;
   shortDescriptionEn: string;
@@ -44,6 +54,12 @@ export type ProductManagementRow = ProductSearchSuggestion & {
   categoryCods?: { code: string }[];
   subCategories: { code: string }[];
   brands: { code: string }[];
+  createdAt: string;
+  createdBy: string;
+  deletedAt: string | null;
+  deletedBy: string | null;
+  updatedAt: string;
+  updatedBy: string;
 };
 
 type UploadedFileResponse = {
@@ -99,6 +115,11 @@ type ProductFormValue = {
 
 type ProductBatchAction = keyof ProductLabels["fields"];
 type ProductLabels = {
+  columns: {
+    deliveryFee: string;
+    discountedPrice: string;
+    image: string;
+  };
   add: string;
   addTitle: string;
   cancel: string;
@@ -142,23 +163,119 @@ type ProductLabels = {
   };
   noDatasheet: string;
   noFileChosen: string;
+  noImage: string;
   noMedia: string;
   googleCategoryEmpty: string;
   googleCategoryLoading: string;
   googleCategorySearchPlaceholder: string;
   noSuggestions: string;
+  rowsPerPage: string;
   save: string;
   saving: string;
   search: string;
   searchPlaceholder: string;
   searchTooShort: string;
   template: string;
+  inlineEdit: string;
+  inlineEditDirty: string;
+  inlineEditImageHelper: string;
   uploadDatasheet: string;
   uploadError: string;
   uploadImage: string;
   uploadingDatasheet: string;
   uploadingMedia: string;
   upload: string;
+};
+
+export type ProductTableLabels = {
+  columns: {
+    createdAt: string;
+    createdBy: string;
+    datasheetUrl: string;
+    deletedAt: string;
+    deletedBy: string;
+    descriptionEn: string;
+    descriptionTh: string;
+    googleCategoryId: string;
+    id: string;
+    image: string;
+    deliveryFee: string;
+    discountedPrice: string;
+    actions: string;
+    brands: string;
+    category: string;
+    flags: string;
+    model: string;
+    nameEn: string;
+    nameTh: string;
+    price: string;
+    rank: string;
+    seoDescriptionEn: string;
+    seoDescriptionTh: string;
+    seoTitleEn: string;
+    seoTitleTh: string;
+    shortDescriptionEn: string;
+    shortDescriptionTh: string;
+    slug: string;
+    sku: string;
+    status: string;
+    subCategory: string;
+    updatedAt: string;
+    updatedBy: string;
+  };
+  active: string;
+  bestSeller: string;
+  empty: string;
+  fetchError: string;
+  inactive: string;
+  newProduct: string;
+  nextPage: string;
+  noFlags: string;
+  noModel: string;
+  noPrice: string;
+  noRelations: string;
+  previousPage: string;
+  promotion: string;
+  selectAll: string;
+  selectRow: string;
+};
+
+export type ProductTablePaginationData = {
+  currentPage: number;
+  currentPageSize?: number;
+  nextLabel: string;
+  previousLabel: string;
+  rowsPerPageLabel?: string;
+  totalPages: number;
+};
+
+type ProductInlineEditDraft = {
+  brandCodesText: string;
+  categoryCodesText: string;
+  datasheetUrl: string;
+  descriptionEn: string;
+  descriptionTh: string;
+  deliveryFee: string;
+  discountedPrice: string;
+  googleCategoryId: string;
+  imgUrlText: string;
+  isActive: boolean;
+  isBestSeller: boolean;
+  isNewProduct: boolean;
+  isPromotion: boolean;
+  model: string;
+  nameEn: string;
+  nameTh: string;
+  price: string;
+  rank: string;
+  seoDescriptionEn: string;
+  seoDescriptionTh: string;
+  seoTitleEn: string;
+  seoTitleTh: string;
+  shortDescriptionEn: string;
+  shortDescriptionTh: string;
+  slug: string;
+  subCategoryCodesText: string;
 };
 
 export function ProductToolbarActions({
@@ -329,11 +446,19 @@ export function ProductRowManagementActions({
 }
 
 export function ProductTableEditController({
+  brandOptions,
+  categoryOptions,
   labels,
+  locale,
   rows,
+  subCategoryOptions,
 }: {
+  brandOptions: ProductEditorOption[];
+  categoryOptions: ProductEditorOption[];
   labels: ProductLabels;
+  locale: "th" | "en";
   rows: ProductManagementRow[];
+  subCategoryOptions: ProductEditorOption[];
 }) {
   const router = useRouter();
   const [editingProduct, setEditingProduct] = useState<ProductManagementRow | null>(
@@ -363,10 +488,14 @@ export function ProductTableEditController({
     <>
       {editingProduct ? (
         <ProductFormModal
+          brandOptions={brandOptions}
+          categoryOptions={categoryOptions}
           labels={labels}
+          locale={locale}
           mode="edit"
           onClose={() => setEditingProduct(null)}
           product={editingProduct}
+          subCategoryOptions={subCategoryOptions}
         />
       ) : null}
       {bulkEditingProducts.length > 0 && bulkEditingAction ? (
@@ -406,6 +535,839 @@ export function ProductTableEditController({
           saveLabel={labels.save}
           savingLabel={labels.save}
           title={`Bulk edit products: ${labels.fields[bulkEditingAction]}`}
+        />
+      ) : null}
+    </>
+  );
+}
+
+export function ProductInlineEditTable({
+  brandOptions,
+  categoryOptions,
+  labels,
+  locale,
+  pagination,
+  rows,
+  subCategoryOptions,
+  tableLabels,
+}: {
+  brandOptions: ProductEditorOption[];
+  categoryOptions: ProductEditorOption[];
+  labels: ProductLabels;
+  locale: "th" | "en";
+  pagination: ProductTablePaginationData;
+  rows: ProductManagementRow[];
+  subCategoryOptions: ProductEditorOption[];
+  tableLabels: ProductTableLabels;
+}) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isSavingAll, setIsSavingAll] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, ProductInlineEditDraft>>({});
+
+  const changedRows = rows.filter((row) => {
+    const draft = drafts[row.sku];
+
+    return draft ? hasInlineDraftChanged(row, draft) : false;
+  });
+  const dirtyCount = changedRows.length;
+  const tablePagination = useMemo<AdminDataTablePagination>(
+    () => ({
+      ...pagination,
+      getPageHref: (page) => {
+        const nextSearchParams = new URLSearchParams(searchParams.toString());
+
+        nextSearchParams.set("page", String(page));
+        nextSearchParams.set("section", "products-services");
+
+        return `${pathname}?${nextSearchParams.toString()}`;
+      },
+    }),
+    [pagination, pathname, searchParams],
+  );
+
+  function updateDraft(
+    row: ProductManagementRow,
+    updater: (
+      current: ProductInlineEditDraft,
+    ) => ProductInlineEditDraft,
+  ) {
+    setDrafts((current) => {
+      const nextDraft = updater(current[row.sku] ?? createInlineDraft(row));
+
+      return {
+        ...current,
+        [row.sku]: nextDraft,
+      };
+    });
+  }
+
+  async function handleSaveAll() {
+    if (dirtyCount === 0) {
+      setIsEditMode(false);
+      setDrafts({});
+      setSaveError("");
+      return;
+    }
+
+    setIsSavingAll(true);
+    setSaveError("");
+
+    try {
+      const responses = await Promise.all(
+        changedRows.map((row) =>
+          fetch(`/api/admin/products/${encodeURIComponent(row.sku)}`, {
+            method: "PATCH",
+            headers: {
+              "content-type": "application/json",
+            },
+            body: JSON.stringify(
+              buildInlineProductPayload(row, drafts[row.sku] ?? createInlineDraft(row)),
+            ),
+          }),
+        ),
+      );
+
+      if (responses.some((response) => !response.ok)) {
+        throw new Error("inline-edit-save-failed");
+      }
+
+      setIsEditMode(false);
+      setDrafts({});
+      router.refresh();
+    } catch {
+      setSaveError(labels.error);
+    } finally {
+      setIsSavingAll(false);
+    }
+  }
+
+  const columns = useMemo<AdminDataTableColumn<ProductManagementRow>[]>(() => {
+    return [
+      {
+        key: "image",
+        header: tableLabels.columns.image,
+        className: "admin-table-image-column",
+        width: "118px",
+        render: (row) => {
+          if (!isEditMode) {
+            return (
+              <ProductTableImage
+                alt={locale === "th" ? row.nameTh : row.nameEn}
+                fallback={labels.noImage}
+                src={row.imgUrl[0]}
+              />
+            );
+          }
+
+          const draft = drafts[row.sku] ?? createInlineDraft(row);
+
+          return (
+            <InlineTableTextArea
+              rows={4}
+              value={draft.imgUrlText}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  imgUrlText: event.target.value,
+                }))
+              }
+            />
+          );
+        },
+      },
+      {
+        key: "id",
+        header: tableLabels.columns.id,
+        className: "admin-table-number-fit-column",
+        width: "88px",
+        render: (row) => row.id,
+      },
+      {
+        key: "sku",
+        header: tableLabels.columns.sku,
+        className: "admin-table-code-column",
+        width: "138px",
+        render: (row) => <InlineTableText value={row.sku} strong />,
+      },
+      {
+        key: "slug",
+        header: tableLabels.columns.slug,
+        className: "admin-table-slug-column",
+        width: "220px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableInput
+              value={(drafts[row.sku] ?? createInlineDraft(row)).slug}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  slug: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableTooltipText value={row.slug} />
+          ),
+      },
+      {
+        key: "rank",
+        header: tableLabels.columns.rank,
+        className: "admin-table-rank-column",
+        width: "88px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableInput
+              type="number"
+              value={(drafts[row.sku] ?? createInlineDraft(row)).rank}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  rank: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableText value={String(row.rank)} />
+          ),
+      },
+      {
+        key: "nameTh",
+        header: tableLabels.columns.nameTh,
+        className: "admin-table-name-column",
+        width: "240px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableInput
+              value={(drafts[row.sku] ?? createInlineDraft(row)).nameTh}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  nameTh: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableTooltipText value={row.nameTh} />
+          ),
+      },
+      {
+        key: "nameEn",
+        header: tableLabels.columns.nameEn,
+        className: "admin-table-name-column",
+        width: "250px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableInput
+              value={(drafts[row.sku] ?? createInlineDraft(row)).nameEn}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  nameEn: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableTooltipText value={row.nameEn} />
+          ),
+      },
+      {
+        key: "shortDescriptionTh",
+        header: tableLabels.columns.shortDescriptionTh,
+        className: "admin-table-short-description-column",
+        width: "220px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableTextArea
+              value={(drafts[row.sku] ?? createInlineDraft(row)).shortDescriptionTh}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  shortDescriptionTh: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableParagraph value={row.shortDescriptionTh} />
+          ),
+      },
+      {
+        key: "shortDescriptionEn",
+        header: tableLabels.columns.shortDescriptionEn,
+        className: "admin-table-short-description-column",
+        width: "220px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableTextArea
+              value={(drafts[row.sku] ?? createInlineDraft(row)).shortDescriptionEn}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  shortDescriptionEn: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableParagraph value={row.shortDescriptionEn} />
+          ),
+      },
+      {
+        key: "descriptionTh",
+        header: tableLabels.columns.descriptionTh,
+        className: "admin-table-short-description-column",
+        width: "220px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableTextArea
+              rows={6}
+              value={(drafts[row.sku] ?? createInlineDraft(row)).descriptionTh}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  descriptionTh: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableParagraph value={stripHtml(row.descriptionTh)} />
+          ),
+      },
+      {
+        key: "descriptionEn",
+        header: tableLabels.columns.descriptionEn,
+        className: "admin-table-short-description-column",
+        width: "220px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableTextArea
+              rows={6}
+              value={(drafts[row.sku] ?? createInlineDraft(row)).descriptionEn}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  descriptionEn: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableParagraph value={stripHtml(row.descriptionEn)} />
+          ),
+      },
+      {
+        key: "model",
+        header: tableLabels.columns.model,
+        className: "admin-table-model-column",
+        width: "130px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableInput
+              value={(drafts[row.sku] ?? createInlineDraft(row)).model}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  model: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableText value={row.model ?? tableLabels.noModel} />
+          ),
+      },
+      {
+        key: "price",
+        header: tableLabels.columns.price,
+        className: "admin-table-price-column",
+        width: "132px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableInput
+              type="number"
+              value={(drafts[row.sku] ?? createInlineDraft(row)).price}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  price: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            formatInlinePrice(row.price, locale, tableLabels.noPrice)
+          ),
+      },
+      {
+        key: "discountedPrice",
+        header: tableLabels.columns.discountedPrice,
+        className: "admin-table-price-column",
+        width: "156px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableInput
+              disabled={!(drafts[row.sku] ?? createInlineDraft(row)).isPromotion}
+              type="number"
+              value={(drafts[row.sku] ?? createInlineDraft(row)).discountedPrice}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  discountedPrice: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            formatInlinePrice(row.discountedPrice, locale, tableLabels.noPrice)
+          ),
+      },
+      {
+        key: "datasheetUrl",
+        header: tableLabels.columns.datasheetUrl,
+        className: "admin-table-content-type-column",
+        width: "160px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableInput
+              value={(drafts[row.sku] ?? createInlineDraft(row)).datasheetUrl}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  datasheetUrl: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableLink
+              href={row.datasheetUrl}
+              label={row.datasheetUrl ? "Open PDF" : labels.noDatasheet}
+              mutedLabel={labels.noDatasheet}
+            />
+          ),
+      },
+      {
+        key: "category",
+        header: tableLabels.columns.category,
+        className: "admin-table-relations-column",
+        width: "220px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableTextArea
+              value={(drafts[row.sku] ?? createInlineDraft(row)).categoryCodesText}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  categoryCodesText: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineProductRelationList
+              locale={locale}
+              noRelationsLabel={tableLabels.noRelations}
+              relations={row.categories ?? row.categoryCods ?? []}
+            />
+          ),
+      },
+      {
+        key: "subCategory",
+        header: tableLabels.columns.subCategory,
+        className: "admin-table-sub-category-column",
+        width: "230px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableTextArea
+              value={(drafts[row.sku] ?? createInlineDraft(row)).subCategoryCodesText}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  subCategoryCodesText: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineProductRelationList
+              locale={locale}
+              noRelationsLabel={tableLabels.noRelations}
+              relations={row.subCategories}
+            />
+          ),
+      },
+      {
+        key: "brands",
+        header: tableLabels.columns.brands,
+        className: "admin-table-brands-column",
+        width: "190px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableTextArea
+              value={(drafts[row.sku] ?? createInlineDraft(row)).brandCodesText}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  brandCodesText: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineProductRelationList
+              locale={locale}
+              noRelationsLabel={tableLabels.noRelations}
+              relations={row.brands}
+            />
+          ),
+      },
+      {
+        key: "googleCategoryId",
+        header: tableLabels.columns.googleCategoryId,
+        className: "admin-table-number-column",
+        width: "140px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableInput
+              value={(drafts[row.sku] ?? createInlineDraft(row)).googleCategoryId}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  googleCategoryId: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableText value={row.googleCategoryId ?? "-"} />
+          ),
+      },
+      {
+        key: "flags",
+        header: tableLabels.columns.flags,
+        className: "admin-table-flags-column",
+        width: "160px",
+        render: (row) =>
+          isEditMode ? (
+            <div className="admin-inline-flag-editor">
+              <InlineTableCheckbox
+                checked={(drafts[row.sku] ?? createInlineDraft(row)).isNewProduct}
+                label={tableLabels.newProduct}
+                onChange={(event) =>
+                  updateDraft(row, (current) => ({
+                    ...current,
+                    isNewProduct: event.target.checked,
+                  }))
+                }
+              />
+              <InlineTableCheckbox
+                checked={(drafts[row.sku] ?? createInlineDraft(row)).isBestSeller}
+                label={tableLabels.bestSeller}
+                onChange={(event) =>
+                  updateDraft(row, (current) => ({
+                    ...current,
+                    isBestSeller: event.target.checked,
+                  }))
+                }
+              />
+              <InlineTableCheckbox
+                checked={(drafts[row.sku] ?? createInlineDraft(row)).isPromotion}
+                label={tableLabels.promotion}
+                onChange={(event) =>
+                  updateDraft(row, (current) => ({
+                    ...current,
+                    discountedPrice: event.target.checked
+                      ? current.discountedPrice
+                      : "",
+                    isPromotion: event.target.checked,
+                  }))
+                }
+              />
+            </div>
+          ) : (
+            <InlineProductFlags
+              bestSellerLabel={tableLabels.bestSeller}
+              noFlagsLabel={tableLabels.noFlags}
+              newProductLabel={tableLabels.newProduct}
+              product={row}
+              promotionLabel={tableLabels.promotion}
+            />
+          ),
+      },
+      {
+        key: "deliveryFee",
+        header: tableLabels.columns.deliveryFee,
+        className: "admin-table-price-column",
+        width: "132px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableInput
+              type="number"
+              value={(drafts[row.sku] ?? createInlineDraft(row)).deliveryFee}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  deliveryFee: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            formatInlinePrice(row.deliveryFee, locale, tableLabels.noPrice)
+          ),
+      },
+      {
+        key: "seoTitleTh",
+        header: tableLabels.columns.seoTitleTh,
+        className: "admin-table-content-topic-column",
+        width: "280px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableInput
+              value={(drafts[row.sku] ?? createInlineDraft(row)).seoTitleTh}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  seoTitleTh: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableParagraph value={row.seoTitleTh} />
+          ),
+      },
+      {
+        key: "seoTitleEn",
+        header: tableLabels.columns.seoTitleEn,
+        className: "admin-table-content-topic-column",
+        width: "280px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableInput
+              value={(drafts[row.sku] ?? createInlineDraft(row)).seoTitleEn}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  seoTitleEn: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableParagraph value={row.seoTitleEn} />
+          ),
+      },
+      {
+        key: "seoDescriptionTh",
+        header: tableLabels.columns.seoDescriptionTh,
+        className: "admin-table-content-body-column",
+        width: "320px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableTextArea
+              value={(drafts[row.sku] ?? createInlineDraft(row)).seoDescriptionTh}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  seoDescriptionTh: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableParagraph value={row.seoDescriptionTh} />
+          ),
+      },
+      {
+        key: "seoDescriptionEn",
+        header: tableLabels.columns.seoDescriptionEn,
+        className: "admin-table-content-body-column",
+        width: "320px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableTextArea
+              value={(drafts[row.sku] ?? createInlineDraft(row)).seoDescriptionEn}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  seoDescriptionEn: event.target.value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableParagraph value={row.seoDescriptionEn} />
+          ),
+      },
+      {
+        key: "status",
+        header: tableLabels.columns.status,
+        className: "admin-table-status-column",
+        width: "126px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableCheckbox
+              checked={(drafts[row.sku] ?? createInlineDraft(row)).isActive}
+              label={tableLabels.active}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  isActive: event.target.checked,
+                }))
+              }
+            />
+          ) : (
+            <AdminStatusBadge
+              label={row.isActive ? tableLabels.active : tableLabels.inactive}
+              tone={row.isActive ? "active" : "inactive"}
+            />
+          ),
+      },
+      {
+        key: "createdBy",
+        header: tableLabels.columns.createdBy,
+        className: "admin-table-user-column",
+        width: "170px",
+        render: (row) => <InlineTableText value={row.createdBy} />,
+      },
+      {
+        key: "createdAt",
+        header: tableLabels.columns.createdAt,
+        className: "admin-table-date-column",
+        width: "190px",
+        render: (row) => formatInlineDateTime(row.createdAt, locale),
+      },
+      {
+        key: "updatedBy",
+        header: tableLabels.columns.updatedBy,
+        className: "admin-table-user-column",
+        width: "170px",
+        render: (row) => <InlineTableText value={row.updatedBy} />,
+      },
+      {
+        key: "updatedAt",
+        header: tableLabels.columns.updatedAt,
+        className: "admin-table-date-column",
+        width: "190px",
+        render: (row) => formatInlineDateTime(row.updatedAt, locale),
+      },
+      {
+        key: "deletedBy",
+        header: tableLabels.columns.deletedBy,
+        className: "admin-table-user-column",
+        width: "170px",
+        render: (row) => <InlineTableText value={row.deletedBy ?? "-"} />,
+      },
+      {
+        key: "deletedAt",
+        header: tableLabels.columns.deletedAt,
+        className: "admin-table-date-column",
+        width: "190px",
+        render: (row) =>
+          row.deletedAt ? (
+            formatInlineDateTime(row.deletedAt, locale)
+          ) : (
+            <span className="admin-table-muted">-</span>
+          ),
+      },
+      {
+        key: "actions",
+        header: tableLabels.columns.actions,
+        className: "admin-table-actions-column",
+        width: "96px",
+        render: (row) =>
+          isEditMode ? (
+            <span className="admin-table-muted">-</span>
+          ) : (
+            <ProductRowManagementActions
+              brandOptions={brandOptions}
+              categoryOptions={categoryOptions}
+              labels={labels}
+              locale={locale}
+              product={row}
+              subCategoryOptions={subCategoryOptions}
+            />
+          ),
+      },
+    ];
+  }, [
+    brandOptions,
+    categoryOptions,
+    drafts,
+    isEditMode,
+    labels,
+    locale,
+    subCategoryOptions,
+    tableLabels,
+  ]);
+
+  return (
+    <>
+      <div className="admin-product-inline-toolbar">
+        <div className="admin-product-inline-toolbar-actions">
+          {isEditMode ? (
+            <>
+              <button
+                className="admin-product-add-button"
+                disabled={isSavingAll}
+                onClick={() => void handleSaveAll()}
+                type="button"
+              >
+                {isSavingAll ? labels.saving : labels.save}
+              </button>
+              <button
+                className="admin-product-secondary-button"
+                disabled={isSavingAll}
+                onClick={() => {
+                  setDrafts({});
+                  setSaveError("");
+                  setIsEditMode(false);
+                }}
+                type="button"
+              >
+                {labels.cancel}
+              </button>
+            </>
+          ) : (
+            <button
+              className="admin-product-secondary-button"
+              onClick={() => {
+                setIsEditMode(true);
+                setSaveError("");
+              }}
+              type="button"
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">
+                edit
+              </span>
+              {labels.inlineEdit}
+            </button>
+          )}
+        </div>
+        {isEditMode ? (
+          <p className="admin-product-inline-toolbar-note">
+            {labels.inlineEditDirty.replace("{count}", String(dirtyCount))}
+          </p>
+        ) : null}
+      </div>
+      {isEditMode ? (
+        <p className="admin-product-inline-toolbar-helper">
+          {labels.inlineEditImageHelper}
+        </p>
+      ) : null}
+      {saveError ? <p className="admin-product-form-error">{saveError}</p> : null}
+      <AdminDataTable
+        columns={columns}
+        contextMenuActions={isEditMode ? undefined : getProductContextMenuActions(labels)}
+        emptyLabel={tableLabels.empty}
+        getRowClassName={() =>
+          isEditMode ? "admin-table-row-inline-editing" : "admin-table-row-view-mode"
+        }
+        getRowId={(row) => row.sku}
+        pagination={tablePagination}
+        rows={rows}
+        selectAllLabel={tableLabels.selectAll}
+        selectRowLabel={(row) => `${tableLabels.selectRow} ${row.sku}`}
+        tableId="products-services"
+        wide
+      />
+      {!isEditMode ? (
+        <ProductTableEditController
+          brandOptions={brandOptions}
+          categoryOptions={categoryOptions}
+          labels={labels}
+          locale={locale}
+          rows={rows}
+          subCategoryOptions={subCategoryOptions}
         />
       ) : null}
     </>
@@ -472,7 +1434,7 @@ function getProductBatchFieldConfig(
 
   return {
     fieldLabel: labels.fields[action],
-    initialValue: row[action] ?? "",
+    initialValue: String(row[action] ?? ""),
     type: "text",
   };
 }
@@ -482,7 +1444,7 @@ function buildProductPayload(
   action: ProductBatchAction,
   value: boolean | number | string,
 ) {
-  const next = {
+  const next: Record<string, boolean | number | string | string[] | null> = {
     brandCodes: row.brands.map((brand) => brand.code),
     categoryCodes: (row.categories ?? row.categoryCods ?? []).map(
       (category) => category.code,
@@ -541,6 +1503,95 @@ function buildProductPayload(
   }
 
   return next;
+}
+
+function createInlineDraft(row: ProductManagementRow): ProductInlineEditDraft {
+  return {
+    brandCodesText: row.brands.map((brand) => brand.code).join(", "),
+    categoryCodesText: (row.categories ?? row.categoryCods ?? [])
+      .map((category) => category.code)
+      .join(", "),
+    datasheetUrl: row.datasheetUrl ?? "",
+    descriptionEn: row.descriptionEn,
+    descriptionTh: row.descriptionTh,
+    deliveryFee:
+      row.deliveryFee === null || row.deliveryFee === undefined
+        ? ""
+        : String(row.deliveryFee),
+    discountedPrice:
+      row.discountedPrice === null || row.discountedPrice === undefined
+        ? ""
+        : String(row.discountedPrice),
+    googleCategoryId: row.googleCategoryId ?? "",
+    imgUrlText: row.imgUrl.join("\n"),
+    isActive: row.isActive,
+    isBestSeller: row.isBestSeller,
+    isNewProduct: row.isNewProduct,
+    isPromotion: row.isPromotion,
+    model: row.model ?? "",
+    nameEn: row.nameEn,
+    nameTh: row.nameTh,
+    price: row.price === null || row.price === undefined ? "" : String(row.price),
+    rank: String(row.rank),
+    seoDescriptionEn: row.seoDescriptionEn,
+    seoDescriptionTh: row.seoDescriptionTh,
+    seoTitleEn: row.seoTitleEn,
+    seoTitleTh: row.seoTitleTh,
+    shortDescriptionEn: row.shortDescriptionEn,
+    shortDescriptionTh: row.shortDescriptionTh,
+    slug: row.slug,
+    subCategoryCodesText: row.subCategories.map((subCategory) => subCategory.code).join(", "),
+  };
+}
+
+function hasInlineDraftChanged(
+  row: ProductManagementRow,
+  draft: ProductInlineEditDraft,
+) {
+  return JSON.stringify(createInlineDraft(row)) !== JSON.stringify(draft);
+}
+
+function buildInlineProductPayload(
+  row: ProductManagementRow,
+  draft: ProductInlineEditDraft,
+) {
+  return {
+    rank: getNumberFromValue(draft.rank) ?? 0,
+    nameTh: draft.nameTh.trim(),
+    nameEn: draft.nameEn.trim(),
+    shortDescriptionTh: draft.shortDescriptionTh.trim(),
+    shortDescriptionEn: draft.shortDescriptionEn.trim(),
+    descriptionTh: draft.descriptionTh,
+    descriptionEn: draft.descriptionEn,
+    datasheetUrl: draft.datasheetUrl.trim() || null,
+    imgUrl: parseInlineList(draft.imgUrlText),
+    slug: draft.slug.trim(),
+    price: getNumberFromValue(draft.price),
+    deliveryFee: getNumberFromValue(draft.deliveryFee),
+    model: draft.model.trim() || null,
+    seoTitleTh: draft.seoTitleTh.trim(),
+    seoTitleEn: draft.seoTitleEn.trim(),
+    seoDescriptionTh: draft.seoDescriptionTh.trim(),
+    seoDescriptionEn: draft.seoDescriptionEn.trim(),
+    googleCategoryId: draft.googleCategoryId.trim() || null,
+    isActive: draft.isActive,
+    isNewProduct: draft.isNewProduct,
+    isBestSeller: draft.isBestSeller,
+    isPromotion: draft.isPromotion,
+    discountedPrice: draft.isPromotion
+      ? getNumberFromValue(draft.discountedPrice)
+      : null,
+    categoryCodes: parseInlineList(draft.categoryCodesText),
+    subCategoryCodes: parseInlineList(draft.subCategoryCodesText),
+    brandCodes: parseInlineList(draft.brandCodesText),
+  };
+}
+
+function parseInlineList(value: string) {
+  return value
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function ProductUploadModal({
@@ -691,6 +1742,350 @@ function ProductUploadModal({
       </div>
     </div>
   );
+}
+
+function ProductTableImage({
+  alt,
+  fallback,
+  src,
+}: {
+  alt: string;
+  fallback: string;
+  src?: string;
+}) {
+  if (!src) {
+    return <span className="admin-table-muted">{fallback}</span>;
+  }
+
+  return (
+    <Image
+      alt={alt}
+      className="admin-table-product-image"
+      height={64}
+      loading="lazy"
+      src={src}
+      unoptimized
+      width={64}
+    />
+  );
+}
+
+function InlineProductRelationList({
+  locale,
+  noRelationsLabel,
+  relations,
+}: {
+  locale: "th" | "en";
+  noRelationsLabel: string;
+  relations: { code: string; nameEn?: string; nameTh?: string }[];
+}) {
+  if (relations.length === 0) {
+    return <span className="admin-table-muted">{noRelationsLabel}</span>;
+  }
+
+  const value = relations
+    .map((relation) =>
+      locale === "th" ? relation.nameTh || relation.code : relation.nameEn || relation.code,
+    )
+    .join(", ");
+
+  return <InlineTableText value={value} />;
+}
+
+function InlineProductFlags({
+  bestSellerLabel,
+  noFlagsLabel,
+  newProductLabel,
+  product,
+  promotionLabel,
+}: {
+  bestSellerLabel: string;
+  noFlagsLabel: string;
+  newProductLabel: string;
+  product: ProductManagementRow;
+  promotionLabel: string;
+}) {
+  const flags = [
+    product.isNewProduct ? newProductLabel : null,
+    product.isBestSeller ? bestSellerLabel : null,
+    product.isPromotion ? promotionLabel : null,
+  ].filter((flag): flag is string => Boolean(flag));
+
+  if (flags.length === 0) {
+    return <span className="admin-table-muted">{noFlagsLabel}</span>;
+  }
+
+  return <InlineTableText value={flags.join(", ")} />;
+}
+
+function InlineTableInput({
+  disabled = false,
+  onChange,
+  type = "text",
+  value,
+}: {
+  disabled?: boolean;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  type?: "number" | "text";
+  value: string;
+}) {
+  return (
+    <input
+      className="admin-inline-table-input"
+      disabled={disabled}
+      onChange={onChange}
+      type={type}
+      value={value}
+    />
+  );
+}
+
+function InlineTableTextArea({
+  onChange,
+  rows = 3,
+  value,
+}: {
+  onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
+  rows?: number;
+  value: string;
+}) {
+  return (
+    <textarea
+      className="admin-inline-table-textarea"
+      onChange={onChange}
+      rows={rows}
+      value={value}
+    />
+  );
+}
+
+function InlineTableCheckbox({
+  checked,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  label: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <label className="admin-inline-table-checkbox">
+      <input checked={checked} onChange={onChange} type="checkbox" />
+      <span>{label}</span>
+    </label>
+  );
+}
+
+function InlineTableParagraph({ value }: { value: string }) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return <span className="admin-table-muted">-</span>;
+  }
+
+  return <InlineTableTooltipText value={trimmed} />;
+}
+
+function InlineTableText({
+  strong = false,
+  value,
+}: {
+  strong?: boolean;
+  value: string;
+}) {
+  const trimmed = value.trim();
+
+  if (!trimmed || trimmed === "-") {
+    return <span className="admin-table-muted">-</span>;
+  }
+
+  if (strong) {
+    return <strong className="admin-inline-table-ellipsis">{trimmed}</strong>;
+  }
+
+  return <span className="admin-inline-table-ellipsis">{trimmed}</span>;
+}
+
+function InlineTableLink({
+  href,
+  label,
+  mutedLabel,
+}: {
+  href: string | null;
+  label: string;
+  mutedLabel: string;
+}) {
+  if (!href) {
+    return <span className="admin-table-muted">{mutedLabel}</span>;
+  }
+
+  return (
+    <a
+      className="admin-inline-table-link"
+      href={href}
+      rel="noreferrer"
+      target="_blank"
+    >
+      {label}
+    </a>
+  );
+}
+
+function InlineTableTooltipText({
+  strong = false,
+  value,
+}: {
+  strong?: boolean;
+  value: string;
+}) {
+  const trimmed = value.trim();
+
+  if (!trimmed || trimmed === "-") {
+    return <span className="admin-table-muted">-</span>;
+  }
+
+  if (strong) {
+    return (
+      <InlineHoverTooltip text={trimmed}>
+        <strong className="admin-inline-table-ellipsis">{trimmed}</strong>
+      </InlineHoverTooltip>
+    );
+  }
+
+  return (
+    <InlineHoverTooltip text={trimmed}>
+      <span className="admin-inline-table-ellipsis">{trimmed}</span>
+    </InlineHoverTooltip>
+  );
+}
+
+function InlineHoverTooltip({
+  children,
+  text,
+}: {
+  children: ReactNode;
+  text: string;
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [position, setPosition] = useState({ left: 0, top: 0 });
+  const anchorRef = useRef<HTMLSpanElement | null>(null);
+  const popupRef = useRef<HTMLSpanElement | null>(null);
+
+  function isAnchorContentTruncated(element: HTMLSpanElement) {
+    const contentElement = element.firstElementChild as HTMLElement | null;
+    const target = contentElement ?? element;
+
+    return (
+      target.scrollWidth > target.clientWidth + 1 ||
+      target.scrollHeight > target.clientHeight + 1
+    );
+  }
+
+  function updatePosition(element: HTMLSpanElement) {
+    const rect = element.getBoundingClientRect();
+
+    setPosition({
+      left: rect.left,
+      top: rect.top + 4,
+    });
+  }
+
+  function showTooltip(event: ReactMouseEvent<HTMLSpanElement>) {
+    if (!isAnchorContentTruncated(event.currentTarget)) {
+      setIsVisible(false);
+      return;
+    }
+
+    updatePosition(event.currentTarget);
+    setIsVisible(true);
+  }
+
+  return (
+    <>
+      <span
+        ref={anchorRef}
+        className="admin-inline-table-tooltip-anchor"
+        onBlur={(event) => {
+          if (popupRef.current?.contains(event.relatedTarget as Node)) {
+            return;
+          }
+
+          setIsVisible(false);
+        }}
+        onFocus={(event) => {
+          if (!isAnchorContentTruncated(event.currentTarget)) {
+            setIsVisible(false);
+            return;
+          }
+
+          updatePosition(event.currentTarget);
+          setIsVisible(true);
+        }}
+        onMouseEnter={showTooltip}
+        onMouseLeave={(event) => {
+          if (popupRef.current?.contains(event.relatedTarget as Node)) {
+            return;
+          }
+
+          setIsVisible(false);
+        }}
+        tabIndex={0}
+      >
+        {children}
+      </span>
+      {isVisible ? (
+        <span
+          className="admin-inline-table-tooltip-popup"
+          ref={popupRef}
+          onMouseLeave={(event) => {
+            if (anchorRef.current?.contains(event.relatedTarget as Node)) {
+              return;
+            }
+
+            setIsVisible(false);
+          }}
+          style={{
+            left: `${position.left}px`,
+            top: `${position.top}px`,
+          }}
+        >
+          {text}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+function formatInlinePrice(
+  value: number | null,
+  locale: "th" | "en",
+  fallback: string,
+) {
+  if (value === null) {
+    return fallback;
+  }
+
+  return new Intl.NumberFormat(locale === "th" ? "th-TH" : "en-US", {
+    currency: "THB",
+    style: "currency",
+  }).format(value);
+}
+
+function formatInlineDateTime(value: string, locale: "th" | "en") {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function stripHtml(value: string) {
+  return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function ProductFormModal({

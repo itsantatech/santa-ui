@@ -101,19 +101,38 @@ export const dictionaries = {
     },
     adminProductTable: {
       columns: {
+        id: "ID",
         sku: "SKU",
+        slug: "Slug",
         rank: "ลำดับ",
         nameTh: "ชื่อภาษาไทย",
         nameEn: "ชื่อภาษาอังกฤษ",
+        shortDescriptionTh: "คำอธิบายสั้นไทย",
+        shortDescriptionEn: "คำอธิบายสั้นอังกฤษ",
+        descriptionTh: "รายละเอียดไทย",
+        descriptionEn: "รายละเอียดอังกฤษ",
+        image: "รูปภาพ",
         model: "รุ่น",
         price: "ราคา",
+        discountedPrice: "ราคาลด",
+        deliveryFee: "ค่าส่ง",
+        datasheetUrl: "Datasheet",
         category: "หมวดหมู่",
         subCategory: "หมวดย่อย",
         brands: "แบรนด์",
+        googleCategoryId: "Google Category ID",
         flags: "ประเภท",
+        seoTitleTh: "SEO Title TH",
+        seoTitleEn: "SEO Title EN",
+        seoDescriptionTh: "SEO Description TH",
+        seoDescriptionEn: "SEO Description EN",
         status: "สถานะ",
+        createdBy: "สร้างโดย",
+        createdAt: "วันที่สร้าง",
         updatedBy: "อัปเดตโดย",
         updatedAt: "อัปเดตล่าสุด",
+        deletedBy: "ลบโดย",
+        deletedAt: "วันที่ลบ",
         actions: "จัดการ",
       },
       selectAll: "เลือกรายการทั้งหมด",
@@ -241,19 +260,38 @@ export const dictionaries = {
     },
     adminProductTable: {
       columns: {
+        id: "ID",
         sku: "SKU",
+        slug: "Slug",
         rank: "Rank",
         nameTh: "Thai Name",
         nameEn: "English Name",
+        shortDescriptionTh: "Short Description TH",
+        shortDescriptionEn: "Short Description EN",
+        descriptionTh: "Description TH",
+        descriptionEn: "Description EN",
+        image: "Image",
         model: "Model",
         price: "Price",
+        discountedPrice: "Discounted Price",
+        deliveryFee: "Delivery Fee",
+        datasheetUrl: "Datasheet",
         category: "Category",
         subCategory: "Sub-category",
         brands: "Brands",
+        googleCategoryId: "Google Category ID",
         flags: "Type",
+        seoTitleTh: "SEO Title TH",
+        seoTitleEn: "SEO Title EN",
+        seoDescriptionTh: "SEO Description TH",
+        seoDescriptionEn: "SEO Description EN",
         status: "Status",
+        createdBy: "Created By",
+        createdAt: "Created At",
         updatedBy: "Updated By",
         updatedAt: "Updated At",
+        deletedBy: "Deleted By",
+        deletedAt: "Deleted At",
         actions: "Actions",
       },
       selectAll: "Select all rows",
@@ -334,19 +372,38 @@ export const dictionaries = {
     };
     adminProductTable: {
       columns: {
+        id: string;
         sku: string;
+        slug: string;
         rank: string;
         nameTh: string;
         nameEn: string;
+        shortDescriptionTh: string;
+        shortDescriptionEn: string;
+        descriptionTh: string;
+        descriptionEn: string;
+        image: string;
         model: string;
         price: string;
+        discountedPrice: string;
+        deliveryFee: string;
+        datasheetUrl: string;
         category: string;
         subCategory: string;
         brands: string;
+        googleCategoryId: string;
         flags: string;
+        seoTitleTh: string;
+        seoTitleEn: string;
+        seoDescriptionTh: string;
+        seoDescriptionEn: string;
         status: string;
+        createdBy: string;
+        createdAt: string;
         updatedBy: string;
         updatedAt: string;
+        deletedBy: string;
+        deletedAt: string;
         actions: string;
       };
       selectAll: string;
