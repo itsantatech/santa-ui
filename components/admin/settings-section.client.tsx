@@ -19,6 +19,21 @@ import { useAdminTableEditRequest } from "./admin-table-events";
 import type { Locale } from "@/lib/i18n";
 import { formatAdminDateTime } from "@/lib/admin-api";
 
+function stripHtmlToPlainText(value: string) {
+  return value
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>\s*<p[^>]*>/gi, "\n")
+    .replace(/<\/?p[^>]*>/gi, "")
+    .replace(/<\/?[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .trim();
+}
+
 type HomeSettingRow = {
   id: string;
   name: string;
@@ -699,24 +714,28 @@ function HomeContentCard({
 }: {
   card: ReturnType<typeof buildHomeSectionCards>[number];
   labels: ReturnType<typeof getLabels>;
-}) {
+  }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState(() => ({
-    contentEn: card.contentEn,
-    contentTh: card.contentTh,
-    headlineEn: card.headlineEn,
-    headlineTh: card.headlineTh,
+    contentEn: stripHtmlToPlainText(card.contentEn),
+    contentTh: stripHtmlToPlainText(card.contentTh),
+    headlineEn: stripHtmlToPlainText(card.headlineEn),
+    headlineTh: stripHtmlToPlainText(card.headlineTh),
     isActive: card.isActive,
   }));
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const headlineThLength = form.headlineTh.trim().length;
-    const headlineEnLength = form.headlineEn.trim().length;
-    const contentThLength = countRichTextCharacters(form.contentTh);
-    const contentEnLength = countRichTextCharacters(form.contentEn);
+    const headlineTh = stripHtmlToPlainText(form.headlineTh);
+    const headlineEn = stripHtmlToPlainText(form.headlineEn);
+    const contentTh = stripHtmlToPlainText(form.contentTh);
+    const contentEn = stripHtmlToPlainText(form.contentEn);
+    const headlineThLength = headlineTh.length;
+    const headlineEnLength = headlineEn.length;
+    const contentThLength = contentTh.length;
+    const contentEnLength = contentEn.length;
 
     if (headlineThLength > 150 || headlineEnLength > 150) {
       setError(labels.home.validation.headlineMax);
@@ -735,17 +754,17 @@ function HomeContentCard({
       card.resource === "home-section-settings"
         ? {
             name: card.name,
-            headlineTh: form.headlineTh,
-            headlineEn: form.headlineEn,
-            contentTh: form.contentTh,
-            contentEn: form.contentEn,
+            headlineTh,
+            headlineEn,
+            contentTh,
+            contentEn,
             isActive: form.isActive,
           }
         : {
-            headlineTh: form.headlineTh,
-            headlineEn: form.headlineEn,
-            contentTh: form.contentTh,
-            contentEn: form.contentEn,
+            headlineTh,
+            headlineEn,
+            contentTh,
+            contentEn,
             imgUrl: card.imgUrl,
           };
 
@@ -776,50 +795,42 @@ function HomeContentCard({
         <h2>{card.title}</h2>
       </div>
       <div className="admin-settings-card-grid admin-settings-about-grid">
-        <SettingsField
+        <SettingsTextarea
           label={labels.home.fields.headlineTh}
           maxLength={150}
-          placeholder={labels.home.placeholders.headlineTh}
           onChange={(value) =>
             setForm((current) => ({ ...current, headlineTh: value.slice(0, 150) }))
           }
+          placeholder={labels.home.placeholders.headlineTh}
           value={form.headlineTh}
         />
-        <SettingsField
+        <SettingsTextarea
           label={labels.home.fields.headlineEn}
           maxLength={150}
-          placeholder={labels.home.placeholders.headlineEn}
           onChange={(value) =>
             setForm((current) => ({ ...current, headlineEn: value.slice(0, 150) }))
           }
+          placeholder={labels.home.placeholders.headlineEn}
           value={form.headlineEn}
         />
-        <div className="admin-settings-richtext-field">
-          <RichTextEditor
-            label={labels.home.fields.contentTh}
-            maxCharacters={500}
-            onChange={(value) => setForm((current) => ({ ...current, contentTh: value }))}
-            placeholder={labels.home.placeholders.contentTh}
-            showToolbar={false}
-            value={form.contentTh}
-          />
-          <span className="admin-settings-field-hint">
-            {countRichTextCharacters(form.contentTh)}/500
-          </span>
-        </div>
-        <div className="admin-settings-richtext-field">
-          <RichTextEditor
-            label={labels.home.fields.contentEn}
-            maxCharacters={500}
-            onChange={(value) => setForm((current) => ({ ...current, contentEn: value }))}
-            placeholder={labels.home.placeholders.contentEn}
-            showToolbar={false}
-            value={form.contentEn}
-          />
-          <span className="admin-settings-field-hint">
-            {countRichTextCharacters(form.contentEn)}/500
-          </span>
-        </div>
+        <SettingsTextarea
+          label={labels.home.fields.contentTh}
+          maxLength={500}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, contentTh: value.slice(0, 500) }))
+          }
+          placeholder={labels.home.placeholders.contentTh}
+          value={form.contentTh}
+        />
+        <SettingsTextarea
+          label={labels.home.fields.contentEn}
+          maxLength={500}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, contentEn: value.slice(0, 500) }))
+          }
+          placeholder={labels.home.placeholders.contentEn}
+          value={form.contentEn}
+        />
       </div>
       <div className="admin-settings-card-footer">
         {card.resource === "home-section-settings" ? (
@@ -1699,20 +1710,25 @@ function SettingsField({
 }
 
 function SettingsTextarea({
+  className,
   label,
+  maxLength,
   onChange,
   placeholder,
   value,
 }: {
+  className?: string;
   label: string;
+  maxLength?: number;
   onChange: (value: string) => void;
   placeholder?: string;
   value: string;
 }) {
   return (
-    <label className="admin-product-field">
+    <label className={className ? `admin-product-field ${className}` : "admin-product-field"}>
       <span>{label}</span>
       <textarea
+        maxLength={maxLength}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         value={value}
