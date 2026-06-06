@@ -164,21 +164,14 @@ export function AdminTableEnhancer({
         return;
       }
 
-      const checkbox = row.querySelector<HTMLInputElement>(
-        "[data-admin-table-row-select]",
-      );
       const selectedRowIds = getSelectedRowIds();
-      const shouldKeepSelection =
-        checkbox?.checked && selectedRowIds.length > 1;
+      const shouldUseSelectedRows = selectedRowIds.length > 1;
+      const nextRowIds = shouldUseSelectedRows ? selectedRowIds : [rowId];
 
-      if (shouldKeepSelection) {
-        setSelection(selectedRowIds);
-      } else {
-        setSelection([rowId]);
-      }
+      setSelection(nextRowIds);
 
       setMenu({
-        rowIds: shouldKeepSelection ? selectedRowIds : [rowId],
+        rowIds: nextRowIds,
         x: event.clientX,
         y: event.clientY,
       });
@@ -246,7 +239,7 @@ export function AdminTableEnhancer({
           type="button"
         >
           <span className="material-symbols-outlined" aria-hidden="true">
-            edit
+            {action.icon ?? "edit"}
           </span>
           {action.label}
           {selectedCountSuffix}

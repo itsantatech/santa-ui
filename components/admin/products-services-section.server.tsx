@@ -1,24 +1,16 @@
-import Image from "next/image";
 import { ProductFilter, type ProductFilterOption } from "@/components/product-filter";
 import { ProductSearch } from "@/components/product-search";
 import {
-  ProductTableEditController,
   type ProductEditorOption,
-  ProductRowManagementActions,
+  ProductInlineEditTable,
+  type ProductTableLabels,
   ProductToolbarActions,
 } from "./products-services-section";
-import { getProductContextMenuActions } from "./products-services-shared";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import {
   fetchAdminList,
-  formatAdminDateTime,
   type AdminListResponse,
 } from "@/lib/admin-api";
-import {
-  AdminDataTable,
-  type AdminDataTableColumn,
-  AdminStatusBadge,
-} from "./admin-data-table";
 
 type ProductRelation = {
   code: string;
@@ -71,6 +63,7 @@ type ProductFilterListResponse = AdminListResponse<ProductRelation>;
 type ProductFilters = {
   brandCode?: string;
   categoryCode?: string;
+  isActive?: boolean;
   pageSize?: number;
   search?: string;
   subCategoryCode?: string;
@@ -127,10 +120,19 @@ export async function ProductsServicesSection({
     filters?.subCategoryCode,
   );
   const selectedBrand = findSelectedOption(brandOptions, filters?.brandCode);
+  const statusOptions = [
+    { label: table.active, value: "true" },
+    { label: table.inactive, value: "false" },
+  ];
+  const selectedStatus = findSelectedOption(
+    statusOptions,
+    filters?.isActive === undefined ? undefined : String(filters.isActive),
+  );
   const filterStateKey = [
     filters?.categoryCode ?? "",
     filters?.subCategoryCode ?? "",
     filters?.brandCode ?? "",
+    filters?.isActive === undefined ? "" : String(filters.isActive),
     filters?.search ?? "",
     filters?.pageSize ?? "",
   ].join(":");
@@ -161,180 +163,19 @@ export async function ProductsServicesSection({
         placeholder: isThaiLocale ? "เลือกแบรนด์" : "Select brand",
         selected: selectedBrand ? [selectedBrand] : undefined,
       },
+      {
+        id: "isActive",
+        label: isThaiLocale ? "สถานะ" : "Status",
+        options: statusOptions,
+        placeholder: isThaiLocale ? "เลือกสถานะ" : "Select status",
+        selected: selectedStatus ? [selectedStatus] : undefined,
+      },
     ],
     removeFilterLabel: isThaiLocale ? "ลบตัวกรอง" : "Remove filter",
     resultLabel: isThaiLocale ? "ผลการค้นหาจำนวน" : "Search results",
     resultUnit: isThaiLocale ? "รายการ" : "items",
     title: isThaiLocale ? "ตัวกรอง" : "Filters",
   };
-  const columns: AdminDataTableColumn<ProductRow>[] = [
-    {
-      key: "image",
-      header: productUi.columns.image,
-      className: "admin-table-image-column",
-      width: "118px",
-      render: (row) => (
-        <ProductImage
-          alt={isThaiLocale ? row.nameTh : row.nameEn}
-          fallback={productUi.noImage}
-          src={row.imgUrl[0]}
-        />
-      ),
-    },
-    {
-      key: "sku",
-      header: table.columns.sku,
-      className: "admin-table-code-column",
-      width: "138px",
-      render: (row) => <strong>{row.sku}</strong>,
-    },
-    {
-      key: "rank",
-      header: table.columns.rank,
-      className: "admin-table-rank-column",
-      width: "88px",
-      render: (row) => row.rank,
-    },
-    {
-      key: "nameTh",
-      header: table.columns.nameTh,
-      className: "admin-table-name-column",
-      width: "240px",
-      render: (row) => row.nameTh,
-    },
-    {
-      key: "nameEn",
-      header: table.columns.nameEn,
-      className: "admin-table-name-column",
-      width: "250px",
-      render: (row) => row.nameEn,
-    },
-    {
-      key: "model",
-      header: table.columns.model,
-      className: "admin-table-model-column",
-      width: "130px",
-      render: (row) => row.model ?? table.noModel,
-    },
-    {
-      key: "price",
-      header: table.columns.price,
-      className: "admin-table-price-column",
-      width: "132px",
-      render: (row) => formatPrice(row.price, locale, table.noPrice),
-    },
-    {
-      key: "discountedPrice",
-      header: productUi.columns.discountedPrice,
-      className: "admin-table-price-column",
-      width: "156px",
-      render: (row) => formatPrice(row.discountedPrice, locale, table.noPrice),
-    },
-    {
-      key: "category",
-      header: table.columns.category,
-      className: "admin-table-relations-column",
-      width: "220px",
-      render: (row) => (
-        <ProductRelationList
-          locale={locale}
-          noRelationsLabel={table.noRelations}
-          relations={row.categories ?? row.categoryCods ?? []}
-        />
-      ),
-    },
-    {
-      key: "subCategory",
-      header: table.columns.subCategory,
-      className: "admin-table-sub-category-column",
-      width: "230px",
-      render: (row) => (
-        <ProductRelationList
-          locale={locale}
-          noRelationsLabel={table.noRelations}
-          relations={row.subCategories}
-        />
-      ),
-    },
-    {
-      key: "brands",
-      header: table.columns.brands,
-      className: "admin-table-brands-column",
-      width: "190px",
-      render: (row) => (
-        <ProductRelationList
-          locale={locale}
-          noRelationsLabel={table.noRelations}
-          relations={row.brands}
-        />
-      ),
-    },
-    {
-      key: "flags",
-      header: table.columns.flags,
-      className: "admin-table-flags-column",
-      width: "160px",
-      render: (row) => (
-        <ProductFlags
-          bestSellerLabel={table.bestSeller}
-          noFlagsLabel={table.noFlags}
-          newProductLabel={table.newProduct}
-          product={row}
-          promotionLabel={table.promotion}
-        />
-      ),
-    },
-    {
-      key: "deliveryFee",
-      header: productUi.columns.deliveryFee,
-      className: "admin-table-price-column",
-      width: "132px",
-      render: (row) => formatPrice(row.deliveryFee, locale, table.noPrice),
-    },
-    {
-      key: "status",
-      header: table.columns.status,
-      className: "admin-table-status-column",
-      width: "126px",
-      render: (row) => (
-        <AdminStatusBadge
-          label={row.isActive ? table.active : table.inactive}
-          tone={row.isActive ? "active" : "inactive"}
-        />
-      ),
-    },
-    {
-      key: "updatedBy",
-      header: table.columns.updatedBy,
-      className: "admin-table-user-column",
-      width: "170px",
-      render: (row) => row.updatedBy,
-    },
-    {
-      key: "updatedAt",
-      header: table.columns.updatedAt,
-      className: "admin-table-date-column",
-      width: "190px",
-      render: (row) => formatAdminDateTime(row.updatedAt, locale),
-    },
-    {
-      key: "actions",
-      header: table.columns.actions,
-      className: "admin-table-actions-column",
-      width: "96px",
-      render: (row) => (
-        <ProductRowManagementActions
-          brandOptions={productEditorBrandOptions}
-          categoryOptions={productEditorCategoryOptions}
-          labels={productUi}
-          locale={locale}
-          product={row}
-          subCategoryOptions={productEditorSubCategoryOptions}
-        />
-      ),
-    },
-  ];
-
   return (
     <div className="admin-section-panel">
       <h1 id="admin-heading">{content.title}</h1>
@@ -366,28 +207,23 @@ export async function ProductsServicesSection({
         title={filterContent.title}
         variant="admin"
       />
-      <AdminDataTable
-        columns={columns}
-        contextMenuActions={getProductContextMenuActions(productUi)}
-        emptyLabel={response ? table.empty : table.fetchError}
-        getRowId={(row) => row.sku}
+      <ProductInlineEditTable
+        brandOptions={productEditorBrandOptions}
+        categoryOptions={productEditorCategoryOptions}
+        labels={productUi}
+        locale={locale}
         pagination={{
           currentPage,
           currentPageSize,
-          totalPages,
-          getPageHref: (nextPage) =>
-            createProductsPageHref(locale, nextPage, filters),
-          previousLabel: table.previousPage,
           nextLabel: table.nextPage,
+          previousLabel: table.previousPage,
           rowsPerPageLabel: productUi.rowsPerPage,
+          totalPages,
         }}
         rows={rows}
-        selectAllLabel={table.selectAll}
-        selectRowLabel={(row) => `${table.selectRow} ${row.sku}`}
-        tableId="products-services"
-        wide
+        subCategoryOptions={productEditorSubCategoryOptions}
+        tableLabels={table as ProductTableLabels}
       />
-      <ProductTableEditController labels={productUi} rows={rows} />
     </div>
   );
 }
@@ -399,6 +235,7 @@ async function getProducts(
   return fetchAdminList<ProductRow>("/products", {
     brandCode: filters?.brandCode,
     categoryCode: filters?.categoryCode,
+    isActive: filters?.isActive,
     page,
     pageSize: filters?.pageSize,
     search: filters?.search,
@@ -449,132 +286,6 @@ function toProductEditorOptions(
   }));
 }
 
-function createProductsPageHref(
-  locale: Locale,
-  page: number,
-  filters?: ProductFilters,
-) {
-  const searchParams = new URLSearchParams({
-    page: String(page),
-    section: "products-services",
-  });
-
-  if (filters?.categoryCode) {
-    searchParams.set("categoryCode", filters.categoryCode);
-  }
-
-  if (filters?.subCategoryCode) {
-    searchParams.set("subCategoryCode", filters.subCategoryCode);
-  }
-
-  if (filters?.brandCode) {
-    searchParams.set("brandCode", filters.brandCode);
-  }
-
-  if (filters?.search) {
-    searchParams.set("search", filters.search);
-  }
-
-  if (filters?.pageSize) {
-    searchParams.set("pageSize", String(filters.pageSize));
-  }
-
-  return `/${locale}/admin?${searchParams.toString()}`;
-}
-
-function ProductImage({
-  alt,
-  fallback,
-  src,
-}: {
-  alt: string;
-  fallback: string;
-  src?: string;
-}) {
-  if (!src) {
-    return <span className="admin-table-muted">{fallback}</span>;
-  }
-
-  return (
-    <Image
-      alt={alt}
-      className="admin-table-product-image"
-      height={64}
-      loading="lazy"
-      src={src}
-      unoptimized
-      width={64}
-    />
-  );
-}
-
-function ProductRelationList({
-  locale,
-  noRelationsLabel,
-  relations,
-}: {
-  locale: Locale;
-  noRelationsLabel: string;
-  relations: ProductRelation[];
-}) {
-  if (relations.length === 0) {
-    return <span className="admin-table-muted">{noRelationsLabel}</span>;
-  }
-
-  return (
-    <div className="admin-table-relations">
-      {relations.map((relation) => (
-        <strong key={relation.code}>
-          {locale === "th" ? relation.nameTh : relation.nameEn}
-        </strong>
-      ))}
-    </div>
-  );
-}
-
-function ProductFlags({
-  bestSellerLabel,
-  noFlagsLabel,
-  newProductLabel,
-  product,
-  promotionLabel,
-}: {
-  bestSellerLabel: string;
-  noFlagsLabel: string;
-  newProductLabel: string;
-  product: ProductRow;
-  promotionLabel: string;
-}) {
-  const flags = [
-    product.isNewProduct ? newProductLabel : null,
-    product.isBestSeller ? bestSellerLabel : null,
-    product.isPromotion ? promotionLabel : null,
-  ].filter((flag): flag is string => Boolean(flag));
-
-  if (flags.length === 0) {
-    return <span className="admin-table-muted">{noFlagsLabel}</span>;
-  }
-
-  return (
-    <div className="admin-table-flag-list">
-      {flags.map((flag) => (
-        <span key={flag}>{flag}</span>
-      ))}
-    </div>
-  );
-}
-
-function formatPrice(value: number | null, locale: Locale, fallback: string) {
-  if (value === null) {
-    return fallback;
-  }
-
-  return new Intl.NumberFormat(locale === "th" ? "th-TH" : "en-US", {
-    currency: "THB",
-    style: "currency",
-  }).format(value);
-}
-
 function getProductAdminUiLabels(locale: Locale) {
   return locale === "th"
   ? {
@@ -605,17 +316,12 @@ function getProductAdminUiLabels(locale: Locale) {
         descriptionTh: "รายละเอียดภาษาไทย",
         discountedPrice: "ราคาลด",
         googleCategoryId: "Google Category ID",
-        isActive: "สถานะ",
-        isBestSeller: "สินค้าแนะนำ",
+        imgUrl: "รูปภาพ",
+        isActive: "แสดงผล",
+        isBestSeller: "สินค้าขายดี",
         isNewProduct: "สินค้าใหม่",
         isPromotion: "โปรโมชั่น",
         model: "รุ่น",
-        imgUrl: "Image",
-        isActive: "แสดงผล",
-        isBestSeller: "Best seller",
-        isNewProduct: "New product",
-        isPromotion: "Promotion",
-        model: "Model",
         nameEn: "ชื่อภาษาอังกฤษ",
         nameTh: "ชื่อภาษาไทย",
         price: "ราคา",
@@ -638,6 +344,10 @@ function getProductAdminUiLabels(locale: Locale) {
       noImage: "ไม่มีรูป",
       noMedia: "ยังไม่มีรูปภาพหรือวิดีโอ",
       noSuggestions: "ไม่พบสินค้า",
+      inlineEdit: "แก้ไข",
+      inlineEditDirty: "แก้ไขแล้ว {count} รายการ",
+      inlineEditImageHelper:
+        "ฟิลด์รูปภาพ, หมวดหมู่, หมวดย่อย และแบรนด์ รองรับการกรอกหลายค่าโดยคั่นด้วย comma หรือขึ้นบรรทัดใหม่",
       rowsPerPage: "แถวต่อหน้า",
       save: "บันทึก",
       saving: "กำลังบันทึก...",
@@ -680,6 +390,7 @@ function getProductAdminUiLabels(locale: Locale) {
         descriptionTh: "Description TH",
         discountedPrice: "Discounted Price",
         googleCategoryId: "Google Category ID",
+        imgUrl: "Images",
         isActive: "Active",
         isBestSeller: "Best seller",
         isNewProduct: "New product",
@@ -706,6 +417,10 @@ function getProductAdminUiLabels(locale: Locale) {
       noImage: "No image",
       noMedia: "No images or videos uploaded",
       noSuggestions: "No products found",
+      inlineEdit: "Edit",
+      inlineEditDirty: "{count} row(s) changed",
+      inlineEditImageHelper:
+        "Image, category, sub-category, and brand fields accept multiple values separated by commas or new lines.",
       rowsPerPage: "Rows per page",
       save: "Save",
       saving: "Saving...",

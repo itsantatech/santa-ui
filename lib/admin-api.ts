@@ -34,7 +34,7 @@ export async function fetchAdminList<Row>(
   {
     brandCode,
     categoryCode,
-    isActive = true,
+    isActive,
     lowStockOnly,
     page,
     pageSize = defaultPageSize,
@@ -45,7 +45,9 @@ export async function fetchAdminList<Row>(
   const url = createSantaApiUrl(resourcePath);
   url.searchParams.set("page", String(page));
   url.searchParams.set("pageSize", String(pageSize));
-  url.searchParams.set("isActive", String(isActive));
+  if (isActive !== undefined) {
+    url.searchParams.set("isActive", String(isActive));
+  }
   if (search) {
     url.searchParams.set("search", search);
   }
