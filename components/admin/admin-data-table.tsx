@@ -14,6 +14,7 @@ export type AdminDataTableColumn<Row> = {
 export type AdminDataTableContextAction = {
   id: string;
   label: string;
+  icon?: string;
 };
 
 export type AdminDataTablePagination = {
@@ -35,6 +36,7 @@ type AdminDataTableProps<Row> = {
   emptyLabel?: string;
   selectAllLabel: string;
   selectRowLabel: (row: Row) => string;
+  showSelectionColumn?: boolean;
   pagination?: AdminDataTablePagination;
   wide?: boolean;
   contextMenuActions?: AdminDataTableContextAction[];
@@ -94,6 +96,7 @@ export function AdminDataTable<Row>({
   rows,
   selectAllLabel,
   selectRowLabel,
+  showSelectionColumn = true,
   tableId,
   wide = false,
 }: AdminDataTableProps<Row>) {
@@ -108,19 +111,28 @@ export function AdminDataTable<Row>({
           }
         >
           <colgroup>
-            <col className="admin-table-select-col" />
+            {showSelectionColumn ? <col className="admin-table-select-col" /> : null}
             {columns.map((column) => (
-              <col key={column.key} style={{ width: column.width }} />
+              <col
+                key={column.key}
+                style={{
+                  width: column.width,
+                  minWidth: column.width,
+                  maxWidth: column.width,
+                }}
+              />
             ))}
           </colgroup>
           <thead>
             <tr>
-              <th className="admin-table-select-cell" scope="col">
-                <label className="admin-table-checkbox-label">
-                  <span className="sr-only">{selectAllLabel}</span>
-                  <input data-admin-table-select-all type="checkbox" />
-                </label>
-              </th>
+              {showSelectionColumn ? (
+                <th className="admin-table-select-cell" scope="col">
+                  <label className="admin-table-checkbox-label">
+                    <span className="sr-only">{selectAllLabel}</span>
+                    <input data-admin-table-select-all type="checkbox" />
+                  </label>
+                </th>
+              ) : null}
               {columns.map((column) => (
                 <th className={column.className} key={column.key} scope="col">
                   {column.header}
@@ -136,12 +148,14 @@ export function AdminDataTable<Row>({
                   data-admin-table-row-id={getRowId(row)}
                   key={getRowId(row)}
                 >
-                  <td className="admin-table-select-cell">
-                    <label className="admin-table-checkbox-label">
-                      <span className="sr-only">{selectRowLabel(row)}</span>
-                      <input data-admin-table-row-select type="checkbox" />
-                    </label>
-                  </td>
+                  {showSelectionColumn ? (
+                    <td className="admin-table-select-cell">
+                      <label className="admin-table-checkbox-label">
+                        <span className="sr-only">{selectRowLabel(row)}</span>
+                        <input data-admin-table-row-select type="checkbox" />
+                      </label>
+                    </td>
+                  ) : null}
                   {columns.map((column) => (
                     <td className={column.className} key={column.key}>
                       {column.render(row)}
@@ -151,7 +165,10 @@ export function AdminDataTable<Row>({
               ))
             ) : (
               <tr>
-                <td className="admin-table-empty-cell" colSpan={columns.length + 1}>
+                <td
+                  className="admin-table-empty-cell"
+                  colSpan={columns.length + (showSelectionColumn ? 1 : 0)}
+                >
                   {emptyLabel}
                 </td>
               </tr>

@@ -8,6 +8,7 @@ import {
   type ReactNode,
   type MouseEvent as ReactMouseEvent,
   type RefObject,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -278,6 +279,34 @@ type ProductInlineEditDraft = {
   subCategoryCodesText: string;
 };
 
+const INLINE_REQUIRED_FIELD_KEYS = [
+  "slug",
+  "nameTh",
+  "nameEn",
+  "shortDescriptionTh",
+  "shortDescriptionEn",
+  "seoTitleTh",
+  "seoTitleEn",
+  "seoDescriptionTh",
+  "seoDescriptionEn",
+] as const satisfies readonly (keyof Pick<
+  ProductInlineEditDraft,
+  | "slug"
+  | "nameTh"
+  | "nameEn"
+  | "shortDescriptionTh"
+  | "shortDescriptionEn"
+  | "seoTitleTh"
+  | "seoTitleEn"
+  | "seoDescriptionTh"
+  | "seoDescriptionEn"
+>)[];
+
+type InlineRequiredFieldKey = (typeof INLINE_REQUIRED_FIELD_KEYS)[number];
+
+const PRODUCT_INLINE_EDIT_REQUEST_EVENT = "admin-product:inline-edit-request";
+const PRODUCT_INLINE_EDIT_STATE_EVENT = "admin-product:inline-edit-state";
+
 export function ProductToolbarActions({
   brandOptions,
   categoryOptions,
@@ -294,7 +323,31 @@ export function ProductToolbarActions({
 }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isInlineEditMode, setIsInlineEditMode] = useState(false);
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    function handleInlineEditState(event: Event) {
+      const detail = (
+        event as CustomEvent<{ isEditMode: boolean }>
+      ).detail;
+
+      if (!detail) {
+        return;
+      }
+
+      setIsInlineEditMode(detail.isEditMode);
+    }
+
+    window.addEventListener(PRODUCT_INLINE_EDIT_STATE_EVENT, handleInlineEditState);
+
+    return () => {
+      window.removeEventListener(
+        PRODUCT_INLINE_EDIT_STATE_EVENT,
+        handleInlineEditState,
+      );
+    };
+  }, []);
 
   async function handleDownload(path: string, fallbackFilename: string) {
     const response = await fetch(path, { cache: "no-store" });
@@ -363,6 +416,22 @@ export function ProductToolbarActions({
         <span aria-hidden="true">+</span>
         {labels.add}
       </button>
+      {!isInlineEditMode ? (
+        <button
+          className="admin-product-secondary-button"
+          onClick={() => {
+            window.dispatchEvent(
+              new CustomEvent(PRODUCT_INLINE_EDIT_REQUEST_EVENT),
+            );
+          }}
+          type="button"
+        >
+          <span className="material-symbols-outlined" aria-hidden="true">
+            edit
+          </span>
+          {labels.inlineEdit}
+        </button>
+      ) : null}
       {isAddOpen ? (
         <ProductFormModal
           brandOptions={brandOptions}
@@ -435,10 +504,11 @@ export function ProductRowManagementActions({
         />
       ) : null}
       {mode === "delete" ? (
-        <DeleteProductModal
+        <DeleteProductsModal
           labels={labels}
+          locale={locale}
           onClose={() => setMode(null)}
-          product={product}
+          products={[product]}
         />
       ) : null}
     </>
@@ -469,16 +539,45 @@ export function ProductTableEditController({
   >([]);
   const [bulkEditingAction, setBulkEditingAction] =
     useState<ProductBatchAction | null>(null);
+  const [bulkDeletingProducts, setBulkDeletingProducts] = useState<
+    ProductManagementRow[]
+  >([]);
+  const [promotionProducts, setPromotionProducts] = useState<ProductManagementRow[]>(
+    [],
+  );
 
   useAdminTableEditRequest("products-services", (actionId, rowIds) => {
     const matchedRows = rows.filter((row) => rowIds.includes(row.sku));
 
+    if (actionId === "delete" && matchedRows.length > 0) {
+      setEditingProduct(null);
+      setBulkEditingAction(null);
+      setBulkEditingProducts([]);
+      setPromotionProducts([]);
+      setBulkDeletingProducts(matchedRows);
+      return;
+    }
+
+    if (actionId === "isPromotion" && matchedRows.length > 0) {
+      setEditingProduct(null);
+      setBulkEditingAction(null);
+      setBulkEditingProducts([]);
+      setBulkDeletingProducts([]);
+      setPromotionProducts(matchedRows);
+      return;
+    }
+
     if (matchedRows.length === 1 && actionId === "edit") {
+      setBulkDeletingProducts([]);
+      setPromotionProducts([]);
       setEditingProduct(matchedRows[0]);
       return;
     }
 
     if (matchedRows.length > 0) {
+      setEditingProduct(null);
+      setBulkDeletingProducts([]);
+      setPromotionProducts([]);
       setBulkEditingAction(actionId as ProductBatchAction);
       setBulkEditingProducts(matchedRows);
     }
@@ -496,6 +595,22 @@ export function ProductTableEditController({
           onClose={() => setEditingProduct(null)}
           product={editingProduct}
           subCategoryOptions={subCategoryOptions}
+        />
+      ) : null}
+      {bulkDeletingProducts.length > 0 ? (
+        <DeleteProductsModal
+          labels={labels}
+          locale={locale}
+          onClose={() => setBulkDeletingProducts([])}
+          products={bulkDeletingProducts}
+        />
+      ) : null}
+      {promotionProducts.length > 0 ? (
+        <ProductPromotionModal
+          labels={labels}
+          locale={locale}
+          onClose={() => setPromotionProducts([])}
+          products={promotionProducts}
         />
       ) : null}
       {bulkEditingProducts.length > 0 && bulkEditingAction ? (
@@ -566,7 +681,14 @@ export function ProductInlineEditTable({
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSavingAll, setIsSavingAll] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [hasInlineValidationAttempted, setHasInlineValidationAttempted] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, ProductInlineEditDraft>>({});
+  const [uploadingDatasheetBySku, setUploadingDatasheetBySku] = useState<
+    Record<string, boolean>
+  >({});
+  const [uploadingMediaBySku, setUploadingMediaBySku] = useState<
+    Record<string, boolean>
+  >({});
 
   const changedRows = rows.filter((row) => {
     const draft = drafts[row.sku];
@@ -589,26 +711,106 @@ export function ProductInlineEditTable({
     [pagination, pathname, searchParams],
   );
 
-  function updateDraft(
-    row: ProductManagementRow,
-    updater: (
-      current: ProductInlineEditDraft,
-    ) => ProductInlineEditDraft,
-  ) {
-    setDrafts((current) => {
-      const nextDraft = updater(current[row.sku] ?? createInlineDraft(row));
+  useEffect(() => {
+    function handleInlineEditRequest() {
+      setIsEditMode(true);
+      setSaveError("");
+      setHasInlineValidationAttempted(false);
+    }
 
-      return {
-        ...current,
-        [row.sku]: nextDraft,
-      };
-    });
-  }
+    window.addEventListener(
+      PRODUCT_INLINE_EDIT_REQUEST_EVENT,
+      handleInlineEditRequest,
+    );
+
+    return () => {
+      window.removeEventListener(
+        PRODUCT_INLINE_EDIT_REQUEST_EVENT,
+        handleInlineEditRequest,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent(PRODUCT_INLINE_EDIT_STATE_EVENT, {
+        detail: { isEditMode },
+      }),
+    );
+  }, [isEditMode]);
+
+  const updateDraft = useCallback(
+    (
+      row: ProductManagementRow,
+      updater: (current: ProductInlineEditDraft) => ProductInlineEditDraft,
+    ) => {
+      setDrafts((current) => {
+        const nextDraft = updater(current[row.sku] ?? createInlineDraft(row));
+
+        return {
+          ...current,
+          [row.sku]: nextDraft,
+        };
+      });
+    },
+    [],
+  );
+
+  const isInlineFieldInvalid = useCallback(
+    (row: ProductManagementRow, fieldKey: InlineRequiredFieldKey) => {
+      if (!hasInlineValidationAttempted) {
+        return false;
+      }
+
+      const draft = drafts[row.sku] ?? createInlineDraft(row);
+
+      return !draft[fieldKey].trim();
+    },
+    [drafts, hasInlineValidationAttempted],
+  );
+
+  const isInlineDiscountedPriceInvalid = useCallback(
+    (row: ProductManagementRow) => {
+      if (!hasInlineValidationAttempted) {
+        return false;
+      }
+
+      const draft = drafts[row.sku] ?? createInlineDraft(row);
+
+      return draft.isPromotion && !draft.discountedPrice.trim();
+    },
+    [drafts, hasInlineValidationAttempted],
+  );
 
   async function handleSaveAll() {
     if (dirtyCount === 0) {
       setIsEditMode(false);
       setDrafts({});
+      setSaveError("");
+      setHasInlineValidationAttempted(false);
+      return;
+    }
+
+    setHasInlineValidationAttempted(true);
+
+    const invalidDrafts = changedRows
+      .map((row) => {
+        const draft = drafts[row.sku] ?? createInlineDraft(row);
+        const missingFields = getInlineRequiredFieldLabels(draft, labels);
+
+        if (draft.isPromotion && !draft.discountedPrice.trim()) {
+          missingFields.push(labels.fields.discountedPrice);
+        }
+
+        return missingFields.length > 0 ? { missingFields, row } : null;
+      })
+      .filter(
+        (
+          item,
+        ): item is { missingFields: string[]; row: ProductManagementRow } => Boolean(item),
+      );
+
+    if (invalidDrafts.length > 0) {
       setSaveError("");
       return;
     }
@@ -637,6 +839,7 @@ export function ProductInlineEditTable({
 
       setIsEditMode(false);
       setDrafts({});
+      setHasInlineValidationAttempted(false);
       router.refresh();
     } catch {
       setSaveError(labels.error);
@@ -645,7 +848,163 @@ export function ProductInlineEditTable({
     }
   }
 
+  const handleInlineMediaSelected = useCallback(
+    async (row: ProductManagementRow, files: FileList | null) => {
+      if (!files?.length) {
+        return;
+      }
+
+      setSaveError("");
+      setUploadingMediaBySku((current) => ({
+        ...current,
+        [row.sku]: true,
+      }));
+
+      try {
+        const uploadedUrls: string[] = [];
+
+        for (const file of Array.from(files)) {
+          uploadedUrls.push(
+            await uploadAdminProductFile(file, "products/media", labels.uploadError),
+          );
+        }
+
+        updateDraft(row, (current) => {
+          const nextUrls = [
+            ...parseInlineList(current.imgUrlText),
+            ...uploadedUrls,
+          ];
+
+          return {
+            ...current,
+            imgUrlText: nextUrls.join("\n"),
+          };
+        });
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : labels.uploadError);
+      } finally {
+        setUploadingMediaBySku((current) => ({
+          ...current,
+          [row.sku]: false,
+        }));
+      }
+    },
+    [labels.uploadError, updateDraft],
+  );
+
+  const handleInlineDatasheetSelected = useCallback(
+    async (row: ProductManagementRow, files: FileList | null) => {
+      const file = files?.[0];
+
+      if (!file) {
+        return;
+      }
+
+      if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+        setSaveError(labels.uploadError);
+        return;
+      }
+
+      setSaveError("");
+      setUploadingDatasheetBySku((current) => ({
+        ...current,
+        [row.sku]: true,
+      }));
+
+      try {
+        const url = await uploadAdminProductFile(
+          file,
+          "products/datasheets",
+          labels.uploadError,
+        );
+
+        updateDraft(row, (current) => ({
+          ...current,
+          datasheetUrl: url,
+        }));
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : labels.uploadError);
+      } finally {
+        setUploadingDatasheetBySku((current) => ({
+          ...current,
+          [row.sku]: false,
+        }));
+      }
+    },
+    [labels.uploadError, updateDraft],
+  );
+
   const columns = useMemo<AdminDataTableColumn<ProductManagementRow>[]>(() => {
+    const actionsColumn: AdminDataTableColumn<ProductManagementRow> = {
+      key: "actions",
+      header: tableLabels.columns.actions,
+      className: "admin-table-actions-column",
+      width: "96px",
+      render: (row) => (
+        <ProductRowManagementActions
+          brandOptions={brandOptions}
+          categoryOptions={categoryOptions}
+          labels={labels}
+          locale={locale}
+          product={row}
+          subCategoryOptions={subCategoryOptions}
+        />
+      ),
+    };
+
+    const flagsColumn: AdminDataTableColumn<ProductManagementRow> = {
+      key: "flags",
+      header: tableLabels.columns.flags,
+      className: "admin-table-flags-column",
+      width: "160px",
+      render: (row) =>
+        isEditMode ? (
+          <div className="admin-inline-flag-editor">
+            <InlineTableCheckbox
+              checked={(drafts[row.sku] ?? createInlineDraft(row)).isNewProduct}
+              label={tableLabels.newProduct}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  isNewProduct: event.target.checked,
+                }))
+              }
+            />
+            <InlineTableCheckbox
+              checked={(drafts[row.sku] ?? createInlineDraft(row)).isBestSeller}
+              label={tableLabels.bestSeller}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  isBestSeller: event.target.checked,
+                }))
+              }
+            />
+            <InlineTableCheckbox
+              checked={(drafts[row.sku] ?? createInlineDraft(row)).isPromotion}
+              label={tableLabels.promotion}
+              onChange={(event) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  discountedPrice: event.target.checked
+                    ? current.discountedPrice
+                    : "",
+                  isPromotion: event.target.checked,
+                }))
+              }
+            />
+          </div>
+        ) : (
+          <InlineProductFlags
+            bestSellerLabel={tableLabels.bestSeller}
+            noFlagsLabel={tableLabels.noFlags}
+            newProductLabel={tableLabels.newProduct}
+            product={row}
+            promotionLabel={tableLabels.promotion}
+          />
+        ),
+    };
+
     return [
       {
         key: "image",
@@ -666,13 +1025,18 @@ export function ProductInlineEditTable({
           const draft = drafts[row.sku] ?? createInlineDraft(row);
 
           return (
-            <InlineTableTextArea
-              rows={4}
-              value={draft.imgUrlText}
-              onChange={(event) =>
+            <InlineTableMediaEditor
+              files={parseInlineList(draft.imgUrlText)}
+              isUploading={uploadingMediaBySku[row.sku] ?? false}
+              label={labels.fields.imgUrl}
+              labels={labels}
+              onFilesSelected={(files) => void handleInlineMediaSelected(row, files)}
+              onRemove={(targetUrl) =>
                 updateDraft(row, (current) => ({
                   ...current,
-                  imgUrlText: event.target.value,
+                  imgUrlText: parseInlineList(current.imgUrlText)
+                    .filter((url) => url !== targetUrl)
+                    .join("\n"),
                 }))
               }
             />
@@ -680,17 +1044,12 @@ export function ProductInlineEditTable({
         },
       },
       {
-        key: "id",
-        header: tableLabels.columns.id,
-        className: "admin-table-number-fit-column",
-        width: "88px",
-        render: (row) => row.id,
-      },
-      {
         key: "sku",
         header: tableLabels.columns.sku,
-        className: "admin-table-code-column",
-        width: "138px",
+        className: isEditMode
+          ? "admin-table-code-column admin-table-code-column-edit"
+          : "admin-table-code-column",
+        width: isEditMode ? "200px" : "138px",
         render: (row) => <InlineTableText value={row.sku} strong />,
       },
       {
@@ -701,6 +1060,12 @@ export function ProductInlineEditTable({
         render: (row) =>
           isEditMode ? (
             <InlineTableInput
+              invalid={isInlineFieldInvalid(row, "slug")}
+              errorMessage={
+                isInlineFieldInvalid(row, "slug")
+                  ? getInlineRequiredFieldErrorMessage("slug", labels, locale)
+                  : ""
+              }
               value={(drafts[row.sku] ?? createInlineDraft(row)).slug}
               onChange={(event) =>
                 updateDraft(row, (current) => ({
@@ -716,8 +1081,10 @@ export function ProductInlineEditTable({
       {
         key: "rank",
         header: tableLabels.columns.rank,
-        className: "admin-table-rank-column",
-        width: "88px",
+        className: isEditMode
+          ? "admin-table-rank-column admin-table-rank-column-edit"
+          : "admin-table-rank-column",
+        width: isEditMode ? "100px" : "88px",
         render: (row) =>
           isEditMode ? (
             <InlineTableInput
@@ -742,6 +1109,12 @@ export function ProductInlineEditTable({
         render: (row) =>
           isEditMode ? (
             <InlineTableInput
+              invalid={isInlineFieldInvalid(row, "nameTh")}
+              errorMessage={
+                isInlineFieldInvalid(row, "nameTh")
+                  ? getInlineRequiredFieldErrorMessage("nameTh", labels, locale)
+                  : ""
+              }
               value={(drafts[row.sku] ?? createInlineDraft(row)).nameTh}
               onChange={(event) =>
                 updateDraft(row, (current) => ({
@@ -762,6 +1135,12 @@ export function ProductInlineEditTable({
         render: (row) =>
           isEditMode ? (
             <InlineTableInput
+              invalid={isInlineFieldInvalid(row, "nameEn")}
+              errorMessage={
+                isInlineFieldInvalid(row, "nameEn")
+                  ? getInlineRequiredFieldErrorMessage("nameEn", labels, locale)
+                  : ""
+              }
               value={(drafts[row.sku] ?? createInlineDraft(row)).nameEn}
               onChange={(event) =>
                 updateDraft(row, (current) => ({
@@ -782,6 +1161,16 @@ export function ProductInlineEditTable({
         render: (row) =>
           isEditMode ? (
             <InlineTableTextArea
+              invalid={isInlineFieldInvalid(row, "shortDescriptionTh")}
+              errorMessage={
+                isInlineFieldInvalid(row, "shortDescriptionTh")
+                  ? getInlineRequiredFieldErrorMessage(
+                      "shortDescriptionTh",
+                      labels,
+                      locale,
+                    )
+                  : ""
+              }
               value={(drafts[row.sku] ?? createInlineDraft(row)).shortDescriptionTh}
               onChange={(event) =>
                 updateDraft(row, (current) => ({
@@ -802,6 +1191,16 @@ export function ProductInlineEditTable({
         render: (row) =>
           isEditMode ? (
             <InlineTableTextArea
+              invalid={isInlineFieldInvalid(row, "shortDescriptionEn")}
+              errorMessage={
+                isInlineFieldInvalid(row, "shortDescriptionEn")
+                  ? getInlineRequiredFieldErrorMessage(
+                      "shortDescriptionEn",
+                      labels,
+                      locale,
+                    )
+                  : ""
+              }
               value={(drafts[row.sku] ?? createInlineDraft(row)).shortDescriptionEn}
               onChange={(event) =>
                 updateDraft(row, (current) => ({
@@ -817,17 +1216,19 @@ export function ProductInlineEditTable({
       {
         key: "descriptionTh",
         header: tableLabels.columns.descriptionTh,
-        className: "admin-table-short-description-column",
-        width: "220px",
+        className: isEditMode
+          ? "admin-table-short-description-column admin-table-short-description-column-edit"
+          : "admin-table-short-description-column",
+        width: isEditMode ? "800px" : "220px",
         render: (row) =>
           isEditMode ? (
-            <InlineTableTextArea
-              rows={6}
+            <InlineTableRichTextEditor
+              label={labels.fields.descriptionTh}
               value={(drafts[row.sku] ?? createInlineDraft(row)).descriptionTh}
-              onChange={(event) =>
+              onChange={(value) =>
                 updateDraft(row, (current) => ({
                   ...current,
-                  descriptionTh: event.target.value,
+                  descriptionTh: value,
                 }))
               }
             />
@@ -838,17 +1239,19 @@ export function ProductInlineEditTable({
       {
         key: "descriptionEn",
         header: tableLabels.columns.descriptionEn,
-        className: "admin-table-short-description-column",
-        width: "220px",
+        className: isEditMode
+          ? "admin-table-short-description-column admin-table-short-description-column-edit"
+          : "admin-table-short-description-column",
+        width: isEditMode ? "800px" : "220px",
         render: (row) =>
           isEditMode ? (
-            <InlineTableTextArea
-              rows={6}
+            <InlineTableRichTextEditor
+              label={labels.fields.descriptionEn}
               value={(drafts[row.sku] ?? createInlineDraft(row)).descriptionEn}
-              onChange={(event) =>
+              onChange={(value) =>
                 updateDraft(row, (current) => ({
                   ...current,
-                  descriptionEn: event.target.value,
+                  descriptionEn: value,
                 }))
               }
             />
@@ -876,6 +1279,7 @@ export function ProductInlineEditTable({
             <InlineTableText value={row.model ?? tableLabels.noModel} />
           ),
       },
+      flagsColumn,
       {
         key: "price",
         header: tableLabels.columns.price,
@@ -906,6 +1310,12 @@ export function ProductInlineEditTable({
           isEditMode ? (
             <InlineTableInput
               disabled={!(drafts[row.sku] ?? createInlineDraft(row)).isPromotion}
+              invalid={isInlineDiscountedPriceInvalid(row)}
+              errorMessage={
+                isInlineDiscountedPriceInvalid(row)
+                  ? getInlineFieldErrorMessage(labels.fields.discountedPrice, locale)
+                  : ""
+              }
               type="number"
               value={(drafts[row.sku] ?? createInlineDraft(row)).discountedPrice}
               onChange={(event) =>
@@ -917,174 +1327,6 @@ export function ProductInlineEditTable({
             />
           ) : (
             formatInlinePrice(row.discountedPrice, locale, tableLabels.noPrice)
-          ),
-      },
-      {
-        key: "datasheetUrl",
-        header: tableLabels.columns.datasheetUrl,
-        className: "admin-table-content-type-column",
-        width: "160px",
-        render: (row) =>
-          isEditMode ? (
-            <InlineTableInput
-              value={(drafts[row.sku] ?? createInlineDraft(row)).datasheetUrl}
-              onChange={(event) =>
-                updateDraft(row, (current) => ({
-                  ...current,
-                  datasheetUrl: event.target.value,
-                }))
-              }
-            />
-          ) : (
-            <InlineTableLink
-              href={row.datasheetUrl}
-              label={row.datasheetUrl ? "Open PDF" : labels.noDatasheet}
-              mutedLabel={labels.noDatasheet}
-            />
-          ),
-      },
-      {
-        key: "category",
-        header: tableLabels.columns.category,
-        className: "admin-table-relations-column",
-        width: "220px",
-        render: (row) =>
-          isEditMode ? (
-            <InlineTableTextArea
-              value={(drafts[row.sku] ?? createInlineDraft(row)).categoryCodesText}
-              onChange={(event) =>
-                updateDraft(row, (current) => ({
-                  ...current,
-                  categoryCodesText: event.target.value,
-                }))
-              }
-            />
-          ) : (
-            <InlineProductRelationList
-              locale={locale}
-              noRelationsLabel={tableLabels.noRelations}
-              relations={row.categories ?? row.categoryCods ?? []}
-            />
-          ),
-      },
-      {
-        key: "subCategory",
-        header: tableLabels.columns.subCategory,
-        className: "admin-table-sub-category-column",
-        width: "230px",
-        render: (row) =>
-          isEditMode ? (
-            <InlineTableTextArea
-              value={(drafts[row.sku] ?? createInlineDraft(row)).subCategoryCodesText}
-              onChange={(event) =>
-                updateDraft(row, (current) => ({
-                  ...current,
-                  subCategoryCodesText: event.target.value,
-                }))
-              }
-            />
-          ) : (
-            <InlineProductRelationList
-              locale={locale}
-              noRelationsLabel={tableLabels.noRelations}
-              relations={row.subCategories}
-            />
-          ),
-      },
-      {
-        key: "brands",
-        header: tableLabels.columns.brands,
-        className: "admin-table-brands-column",
-        width: "190px",
-        render: (row) =>
-          isEditMode ? (
-            <InlineTableTextArea
-              value={(drafts[row.sku] ?? createInlineDraft(row)).brandCodesText}
-              onChange={(event) =>
-                updateDraft(row, (current) => ({
-                  ...current,
-                  brandCodesText: event.target.value,
-                }))
-              }
-            />
-          ) : (
-            <InlineProductRelationList
-              locale={locale}
-              noRelationsLabel={tableLabels.noRelations}
-              relations={row.brands}
-            />
-          ),
-      },
-      {
-        key: "googleCategoryId",
-        header: tableLabels.columns.googleCategoryId,
-        className: "admin-table-number-column",
-        width: "140px",
-        render: (row) =>
-          isEditMode ? (
-            <InlineTableInput
-              value={(drafts[row.sku] ?? createInlineDraft(row)).googleCategoryId}
-              onChange={(event) =>
-                updateDraft(row, (current) => ({
-                  ...current,
-                  googleCategoryId: event.target.value,
-                }))
-              }
-            />
-          ) : (
-            <InlineTableText value={row.googleCategoryId ?? "-"} />
-          ),
-      },
-      {
-        key: "flags",
-        header: tableLabels.columns.flags,
-        className: "admin-table-flags-column",
-        width: "160px",
-        render: (row) =>
-          isEditMode ? (
-            <div className="admin-inline-flag-editor">
-              <InlineTableCheckbox
-                checked={(drafts[row.sku] ?? createInlineDraft(row)).isNewProduct}
-                label={tableLabels.newProduct}
-                onChange={(event) =>
-                  updateDraft(row, (current) => ({
-                    ...current,
-                    isNewProduct: event.target.checked,
-                  }))
-                }
-              />
-              <InlineTableCheckbox
-                checked={(drafts[row.sku] ?? createInlineDraft(row)).isBestSeller}
-                label={tableLabels.bestSeller}
-                onChange={(event) =>
-                  updateDraft(row, (current) => ({
-                    ...current,
-                    isBestSeller: event.target.checked,
-                  }))
-                }
-              />
-              <InlineTableCheckbox
-                checked={(drafts[row.sku] ?? createInlineDraft(row)).isPromotion}
-                label={tableLabels.promotion}
-                onChange={(event) =>
-                  updateDraft(row, (current) => ({
-                    ...current,
-                    discountedPrice: event.target.checked
-                      ? current.discountedPrice
-                      : "",
-                    isPromotion: event.target.checked,
-                  }))
-                }
-              />
-            </div>
-          ) : (
-            <InlineProductFlags
-              bestSellerLabel={tableLabels.bestSeller}
-              noFlagsLabel={tableLabels.noFlags}
-              newProductLabel={tableLabels.newProduct}
-              product={row}
-              promotionLabel={tableLabels.promotion}
-            />
           ),
       },
       {
@@ -1109,6 +1351,179 @@ export function ProductInlineEditTable({
           ),
       },
       {
+        key: "datasheetUrl",
+        header: tableLabels.columns.datasheetUrl,
+        className: "admin-table-content-type-column",
+        width: "160px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableDatasheetEditor
+              isUploading={uploadingDatasheetBySku[row.sku] ?? false}
+              labels={labels}
+              url={(drafts[row.sku] ?? createInlineDraft(row)).datasheetUrl}
+              onFilesSelected={(files) => void handleInlineDatasheetSelected(row, files)}
+              onRemove={() =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  datasheetUrl: "",
+                }))
+              }
+            />
+          ) : (
+            <InlineTableLink
+              href={row.datasheetUrl}
+              label={row.datasheetUrl ? "Open PDF" : labels.noDatasheet}
+              mutedLabel={labels.noDatasheet}
+            />
+          ),
+      },
+      {
+        key: "category",
+        header: tableLabels.columns.category,
+        className: isEditMode
+          ? "admin-table-relations-column admin-table-relations-column-edit"
+          : "admin-table-relations-column",
+        width: isEditMode ? "500px" : "220px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableMultiSelectField
+              getOptionLabel={(option) => (locale === "th" ? option.nameTh : option.nameEn)}
+              label={tableLabels.columns.category}
+              noResultsLabel={labels.noSuggestions}
+              onChange={(values) =>
+                updateDraft(row, (current) => {
+                  const nextSubCategoryOptions = subCategoryOptions.filter((option) =>
+                    values.includes(option.parentCode ?? ""),
+                  );
+
+                  return {
+                    ...current,
+                    categoryCodesText: values.join(", "),
+                    subCategoryCodesText: parseInlineList(current.subCategoryCodesText)
+                      .filter((code) =>
+                        nextSubCategoryOptions.some((option) => option.code === code),
+                      )
+                      .join(", "),
+                  };
+                })
+              }
+              options={categoryOptions}
+              searchPlaceholder={labels.search}
+              selectedValues={parseInlineList(
+                (drafts[row.sku] ?? createInlineDraft(row)).categoryCodesText,
+              )}
+            />
+          ) : (
+            <InlineProductRelationList
+              locale={locale}
+              noRelationsLabel={tableLabels.noRelations}
+              relations={row.categories ?? row.categoryCods ?? []}
+            />
+          ),
+      },
+      {
+        key: "subCategory",
+        header: tableLabels.columns.subCategory,
+        className: isEditMode
+          ? "admin-table-sub-category-column admin-table-sub-category-column-edit"
+          : "admin-table-sub-category-column",
+        width: isEditMode ? "500px" : "230px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableMultiSelectField
+              disabled={
+                parseInlineList((drafts[row.sku] ?? createInlineDraft(row)).categoryCodesText)
+                  .length === 0
+              }
+              getOptionLabel={(option) => (locale === "th" ? option.nameTh : option.nameEn)}
+              label={tableLabels.columns.subCategory}
+              noResultsLabel={labels.noSuggestions}
+              onChange={(values) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  subCategoryCodesText: values.join(", "),
+                }))
+              }
+              options={subCategoryOptions.filter((option) =>
+                parseInlineList((drafts[row.sku] ?? createInlineDraft(row)).categoryCodesText).includes(
+                  option.parentCode ?? "",
+                ),
+              )}
+              searchPlaceholder={labels.search}
+              selectedValues={parseInlineList(
+                (drafts[row.sku] ?? createInlineDraft(row)).subCategoryCodesText,
+              )}
+            />
+          ) : (
+            <InlineProductRelationList
+              locale={locale}
+              noRelationsLabel={tableLabels.noRelations}
+              relations={row.subCategories}
+            />
+          ),
+      },
+      {
+        key: "brands",
+        header: tableLabels.columns.brands,
+        className: isEditMode
+          ? "admin-table-brands-column admin-table-brands-column-edit"
+          : "admin-table-brands-column",
+        width: isEditMode ? "500px" : "190px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableMultiSelectField
+              getOptionLabel={(option) => (locale === "th" ? option.nameTh : option.nameEn)}
+              label={tableLabels.columns.brands}
+              noResultsLabel={labels.noSuggestions}
+              onChange={(values) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  brandCodesText: values.join(", "),
+                }))
+              }
+              options={brandOptions}
+              searchPlaceholder={labels.search}
+              selectedValues={parseInlineList(
+                (drafts[row.sku] ?? createInlineDraft(row)).brandCodesText,
+              )}
+            />
+          ) : (
+            <InlineProductRelationList
+              locale={locale}
+              noRelationsLabel={tableLabels.noRelations}
+              relations={row.brands}
+            />
+          ),
+      },
+      {
+        key: "googleCategoryId",
+        header: tableLabels.columns.googleCategoryId,
+        className: isEditMode
+          ? "admin-table-number-column admin-table-number-column-edit"
+          : "admin-table-number-column",
+        width: isEditMode ? "500px" : "140px",
+        render: (row) =>
+          isEditMode ? (
+            <InlineTableGoogleCategoryCombobox
+              emptyLabel={labels.googleCategoryEmpty}
+              label={labels.fields.googleCategoryId}
+              loadingLabel={labels.googleCategoryLoading}
+              locale={locale}
+              noResultsLabel={labels.noSuggestions}
+              searchPlaceholder={labels.googleCategorySearchPlaceholder}
+              value={(drafts[row.sku] ?? createInlineDraft(row)).googleCategoryId}
+              onChange={(value) =>
+                updateDraft(row, (current) => ({
+                  ...current,
+                  googleCategoryId: value,
+                }))
+              }
+            />
+          ) : (
+            <InlineTableText value={row.googleCategoryId ?? "-"} />
+          ),
+      },
+      {
         key: "seoTitleTh",
         header: tableLabels.columns.seoTitleTh,
         className: "admin-table-content-topic-column",
@@ -1116,6 +1531,12 @@ export function ProductInlineEditTable({
         render: (row) =>
           isEditMode ? (
             <InlineTableInput
+              invalid={isInlineFieldInvalid(row, "seoTitleTh")}
+              errorMessage={
+                isInlineFieldInvalid(row, "seoTitleTh")
+                  ? getInlineRequiredFieldErrorMessage("seoTitleTh", labels, locale)
+                  : ""
+              }
               value={(drafts[row.sku] ?? createInlineDraft(row)).seoTitleTh}
               onChange={(event) =>
                 updateDraft(row, (current) => ({
@@ -1136,6 +1557,12 @@ export function ProductInlineEditTable({
         render: (row) =>
           isEditMode ? (
             <InlineTableInput
+              invalid={isInlineFieldInvalid(row, "seoTitleEn")}
+              errorMessage={
+                isInlineFieldInvalid(row, "seoTitleEn")
+                  ? getInlineRequiredFieldErrorMessage("seoTitleEn", labels, locale)
+                  : ""
+              }
               value={(drafts[row.sku] ?? createInlineDraft(row)).seoTitleEn}
               onChange={(event) =>
                 updateDraft(row, (current) => ({
@@ -1156,6 +1583,16 @@ export function ProductInlineEditTable({
         render: (row) =>
           isEditMode ? (
             <InlineTableTextArea
+              invalid={isInlineFieldInvalid(row, "seoDescriptionTh")}
+              errorMessage={
+                isInlineFieldInvalid(row, "seoDescriptionTh")
+                  ? getInlineRequiredFieldErrorMessage(
+                      "seoDescriptionTh",
+                      labels,
+                      locale,
+                    )
+                  : ""
+              }
               value={(drafts[row.sku] ?? createInlineDraft(row)).seoDescriptionTh}
               onChange={(event) =>
                 updateDraft(row, (current) => ({
@@ -1176,6 +1613,16 @@ export function ProductInlineEditTable({
         render: (row) =>
           isEditMode ? (
             <InlineTableTextArea
+              invalid={isInlineFieldInvalid(row, "seoDescriptionEn")}
+              errorMessage={
+                isInlineFieldInvalid(row, "seoDescriptionEn")
+                  ? getInlineRequiredFieldErrorMessage(
+                      "seoDescriptionEn",
+                      labels,
+                      locale,
+                    )
+                  : ""
+              }
               value={(drafts[row.sku] ?? createInlineDraft(row)).seoDescriptionEn}
               onChange={(event) =>
                 updateDraft(row, (current) => ({
@@ -1259,25 +1706,7 @@ export function ProductInlineEditTable({
             <span className="admin-table-muted">-</span>
           ),
       },
-      {
-        key: "actions",
-        header: tableLabels.columns.actions,
-        className: "admin-table-actions-column",
-        width: "96px",
-        render: (row) =>
-          isEditMode ? (
-            <span className="admin-table-muted">-</span>
-          ) : (
-            <ProductRowManagementActions
-              brandOptions={brandOptions}
-              categoryOptions={categoryOptions}
-              labels={labels}
-              locale={locale}
-              product={row}
-              subCategoryOptions={subCategoryOptions}
-            />
-          ),
-      },
+      ...(!isEditMode ? [actionsColumn] : []),
     ];
   }, [
     brandOptions,
@@ -1286,63 +1715,45 @@ export function ProductInlineEditTable({
     isEditMode,
     labels,
     locale,
+    uploadingDatasheetBySku,
+    uploadingMediaBySku,
     subCategoryOptions,
     tableLabels,
+    handleInlineDatasheetSelected,
+    handleInlineMediaSelected,
+    isInlineFieldInvalid,
+    isInlineDiscountedPriceInvalid,
+    updateDraft,
   ]);
 
   return (
     <>
-      <div className="admin-product-inline-toolbar">
-        <div className="admin-product-inline-toolbar-actions">
-          {isEditMode ? (
-            <>
-              <button
-                className="admin-product-add-button"
-                disabled={isSavingAll}
-                onClick={() => void handleSaveAll()}
-                type="button"
-              >
-                {isSavingAll ? labels.saving : labels.save}
-              </button>
-              <button
-                className="admin-product-secondary-button"
-                disabled={isSavingAll}
-                onClick={() => {
-                  setDrafts({});
-                  setSaveError("");
-                  setIsEditMode(false);
-                }}
-                type="button"
-              >
-                {labels.cancel}
-              </button>
-            </>
-          ) : (
+      {isEditMode ? (
+        <div className="admin-product-inline-toolbar">
+          <div className="admin-product-inline-toolbar-actions">
+            <button
+              className="admin-product-add-button"
+              disabled={isSavingAll}
+              onClick={() => void handleSaveAll()}
+              type="button"
+            >
+              {isSavingAll ? labels.saving : labels.save}
+            </button>
             <button
               className="admin-product-secondary-button"
+              disabled={isSavingAll}
               onClick={() => {
-                setIsEditMode(true);
+                setDrafts({});
                 setSaveError("");
+                setHasInlineValidationAttempted(false);
+                setIsEditMode(false);
               }}
               type="button"
             >
-              <span className="material-symbols-outlined" aria-hidden="true">
-                edit
-              </span>
-              {labels.inlineEdit}
+              {labels.cancel}
             </button>
-          )}
+          </div>
         </div>
-        {isEditMode ? (
-          <p className="admin-product-inline-toolbar-note">
-            {labels.inlineEditDirty.replace("{count}", String(dirtyCount))}
-          </p>
-        ) : null}
-      </div>
-      {isEditMode ? (
-        <p className="admin-product-inline-toolbar-helper">
-          {labels.inlineEditImageHelper}
-        </p>
       ) : null}
       {saveError ? <p className="admin-product-form-error">{saveError}</p> : null}
       <AdminDataTable
@@ -1357,6 +1768,7 @@ export function ProductInlineEditTable({
         rows={rows}
         selectAllLabel={tableLabels.selectAll}
         selectRowLabel={(row) => `${tableLabels.selectRow} ${row.sku}`}
+        showSelectionColumn={!isEditMode}
         tableId="products-services"
         wide
       />
@@ -1587,11 +1999,61 @@ function buildInlineProductPayload(
   };
 }
 
+function getInlineRequiredFieldLabels(
+  draft: ProductInlineEditDraft,
+  labels: ProductLabels,
+) {
+  return INLINE_REQUIRED_FIELD_KEYS.filter((fieldKey) => !draft[fieldKey].trim()).map(
+    (fieldKey) => labels.fields[fieldKey],
+  );
+}
+
+function getInlineFieldErrorMessage(fieldLabel: string, locale: "th" | "en") {
+  return locale === "th" ? `${fieldLabel} จำเป็นต้องกรอก` : `${fieldLabel} is required`;
+}
+
+function getInlineRequiredFieldErrorMessage(
+  fieldKey: InlineRequiredFieldKey,
+  labels: ProductLabels,
+  locale: "th" | "en",
+) {
+  return getInlineFieldErrorMessage(labels.fields[fieldKey], locale);
+}
+
 function parseInlineList(value: string) {
   return value
     .split(/[\n,]/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+async function uploadAdminProductFile(
+  file: File,
+  folder: string,
+  fallbackErrorMessage: string,
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("visibility", "public");
+  formData.append("folder", folder);
+
+  const response = await fetch("/api/admin/files/upload", {
+    body: formData,
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(fallbackErrorMessage);
+  }
+
+  const result = (await response.json()) as UploadedFileResponse;
+  const nextUrl = result.url ?? result.signedUrl;
+
+  if (!nextUrl) {
+    throw new Error(fallbackErrorMessage);
+  }
+
+  return nextUrl;
 }
 
 function ProductUploadModal({
@@ -1820,42 +2282,88 @@ function InlineProductFlags({
 
 function InlineTableInput({
   disabled = false,
+  errorMessage = "",
+  invalid = false,
   onChange,
   type = "text",
   value,
 }: {
   disabled?: boolean;
+  errorMessage?: string;
+  invalid?: boolean;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   type?: "number" | "text";
   value: string;
 }) {
   return (
-    <input
-      className="admin-inline-table-input"
-      disabled={disabled}
-      onChange={onChange}
-      type={type}
-      value={value}
-    />
+    <div className="admin-inline-table-field">
+      <input
+        aria-invalid={invalid}
+        className={`admin-inline-table-input${invalid ? " is-invalid" : ""}`}
+        disabled={disabled}
+        onChange={onChange}
+        type={type}
+        value={value}
+      />
+      {errorMessage ? (
+        <p className="admin-inline-table-field-error">{errorMessage}</p>
+      ) : null}
+    </div>
   );
 }
 
 function InlineTableTextArea({
+  errorMessage = "",
+  invalid = false,
   onChange,
   rows = 3,
   value,
 }: {
+  errorMessage?: string;
+  invalid?: boolean;
   onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
   rows?: number;
   value: string;
 }) {
   return (
-    <textarea
-      className="admin-inline-table-textarea"
-      onChange={onChange}
-      rows={rows}
-      value={value}
-    />
+    <div className="admin-inline-table-field">
+      <textarea
+        aria-invalid={invalid}
+        className={`admin-inline-table-textarea${invalid ? " is-invalid" : ""}`}
+        onChange={onChange}
+        rows={rows}
+        value={value}
+      />
+      {errorMessage ? (
+        <p className="admin-inline-table-field-error">{errorMessage}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function InlineTableRichTextEditor({
+  errorMessage = "",
+  invalid = false,
+  label,
+  onChange,
+  value,
+}: {
+  errorMessage?: string;
+  invalid?: boolean;
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  return (
+    <div
+      aria-invalid={invalid}
+      className={`admin-inline-table-richtext${invalid ? " is-invalid" : ""}`}
+    >
+      <RichTextEditor label={label} onChange={onChange} value={value} />
+      {errorMessage ? (
+        <p className="admin-inline-table-field-error">{errorMessage}</p>
+      ) : null}
+    </div>
   );
 }
 
@@ -1873,6 +2381,250 @@ function InlineTableCheckbox({
       <input checked={checked} onChange={onChange} type="checkbox" />
       <span>{label}</span>
     </label>
+  );
+}
+
+function InlineTableMediaEditor({
+  files,
+  isUploading,
+  label,
+  labels,
+  onFilesSelected,
+  onRemove,
+}: {
+  files: string[];
+  isUploading: boolean;
+  label: string;
+  labels: ProductLabels;
+  onFilesSelected: (files: FileList | null) => void;
+  onRemove: (url: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  return (
+    <div className="admin-inline-table-media-editor">
+      <input
+        accept="image/*,video/mp4,video/quicktime,video/webm,video/x-m4v"
+        className="admin-inventory-file-input"
+        hidden
+        multiple
+        onChange={(event) => {
+          onFilesSelected(event.target.files);
+          event.currentTarget.value = "";
+        }}
+        ref={inputRef}
+        type="file"
+      />
+      <button
+        className="admin-product-secondary-button admin-inline-table-upload-button"
+        onClick={() => inputRef.current?.click()}
+        type="button"
+      >
+        <span className="material-symbols-outlined" aria-hidden="true">
+          upload_file
+        </span>
+        {isUploading ? labels.uploadingMedia : labels.uploadImage}
+      </button>
+      {files.length > 0 ? (
+        <div className="admin-inline-table-media-grid">
+          {files.map((url) => (
+            <div className="admin-inline-table-media-card" key={url}>
+              <div className="admin-inline-table-media-frame">
+                {isVideoAssetUrl(url) ? (
+                  <video
+                    className="admin-upload-preview-video"
+                    controls
+                    playsInline
+                    src={url}
+                  />
+                ) : (
+                  <Image
+                    alt={label}
+                    className="admin-upload-preview-image"
+                    height={160}
+                    src={url}
+                    unoptimized
+                    width={240}
+                  />
+                )}
+              </div>
+              <div className="admin-inline-table-media-actions">
+                <a
+                  className="admin-upload-preview-link"
+                  href={url}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Open file
+                </a>
+                <button
+                  className="admin-product-secondary-button"
+                  onClick={() => onRemove(url)}
+                  type="button"
+                >
+                  {labels.delete}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="admin-upload-empty">{labels.noMedia}</p>
+      )}
+    </div>
+  );
+}
+
+function InlineTableDatasheetEditor({
+  isUploading,
+  labels,
+  onFilesSelected,
+  onRemove,
+  url,
+}: {
+  isUploading: boolean;
+  labels: ProductLabels;
+  onFilesSelected: (files: FileList | null) => void;
+  onRemove: () => void;
+  url: string;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  return (
+    <div className="admin-inline-table-media-editor">
+      <input
+        accept="application/pdf"
+        className="admin-inventory-file-input"
+        hidden
+        onChange={(event) => {
+          onFilesSelected(event.target.files);
+          event.currentTarget.value = "";
+        }}
+        ref={inputRef}
+        type="file"
+      />
+      <button
+        className="admin-product-secondary-button admin-inline-table-upload-button"
+        onClick={() => inputRef.current?.click()}
+        type="button"
+      >
+        <span className="material-symbols-outlined" aria-hidden="true">
+          upload_file
+        </span>
+        {isUploading ? labels.uploadingDatasheet : labels.uploadDatasheet}
+      </button>
+      {url ? (
+        <div className="admin-inline-table-media-card">
+          <div className="admin-inline-table-media-frame">
+            <span
+              aria-hidden="true"
+              className="material-symbols-outlined admin-inline-table-pdf-icon"
+            >
+              picture_as_pdf
+            </span>
+          </div>
+          <div className="admin-inline-table-media-actions">
+            <a
+              className="admin-upload-preview-link"
+              href={url}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Open PDF
+            </a>
+            <button
+              className="admin-product-secondary-button"
+              onClick={onRemove}
+              type="button"
+            >
+              {labels.delete}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="admin-upload-empty">{labels.noDatasheet}</p>
+      )}
+    </div>
+  );
+}
+
+function InlineTableMultiSelectField({
+  disabled = false,
+  getOptionLabel,
+  errorMessage = "",
+  label,
+  noResultsLabel,
+  onChange,
+  options,
+  searchPlaceholder,
+  selectedValues,
+}: {
+  disabled?: boolean;
+  getOptionLabel: (option: ProductEditorOption) => string;
+  errorMessage?: string;
+  label: string;
+  noResultsLabel: string;
+  onChange: (values: string[]) => void;
+  options: ProductEditorOption[];
+  searchPlaceholder: string;
+  selectedValues: string[];
+}) {
+  return (
+    <div className="admin-inline-table-combobox">
+      <MultiSelectField
+        disabled={disabled}
+        getOptionLabel={getOptionLabel}
+        label={label}
+        noResultsLabel={noResultsLabel}
+        onChange={onChange}
+        options={options}
+        searchPlaceholder={searchPlaceholder}
+        selectedValues={selectedValues}
+      />
+      {errorMessage ? (
+        <p className="admin-inline-table-field-error">{errorMessage}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function InlineTableGoogleCategoryCombobox({
+  emptyLabel,
+  errorMessage = "",
+  label,
+  loadingLabel,
+  locale,
+  noResultsLabel,
+  onChange,
+  searchPlaceholder,
+  value,
+}: {
+  emptyLabel: string;
+  errorMessage?: string;
+  label: string;
+  loadingLabel: string;
+  locale: "th" | "en";
+  noResultsLabel: string;
+  onChange: (value: string) => void;
+  searchPlaceholder: string;
+  value: string;
+}) {
+  return (
+    <div className="admin-inline-table-combobox">
+      <GoogleCategoryCombobox
+        emptyLabel={emptyLabel}
+        label={label}
+        loadingLabel={loadingLabel}
+        locale={locale}
+        noResultsLabel={noResultsLabel}
+        onChange={onChange}
+        searchPlaceholder={searchPlaceholder}
+        value={value}
+      />
+      {errorMessage ? (
+        <p className="admin-inline-table-field-error">{errorMessage}</p>
+      ) : null}
+    </div>
   );
 }
 
@@ -2134,28 +2886,7 @@ function ProductFormModal({
     file: File;
     folder: string;
   }) {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("visibility", "public");
-    formData.append("folder", folder);
-
-    const response = await fetch("/api/admin/files/upload", {
-      body: formData,
-      method: "POST",
-    });
-
-    if (!response.ok) {
-      throw new Error(labels.uploadError);
-    }
-
-    const result = (await response.json()) as UploadedFileResponse;
-    const nextUrl = result.url ?? result.signedUrl;
-
-    if (!nextUrl) {
-      throw new Error(labels.uploadError);
-    }
-
-    return nextUrl;
+    return uploadAdminProductFile(file, folder, labels.uploadError);
   }
 
   async function handleDatasheetSelected(files: FileList | null) {
@@ -2357,6 +3088,7 @@ function ProductFormFields({
       <ControlledTextField
         disabled={!form.isPromotion}
         label={labels.fields.discountedPrice}
+        required={form.isPromotion}
         type="number"
         value={form.discountedPrice}
         onChange={(value) => onChange((current) => ({ ...current, discountedPrice: value }))}
@@ -2470,30 +3202,47 @@ function ProductFormFields({
   );
 }
 
-function DeleteProductModal({
+function DeleteProductsModal({
   labels,
+  locale,
   onClose,
-  product,
+  products,
 }: {
   labels: ProductLabels;
+  locale: "th" | "en";
   onClose: () => void;
-  product: ProductManagementRow;
+  products: ProductManagementRow[];
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const isBulkDelete = products.length > 1;
+  const title = isBulkDelete
+    ? locale === "th"
+      ? "ลบสินค้าที่เลือก"
+      : "Delete selected products"
+    : labels.deleteTitle;
+  const body = isBulkDelete
+    ? locale === "th"
+      ? `ต้องการลบสินค้าที่เลือกจำนวน ${products.length} รายการใช่หรือไม่`
+      : `Delete ${products.length} selected products?`
+    : labels.deleteBodyTemplate.replace("{sku}", products[0]?.sku ?? "");
 
   async function handleDelete() {
     setIsDeleting(true);
     setError("");
 
-    const response = await fetch(`/api/admin/products/${encodeURIComponent(product.sku)}`, {
-      method: "DELETE",
-    });
+    const responses = await Promise.all(
+      products.map((product) =>
+        fetch(`/api/admin/products/${encodeURIComponent(product.sku)}`, {
+          method: "DELETE",
+        }),
+      ),
+    );
 
     setIsDeleting(false);
 
-    if (!response.ok) {
+    if (responses.some((response) => !response.ok)) {
       setError(labels.error);
       return;
     }
@@ -2511,7 +3260,7 @@ function DeleteProductModal({
         role="dialog"
       >
         <div className="admin-product-modal-header">
-          <h2 id="admin-product-delete-title">{labels.deleteTitle}</h2>
+          <h2 id="admin-product-delete-title">{title}</h2>
           <button
             aria-label={labels.cancel}
             className="admin-product-modal-close"
@@ -2523,7 +3272,7 @@ function DeleteProductModal({
             </span>
           </button>
         </div>
-        <p>{labels.deleteBodyTemplate.replace("{sku}", product.sku)}</p>
+        <p>{body}</p>
         {error ? <p className="admin-product-form-error">{error}</p> : null}
         <div className="admin-product-modal-actions">
           <button
@@ -2542,6 +3291,141 @@ function DeleteProductModal({
             {labels.confirmDelete}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ProductPromotionModal({
+  labels,
+  locale,
+  onClose,
+  products,
+}: {
+  labels: ProductLabels;
+  locale: "th" | "en";
+  onClose: () => void;
+  products: ProductManagementRow[];
+}) {
+  const router = useRouter();
+  const [discountedPrice, setDiscountedPrice] = useState(
+    products[0]?.discountedPrice === null || products[0]?.discountedPrice === undefined
+      ? ""
+      : String(products[0].discountedPrice),
+  );
+  const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const title = locale === "th" ? "ตั้งค่าโปรโมชัน" : "Set promotion";
+  const description =
+    locale === "th"
+      ? `ระบุราคาลดเพื่อเปิดโปรโมชันให้สินค้า ${products.length} รายการที่เลือก`
+      : `Enter the discounted price to enable promotion for ${products.length} selected products.`;
+
+  async function handleSubmit() {
+    const trimmedValue = discountedPrice.trim();
+
+    if (!trimmedValue) {
+      setError(
+        locale === "th" ? "กรุณากรอกราคาลด" : "Discounted price is required",
+      );
+      return;
+    }
+
+    const parsedValue = Number(trimmedValue);
+
+    if (!Number.isFinite(parsedValue)) {
+      setError(labels.error);
+      return;
+    }
+
+    setIsSaving(true);
+    setError("");
+
+    try {
+      const responses = await Promise.all(
+        products.map((product) =>
+          fetch(`/api/admin/products/${encodeURIComponent(product.sku)}`, {
+            body: JSON.stringify({
+              discountedPrice: parsedValue,
+              isPromotion: true,
+            }),
+            headers: {
+              "content-type": "application/json",
+            },
+            method: "PATCH",
+          }),
+        ),
+      );
+
+      if (responses.some((response) => !response.ok)) {
+        throw new Error("promotion-update-failed");
+      }
+
+      router.refresh();
+      onClose();
+    } catch {
+      setError(labels.error);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <div className="admin-product-modal-backdrop" role="presentation">
+      <div aria-modal="true" className="admin-product-modal" role="dialog">
+        <div className="admin-product-modal-header">
+          <h2>{title}</h2>
+          <button onClick={onClose} type="button">
+            <span className="material-symbols-outlined" aria-hidden="true">
+              close
+            </span>
+          </button>
+        </div>
+        <form
+          className="admin-product-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleSubmit();
+          }}
+        >
+          <div className="admin-product-form-section">
+            <p className="admin-product-form-hint">{description}</p>
+            <div className="admin-table-relations">
+              {products.map((product) => (
+                <strong key={product.sku}>{product.sku}</strong>
+              ))}
+            </div>
+          </div>
+          <div className="admin-product-form-section">
+            <label className="admin-product-field">
+              <span>{labels.fields.discountedPrice}</span>
+              <input
+                autoFocus
+                onChange={(event) => setDiscountedPrice(event.target.value)}
+                type="number"
+                value={discountedPrice}
+              />
+            </label>
+          </div>
+          {error ? <p className="admin-product-form-error">{error}</p> : null}
+          <div className="admin-product-modal-actions">
+            <button
+              className="admin-product-secondary-button"
+              onClick={onClose}
+              type="button"
+            >
+              {labels.cancel}
+            </button>
+            <button
+              className="admin-product-add-button"
+              disabled={isSaving}
+              type="submit"
+            >
+              {isSaving ? labels.saving : labels.save}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
