@@ -3513,6 +3513,161 @@ button.admin-table-page-link:disabled {
   filter: brightness(1.02);
 }
 
+.home-business-unit {
+  padding: 88px clamp(24px, 5vw, 88px) 112px;
+  background: #ffffff;
+}
+
+.home-business-unit-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.home-business-unit-copy {
+  width: min(760px, 100%);
+}
+
+.home-business-unit-eyebrow {
+  margin: 0 0 12px;
+  color: #7c7c7c;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.home-business-unit-heading {
+  margin: 0;
+  color: #f67c26;
+  font-size: clamp(28px, 3.1vw, 44px);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+  white-space: pre-line;
+  text-wrap: balance;
+}
+
+.home-business-unit-body {
+  width: min(720px, 100%);
+  margin: 18px 0 0;
+  color: #4b5563;
+  font-size: clamp(16px, 1.25vw, 20px);
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.home-business-unit-cta {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 22px;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  background: #111111;
+  border-radius: 999px;
+  box-shadow: 0 14px 28px rgb(17 17 17 / 10%);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    filter 160ms ease;
+}
+
+.home-business-unit-cta:hover,
+.home-business-unit-cta:focus-visible {
+  color: #ffffff;
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.home-business-unit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 42px;
+}
+
+.home-business-unit-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 96px;
+  min-width: 310px;
+  padding: 20px 22px;
+  color: #ffffff;
+  background: #F67C26;
+  border-radius: 16px;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    filter 160ms ease;
+}
+
+.home-business-unit-card:hover,
+.home-business-unit-card:focus-visible {
+  color: #ffffff;
+  transform: translateY(-2px);
+  filter: brightness(1.02);
+}
+
+.home-business-unit-card-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 16%);
+  overflow: hidden;
+}
+
+.home-business-unit-card-image {
+  display: block;
+  width: 48px;
+  height: 48px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.home-business-unit-card-symbol {
+  color: #ffffff;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.home-business-unit-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.home-business-unit-card-title {
+  color: inherit;
+  font-size: clamp(17px, 1.15vw, 20px);
+  font-weight: 800;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.home-business-unit-card-description {
+  color: rgb(255 255 255 / 80%);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 @media (max-width: 1440px) {
   .site-header-inner {
     gap: 20px;
@@ -3571,6 +3726,19 @@ button.admin-table-page-link:disabled {
   .admin-product-heading-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .home-business-unit-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .home-business-unit-body {
+    max-width: 100%;
+  }
+
+  .home-business-unit-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -3658,6 +3826,54 @@ button.admin-table-page-link:disabled {
     min-height: 52px;
     margin-top: 28px;
     font-size: 16px;
+  }
+
+  .home-business-unit {
+    padding: 64px 16px 88px;
+  }
+
+  .home-business-unit-eyebrow {
+    font-size: 13px;
+  }
+
+  .home-business-unit-heading {
+    font-size: clamp(26px, 7vw, 38px);
+  }
+
+  .home-business-unit-body {
+    margin-top: 14px;
+    font-size: 16px;
+  }
+
+  .home-business-unit-cta {
+    width: 100%;
+  }
+
+  .home-business-unit-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-top: 28px;
+  }
+
+  .home-business-unit-card {
+    min-height: 112px;
+    padding: 18px 18px;
+    border-radius: 22px;
+  }
+
+  .home-business-unit-card-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+  }
+
+  .home-business-unit-card-image {
+    width: 32px;
+    height: 32px;
+  }
+
+  .home-business-unit-card-symbol {
+    font-size: 28px;
   }
 
   .product-filter-title-row {
