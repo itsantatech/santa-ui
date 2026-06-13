@@ -166,6 +166,7 @@ export default async function Home({ params }: HomeProps) {
   const businessUnitSetting = homeSettingsResponse?.items.find(
     (item) => item.name === "business-unit",
   );
+  const heroImageUrl = heroSetting?.imgUrl?.[0]?.trim() || "/assets/hero-section-bg.svg";
   const heroContent = {
     eyebrow: "One Stop Service",
     heading: locale === "th"
@@ -189,7 +190,13 @@ export default async function Home({ params }: HomeProps) {
   return (
     <main className="site-shell">
       <SiteNavbar locale={locale} />
-      <section className="home-hero" aria-labelledby="home-hero-title">
+      <section
+        className="home-hero"
+        aria-labelledby="home-hero-title"
+        style={{
+          backgroundImage: `linear-gradient(90deg, rgb(10 18 42 / 68%) 0%, rgb(10 18 42 / 34%) 52%, rgb(10 18 42 / 8%) 100%), url("${heroImageUrl}")`,
+        }}
+      >
         <div className="home-hero-copy">
           <h1 id="home-hero-title" className="home-hero-heading">
             {heroContent.heading}

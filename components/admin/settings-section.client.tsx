@@ -716,6 +716,8 @@ function HomeContentCard({
   labels: ReturnType<typeof getLabels>;
 }) {
   const router = useRouter();
+  const sectionKey = normalizeHomeSectionKey(card.name);
+  const supportsSectionImage = sectionKey === "hero" || sectionKey === "about";
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -809,7 +811,9 @@ function HomeContentCard({
             headlineEn,
             contentTh,
             contentEn,
-            imgUrl: form.imageUrl ? [form.imageUrl] : [],
+            ...(supportsSectionImage
+              ? { imgUrl: form.imageUrl ? [form.imageUrl] : [] }
+              : {}),
             isActive: form.isActive,
           }
         : {
@@ -883,76 +887,78 @@ function HomeContentCard({
           placeholder={labels.home.placeholders.contentEn}
           value={form.contentEn}
         />
-        <div className="admin-settings-about-image-card">
-          <div className="admin-settings-about-image-copy">
-            <strong>{labels.home.fields.image}</strong>
-          </div>
-          <div className="admin-upload-actions">
-            <input
-              accept="image/*,video/mp4,video/quicktime,video/webm,video/x-m4v"
-              className="admin-settings-hidden-file-input"
-              onChange={(event) => void handleImageSelected(event.target.files)}
-              ref={imageInputRef}
-              type="file"
-            />
-            <button
-              className="admin-product-secondary-button"
-              disabled={isUploading}
-              onClick={() => imageInputRef.current?.click()}
-              type="button"
-            >
-              {isUploading ? labels.home.uploadingImage : labels.home.uploadImage}
-            </button>
-            {form.imageUrl ? (
+        {supportsSectionImage ? (
+          <div className="admin-settings-about-image-card">
+            <div className="admin-settings-about-image-copy">
+              <strong>{labels.home.fields.image}</strong>
+            </div>
+            <div className="admin-upload-actions">
+              <input
+                accept="image/*,video/mp4,video/quicktime,video/webm,video/x-m4v"
+                className="admin-settings-hidden-file-input"
+                onChange={(event) => void handleImageSelected(event.target.files)}
+                ref={imageInputRef}
+                type="file"
+              />
               <button
                 className="admin-product-secondary-button"
-                onClick={() => setForm((current) => ({ ...current, imageUrl: "" }))}
+                disabled={isUploading}
+                onClick={() => imageInputRef.current?.click()}
                 type="button"
               >
-                {labels.home.removeImage}
+                {isUploading ? labels.home.uploadingImage : labels.home.uploadImage}
               </button>
-            ) : null}
-          </div>
-          {form.imageUrl ? (
-            <div className="admin-upload-media-grid">
-              <div className="admin-upload-preview-card">
-                <div className="admin-upload-preview-frame">
-                  {isVideoUrl(form.imageUrl) ? (
-                    <video
-                      className="admin-upload-preview-video"
-                      controls
-                      playsInline
-                      src={form.imageUrl}
-                    />
-                  ) : (
-                    <Image
-                      alt={labels.home.imageAlt}
-                      className="admin-upload-preview-image"
-                      height={220}
-                      src={form.imageUrl}
-                      unoptimized
-                      width={420}
-                    />
-                  )}
-                </div>
-                <div className="admin-upload-preview-meta">
-                  <a
-                    className="admin-upload-preview-link"
-                    href={form.imageUrl}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    {labels.home.previewImage}
-                  </a>
+              {form.imageUrl ? (
+                <button
+                  className="admin-product-secondary-button"
+                  onClick={() => setForm((current) => ({ ...current, imageUrl: "" }))}
+                  type="button"
+                >
+                  {labels.home.removeImage}
+                </button>
+              ) : null}
+            </div>
+            {form.imageUrl ? (
+              <div className="admin-upload-media-grid">
+                <div className="admin-upload-preview-card">
+                  <div className="admin-upload-preview-frame">
+                    {isVideoUrl(form.imageUrl) ? (
+                      <video
+                        className="admin-upload-preview-video"
+                        controls
+                        playsInline
+                        src={form.imageUrl}
+                      />
+                    ) : (
+                      <Image
+                        alt={labels.home.imageAlt}
+                        className="admin-upload-preview-image"
+                        height={220}
+                        src={form.imageUrl}
+                        unoptimized
+                        width={420}
+                      />
+                    )}
+                  </div>
+                  <div className="admin-upload-preview-meta">
+                    <a
+                      className="admin-upload-preview-link"
+                      href={form.imageUrl}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      {labels.home.previewImage}
+                    </a>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <p className="admin-upload-empty admin-settings-about-image-empty">
-              {labels.home.noImage}
-            </p>
-          )}
-        </div>
+            ) : (
+              <p className="admin-upload-empty admin-settings-about-image-empty">
+                {labels.home.noImage}
+              </p>
+            )}
+          </div>
+        ) : null}
       </div>
       <div className="admin-settings-card-footer">
         {card.resource === "home-section-settings" ? (
@@ -2090,6 +2096,10 @@ function resolveHomeSectionTitle(
     return sectionTitles.businessUnit;
   }
 
+  if (normalized.includes("about")) {
+    return sectionTitles.about;
+  }
+
   if (normalized.includes("brand")) {
     return sectionTitles.brand;
   }
@@ -2341,7 +2351,7 @@ function getLabels(locale: Locale) {
           previewImage: "เปิดดูไฟล์",
           removeImage: "ลบไฟล์",
           sectionTitles: {
-            about: "เกี่ยวกับซานต้าเทคโนโลยี - About Santa Technology Section",
+            about: "เกี่ยวกับซานต้า - About Santa Section",
             brand: "แบรนด์ - Brand Section",
             businessUnit: "หมวดหมู่สินค้าและบริการ - Business Unit Section",
             hero: "ฮีโร่แบนเนอร์ - Hero Banner Section",
@@ -2496,7 +2506,7 @@ function getLabels(locale: Locale) {
           previewImage: "Open file",
           removeImage: "Remove file",
           sectionTitles: {
-            about: "About Santa Technology - About Santa Technology Section",
+            about: "About Santa - About Santa Section",
             brand: "Brand - Brand Section",
             businessUnit: "Business Unit - Business Unit Section",
             hero: "Hero Banner - Hero Banner Section",
