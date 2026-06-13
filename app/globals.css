@@ -3439,6 +3439,39 @@ button.admin-table-page-link:disabled {
   line-height: 1.55;
 }
 
+.public-page-empty-section {
+  display: grid;
+  place-items: center;
+  height: 720px;
+  min-height: 720px;
+  padding: 72px clamp(24px, 4.7vw, 88px);
+  background: #ffffff;
+}
+
+.public-page-empty-copy {
+  display: grid;
+  gap: 18px;
+  width: min(760px, 100%);
+  text-align: center;
+}
+
+.public-page-empty-copy h1 {
+  margin: 0;
+  color: #111111;
+  font-size: clamp(34px, 4vw, 56px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.public-page-empty-copy p {
+  margin: 0;
+  color: #667085;
+  font-size: clamp(16px, 1.25vw, 20px);
+  font-weight: 500;
+  line-height: 1.6;
+}
+
 .home-hero {
   display: flex;
   align-items: flex-start;

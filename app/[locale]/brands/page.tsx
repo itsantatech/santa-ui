@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
 import { fetchAdminList } from "@/lib/admin-api";
-import { getDictionary, isLocale, locales } from "@/lib/i18n";
+import { isLocale, locales } from "@/lib/i18n";
 
 type LocalePageProps = {
   params: Promise<{ locale: string }>;
@@ -36,15 +36,13 @@ export async function generateMetadata({
     return {};
   }
 
-  const content = getDictionary(locale);
-
   return {
-    title: content.newsDropdown.news,
-    description: content.newsDropdown.news,
+    title: locale === "th" ? "แบรนด์" : "Brands",
+    description: locale === "th" ? "แบรนด์" : "Brands",
   };
 }
 
-export default async function NewsPage({ params }: LocalePageProps) {
+export default async function BrandsPage({ params }: LocalePageProps) {
   const { locale } = await params;
 
   if (!isLocale(locale)) {
@@ -65,7 +63,7 @@ export default async function NewsPage({ params }: LocalePageProps) {
   ]);
 
   const categories = sortFooterCategories(categoriesResponse?.items ?? []);
-  const title = getDictionary(locale).newsDropdown.news;
+  const title = locale === "th" ? "แบรนด์" : "Brands";
 
   return (
     <main className="site-shell">

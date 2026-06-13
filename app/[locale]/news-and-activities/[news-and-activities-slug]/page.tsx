@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
 import { fetchAdminList } from "@/lib/admin-api";
-import { getDictionary, isLocale, locales } from "@/lib/i18n";
+import { isLocale, locales } from "@/lib/i18n";
 
-type LocalePageProps = {
-  params: Promise<{ locale: string }>;
+type NewsDetailPageProps = {
+  params: Promise<{ locale: string; "news-and-activities-slug": string }>;
 };
 
 type FooterCategory = {
@@ -29,23 +29,22 @@ export function generateStaticParams() {
 
 export async function generateMetadata({
   params,
-}: LocalePageProps): Promise<Metadata> {
-  const { locale } = await params;
+}: NewsDetailPageProps): Promise<Metadata> {
+  const { locale, "news-and-activities-slug": newsSlug } = await params;
 
   if (!isLocale(locale)) {
     return {};
   }
 
-  const content = getDictionary(locale);
+  const title = `${locale === "th" ? "ข่าวสารและกิจกรรม" : "News & Activities"}: ${formatSlugLabel(newsSlug)}`;
 
-  return {
-    title: content.newsDropdown.news,
-    description: content.newsDropdown.news,
-  };
+  return { title, description: title };
 }
 
-export default async function NewsPage({ params }: LocalePageProps) {
-  const { locale } = await params;
+export default async function NewsDetailPage({
+  params,
+}: NewsDetailPageProps) {
+  const { locale, "news-and-activities-slug": newsSlug } = await params;
 
   if (!isLocale(locale)) {
     notFound();
@@ -65,7 +64,7 @@ export default async function NewsPage({ params }: LocalePageProps) {
   ]);
 
   const categories = sortFooterCategories(categoriesResponse?.items ?? []);
-  const title = getDictionary(locale).newsDropdown.news;
+  const title = `${locale === "th" ? "ข่าวสารและกิจกรรม" : "News & Activities"}: ${formatSlugLabel(newsSlug)}`;
 
   return (
     <main className="site-shell">
@@ -82,6 +81,10 @@ export default async function NewsPage({ params }: LocalePageProps) {
       />
     </main>
   );
+}
+
+function formatSlugLabel(slug: string) {
+  return decodeURIComponent(slug).replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function sortFooterCategories(categories: FooterCategory[]) {
