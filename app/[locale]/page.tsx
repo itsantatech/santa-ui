@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
 import { fetchAdminList } from "@/lib/admin-api";
 import { getDictionary, isLocale, locales, type Locale } from "@/lib/i18n";
@@ -40,6 +41,12 @@ type BrandRow = {
   nameEn: string;
   slug: string;
   imgUrl: string | null;
+  isActive: boolean;
+};
+
+type SocialContactRow = {
+  code: string;
+  contactUrl: string;
   isActive: boolean;
 };
 
@@ -222,7 +229,7 @@ export default async function Home({ params }: HomeProps) {
     notFound();
   }
 
-  const [homeSettingsResponse, categoriesResponse, brandsResponse] = await Promise.all([
+  const [homeSettingsResponse, categoriesResponse, brandsResponse, socialContactsResponse] = await Promise.all([
     fetchAdminList<HomeSettingRow>("/home-section-settings", {
       isActive: true,
       page: 1,
@@ -237,6 +244,11 @@ export default async function Home({ params }: HomeProps) {
       isActive: true,
       page: 1,
       pageSize: 36,
+    }),
+    fetchAdminList<SocialContactRow>("/social-media-contacts", {
+      isActive: true,
+      page: 1,
+      pageSize: 20,
     }),
   ]);
 
@@ -344,7 +356,11 @@ export default async function Home({ params }: HomeProps) {
         ) : null}
       </section>
 
-      <section className="home-about-santa" aria-labelledby="home-about-santa-title">
+      <section
+        className="home-about-santa"
+        id="home-about-santa"
+        aria-labelledby="home-about-santa-title"
+      >
         <div className="home-about-santa-media">
           <Image
             alt={aboutSantaContent.heading}
@@ -365,7 +381,11 @@ export default async function Home({ params }: HomeProps) {
         </div>
       </section>
 
-      <section className="home-brand-section" aria-labelledby="home-brand-section-title">
+      <section
+        className="home-brand-section"
+        id="home-brand-section"
+        aria-labelledby="home-brand-section-title"
+      >
         <div className="home-brand-section-copy">
           <h2 id="home-brand-section-title" className="home-brand-section-heading">
             {brandSectionContent.heading}
@@ -397,7 +417,11 @@ export default async function Home({ params }: HomeProps) {
         </Link>
       </section>
 
-      <section className="home-faq-section" aria-labelledby="home-faq-section-title">
+      <section
+        className="home-faq-section"
+        id="home-faq-section"
+        aria-labelledby="home-faq-section-title"
+      >
         <Image
           alt={faqSectionContent.heading}
           className="home-faq-section-image"
@@ -416,6 +440,12 @@ export default async function Home({ params }: HomeProps) {
           <span className="home-faq-section-cta">{faqSectionContent.cta}</span>
         </div>
       </section>
+
+      <SiteFooter
+        categories={businessUnitCategories}
+        locale={locale}
+        socialContacts={socialContactsResponse?.items ?? []}
+      />
     </main>
   );
 }

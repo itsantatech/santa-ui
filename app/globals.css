@@ -3887,6 +3887,95 @@ button.admin-table-page-link:disabled {
   border-radius: 999px;
 }
 
+.site-footer {
+  display: grid;
+  gap: 56px;
+  padding: 84px clamp(24px, 5vw, 88px) 46px;
+  color: #111111;
+  background: #ef8538;
+}
+
+.site-footer-grid {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr 0.7fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.site-footer-column {
+  display: grid;
+  gap: 26px;
+}
+
+.site-footer-column h2 {
+  margin: 0;
+  color: #111111;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.site-footer-column p,
+.site-footer-list,
+.site-footer-contact-copy {
+  margin: 0;
+  color: #111111;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+.site-footer-list {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.site-footer-list a,
+.site-footer-contact-copy a {
+  color: inherit;
+}
+
+.site-footer-contact {
+  gap: 22px;
+}
+
+.site-footer-contact-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.site-footer-socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 8px;
+}
+
+.site-footer-socials a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: #111111;
+}
+
+.site-footer-socials img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.site-footer-copyright {
+  margin: 0;
+  color: rgb(17 17 17 / 82%);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
 @media (max-width: 1440px) {
   .site-header-inner {
     gap: 20px;
@@ -4185,6 +4274,31 @@ button.admin-table-page-link:disabled {
     min-height: 50px;
     padding-inline: 22px;
     font-size: 15px;
+  }
+
+  .site-footer {
+    gap: 42px;
+    padding: 56px 20px 32px;
+  }
+
+  .site-footer-grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .site-footer-column {
+    gap: 18px;
+  }
+
+  .site-footer-column h2 {
+    font-size: 20px;
+  }
+
+  .site-footer-column p,
+  .site-footer-list,
+  .site-footer-contact-copy,
+  .site-footer-copyright {
+    font-size: 16px;
   }
 
   .product-filter-title-row {
