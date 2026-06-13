@@ -130,7 +130,7 @@ function getAboutSantaContent({
       richTextToPlainText(
         getLocalizedText(locale, aboutSantaSetting?.headlineTh, aboutSantaSetting?.headlineEn),
       ) || "Santa Technology",
-    imageUrl: aboutSantaSetting?.imgUrl?.[0]?.trim() || "/assets/about_santa.svg",
+    imageUrl: aboutSantaSetting?.imgUrl?.[0]?.trim() || "/assets/about-santa-section.svg",
   };
 }
 
@@ -154,6 +154,20 @@ function getBrandSectionContent({
       ? richTextToPlainText(brandSetting?.headlineTh) || "แบรนด์ชั้นนำที่เราคัดสรรมาเพื่อคุณ"
       : richTextToPlainText(brandSetting?.headlineEn) || "Leading brands we selected for you",
   };
+}
+
+function getFaqSectionContent(locale: Locale) {
+  return locale === "th"
+    ? {
+        body: "ดูคำถามที่พบบ่อย\nหรือ ติดต่อทีมผู้เชี่ยวชาญของเรา",
+        cta: "คำถามที่พบบ่อย",
+        heading: "ยังมีข้อสงสัย?",
+      }
+    : {
+        body: "Browse frequently asked questions\nor contact our team of specialists",
+        cta: "Frequently asked questions",
+        heading: "Still have questions?",
+      };
 }
 
 function getCategoryCardCopy(category: CategoryRow, locale: Locale) {
@@ -251,6 +265,7 @@ export default async function Home({ params }: HomeProps) {
   const businessUnitContent = getHomeSectionContent({ businessUnitSetting, locale });
   const aboutSantaContent = getAboutSantaContent({ aboutSantaSetting, locale });
   const brandSectionContent = getBrandSectionContent({ brandSetting, locale });
+  const faqSectionContent = getFaqSectionContent(locale);
   const businessUnitCategories = (categoriesResponse?.items ?? [])
     .filter((item) => item.isActive)
     .sort((left, right) => left.rank - right.rank || left.nameTh.localeCompare(right.nameTh));
@@ -380,6 +395,26 @@ export default async function Home({ params }: HomeProps) {
         <Link className="home-brand-section-cta" href={`/${locale}/products-services`}>
           {brandSectionContent.cta}
         </Link>
+      </section>
+
+      <section className="home-faq-section" aria-labelledby="home-faq-section-title">
+        <Image
+          alt={faqSectionContent.heading}
+          className="home-faq-section-image"
+          fill
+          priority={false}
+          sizes="100vw"
+          src="/assets/faq-section.svg"
+          unoptimized
+        />
+        <div className="home-faq-section-overlay" />
+        <div className="home-faq-section-copy">
+          <h2 id="home-faq-section-title" className="home-faq-section-heading">
+            {faqSectionContent.heading}
+          </h2>
+          <p className="home-faq-section-body">{faqSectionContent.body}</p>
+          <span className="home-faq-section-cta">{faqSectionContent.cta}</span>
+        </div>
       </section>
     </main>
   );
