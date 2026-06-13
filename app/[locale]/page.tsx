@@ -33,6 +33,16 @@ type CategoryRow = {
   slug: string;
 };
 
+type BrandRow = {
+  code: string;
+  rank: number;
+  nameTh: string;
+  nameEn: string;
+  slug: string;
+  imgUrl: string | null;
+  isActive: boolean;
+};
+
 const fallbackCategoryIcons = [
   "factory",
   "precision_manufacturing",
@@ -124,6 +134,28 @@ function getAboutSantaContent({
   };
 }
 
+function getBrandSectionContent({
+  brandSetting,
+  locale,
+}: {
+  brandSetting?: HomeSettingRow | null;
+  locale: Locale;
+}) {
+  const isThaiLocale = locale === "th";
+
+  return {
+    body: isThaiLocale
+      ? richTextToPlainText(brandSetting?.contentTh) ||
+        "เราเป็นตัวแทนจำหน่ายอย่างเป็นทางการจากแบรนด์มาตรฐานสากลทั่วโลก ครอบคลุมทั้งภาคอุตสาหกรรม โรงงาน และหน่วยงานราชการ พร้อมส่งมอบสินค้าคุณภาพสูงและบริการหลังการขายโดยทีมวิศวกรผู้เชี่ยวชาญ"
+      : richTextToPlainText(brandSetting?.contentEn) ||
+        "We are an authorized distributor for leading global brands serving industrial, factory, and government sectors with high-quality products and expert after-sales support.",
+    cta: isThaiLocale ? "ดูแบรนด์ทั้งหมด" : "Browse all brands",
+    heading: isThaiLocale
+      ? richTextToPlainText(brandSetting?.headlineTh) || "แบรนด์ชั้นนำที่เราคัดสรรมาเพื่อคุณ"
+      : richTextToPlainText(brandSetting?.headlineEn) || "Leading brands we selected for you",
+  };
+}
+
 function getCategoryCardCopy(category: CategoryRow, locale: Locale) {
   const name = richTextToPlainText(
     getLocalizedText(locale, category.nameTh, category.nameEn),
@@ -176,7 +208,7 @@ export default async function Home({ params }: HomeProps) {
     notFound();
   }
 
-  const [homeSettingsResponse, categoriesResponse] = await Promise.all([
+  const [homeSettingsResponse, categoriesResponse, brandsResponse] = await Promise.all([
     fetchAdminList<HomeSettingRow>("/home-section-settings", {
       isActive: true,
       page: 1,
@@ -187,6 +219,11 @@ export default async function Home({ params }: HomeProps) {
       page: 1,
       pageSize: 100,
     }),
+    fetchAdminList<BrandRow>("/brands", {
+      isActive: true,
+      page: 1,
+      pageSize: 36,
+    }),
   ]);
 
   const heroSetting = homeSettingsResponse?.items.find((item) => item.name === "hero-banner");
@@ -194,6 +231,7 @@ export default async function Home({ params }: HomeProps) {
     (item) => item.name === "business-unit",
   );
   const aboutSantaSetting = homeSettingsResponse?.items.find((item) => item.name === "about-santa");
+  const brandSetting = homeSettingsResponse?.items.find((item) => item.name === "brand");
   const heroImageUrl = heroSetting?.imgUrl?.[0]?.trim() || "/assets/hero-section-bg.svg";
   const heroContent = {
     eyebrow: "One Stop Service",
@@ -212,9 +250,14 @@ export default async function Home({ params }: HomeProps) {
   };
   const businessUnitContent = getHomeSectionContent({ businessUnitSetting, locale });
   const aboutSantaContent = getAboutSantaContent({ aboutSantaSetting, locale });
+  const brandSectionContent = getBrandSectionContent({ brandSetting, locale });
   const businessUnitCategories = (categoriesResponse?.items ?? [])
     .filter((item) => item.isActive)
     .sort((left, right) => left.rank - right.rank || left.nameTh.localeCompare(right.nameTh));
+  const featuredBrands = (brandsResponse?.items ?? [])
+    .filter((item) => item.isActive && item.imgUrl)
+    .sort((left, right) => right.rank - left.rank || left.code.localeCompare(right.code))
+    .slice(0, 36);
 
   return (
     <main className="site-shell">
@@ -305,6 +348,38 @@ export default async function Home({ params }: HomeProps) {
           <p className="home-about-santa-body">{aboutSantaContent.body}</p>
           <span className="home-about-santa-cta">{aboutSantaContent.cta}</span>
         </div>
+      </section>
+
+      <section className="home-brand-section" aria-labelledby="home-brand-section-title">
+        <div className="home-brand-section-copy">
+          <h2 id="home-brand-section-title" className="home-brand-section-heading">
+            {brandSectionContent.heading}
+          </h2>
+          <p className="home-brand-section-body">{brandSectionContent.body}</p>
+        </div>
+
+        {featuredBrands.length > 0 ? (
+          <div className="home-brand-grid">
+            {featuredBrands.map((brand) => (
+              <div className="home-brand-card" key={brand.code}>
+                <div className="home-brand-card-media">
+                  <Image
+                    alt={getLocalizedText(locale, brand.nameTh, brand.nameEn)}
+                    className="home-brand-card-image"
+                    fill
+                    sizes="(max-width: 1024px) 25vw, 8vw"
+                    src={brand.imgUrl ?? ""}
+                    unoptimized
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <Link className="home-brand-section-cta" href={`/${locale}/products-services`}>
+          {brandSectionContent.cta}
+        </Link>
       </section>
     </main>
   );
