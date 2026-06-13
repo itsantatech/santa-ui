@@ -9,6 +9,7 @@ type HomeSettingRow = {
   headlineEn: string;
   contentTh?: string | null;
   contentEn?: string | null;
+  imgUrl?: string[] | null;
   isActive: boolean;
 };
 
