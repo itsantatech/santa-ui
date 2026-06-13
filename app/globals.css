@@ -131,6 +131,8 @@ input {
 .primary-nav-link {
   display: inline-flex;
   align-items: center;
+  border: 0;
+  background: transparent;
   gap: 7px;
   min-height: 40px;
   color: #111827;
@@ -144,16 +146,15 @@ input {
   position: relative;
 }
 
-.primary-nav-dropdown summary {
-  list-style: none;
+.primary-nav-dropdown .primary-nav-link {
   cursor: pointer;
 }
 
-.primary-nav-dropdown summary::-webkit-details-marker {
-  display: none;
+.primary-nav-dropdown .primary-nav-link .nav-icon {
+  transition: transform 0.18s ease;
 }
 
-.primary-nav-dropdown[open] summary .nav-icon {
+.primary-nav-dropdown .primary-nav-link[aria-expanded="true"] .nav-icon {
   transform: rotate(180deg);
 }
 
@@ -165,8 +166,8 @@ input {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  width: 143px;
-  height: 80px;
+  width: 286px;
+  height: auto;
   padding: 4px;
   margin: 0;
   overflow: hidden;
@@ -178,6 +179,16 @@ input {
   list-style: none;
 }
 
+.primary-nav-menu-categories {
+  width: 360px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.primary-nav-menu-news {
+  width: 286px;
+}
+
 .primary-nav-menu li {
   width: 100%;
 }
@@ -186,8 +197,8 @@ input {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 135px;
-  height: 36px;
+  width: 100%;
+  min-height: 36px;
   padding: 8px 16px;
   color: #0f172a;
   font-family: Inter, Arial, Helvetica, sans-serif;
@@ -198,6 +209,19 @@ input {
   border-radius: 8px;
 }
 
+.primary-nav-menu-categories .primary-nav-menu-item {
+  justify-content: flex-start;
+  width: 100%;
+  height: auto;
+  min-height: 36px;
+  text-align: left;
+}
+
+.primary-nav-menu-news .primary-nav-menu-item {
+  justify-content: center;
+  text-align: center;
+}
+
 .primary-nav-menu-item:hover,
 .primary-nav-menu-item:focus-visible,
 .primary-nav-menu-item.active {
@@ -206,6 +230,7 @@ input {
 
 .primary-nav-link:hover,
 .primary-nav-link:focus-visible,
+.primary-nav-link-active,
 .sign-in-link:hover,
 .sign-in-link:focus-visible,
 .sign-out-link:hover,
