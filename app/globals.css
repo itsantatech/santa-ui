@@ -3668,6 +3668,70 @@ button.admin-table-page-link:disabled {
   -webkit-line-clamp: 2;
 }
 
+.home-about-santa {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: stretch;
+  max-height: 720px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.home-about-santa-media {
+  position: relative;
+  min-height: 640px;
+  height: 720px;
+  max-height: 720px;
+  overflow: hidden;
+  background: #e5e7eb;
+}
+
+.home-about-santa-image {
+  object-fit: cover;
+}
+
+.home-about-santa-copy {
+  display: grid;
+  align-content: center;
+  gap: 28px;
+  padding: clamp(40px, 6vw, 88px);
+}
+
+.home-about-santa-heading {
+  margin: 0;
+  color: #f67c26;
+  font-size: clamp(28px, 3.1vw, 44px);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+  white-space: pre-line;
+  text-wrap: balance;
+}
+
+.home-about-santa-body {
+  max-width: 620px;
+  margin: 0;
+  color: #4b5563;
+  font-size: clamp(16px, 1.25vw, 20px);
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.home-about-santa-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 52px;
+  padding: 0 22px;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  background: #F67C26;
+  border-radius: 999px;
+}
+
 @media (max-width: 1440px) {
   .site-header-inner {
     gap: 20px;
@@ -3874,6 +3938,36 @@ button.admin-table-page-link:disabled {
 
   .home-business-unit-card-symbol {
     font-size: 28px;
+  }
+
+  .home-about-santa {
+    grid-template-columns: 1fr;
+    max-height: none;
+  }
+
+  .home-about-santa-media {
+    min-height: 320px;
+    height: auto;
+    max-height: none;
+  }
+
+  .home-about-santa-copy {
+    gap: 22px;
+    padding: 32px 20px 44px;
+  }
+
+  .home-about-santa-heading {
+    font-size: clamp(26px, 7vw, 38px);
+  }
+
+  .home-about-santa-body {
+    font-size: 16px;
+  }
+
+  .home-about-santa-cta {
+    min-height: 50px;
+    padding-inline: 22px;
+    font-size: 15px;
   }
 
   .product-filter-title-row {

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteNavbar } from "@/components/site-navbar";
@@ -97,6 +98,32 @@ function getHomeSectionContent({
   };
 }
 
+function getAboutSantaContent({
+  aboutSantaSetting,
+  locale,
+}: {
+  aboutSantaSetting?: HomeSettingRow | null;
+  locale: Locale;
+}) {
+  const isThaiLocale = locale === "th";
+
+  return {
+    body:
+      richTextToPlainText(
+        getLocalizedText(locale, aboutSantaSetting?.contentTh, aboutSantaSetting?.contentEn),
+      ) ||
+      (isThaiLocale
+        ? "ผู้นำเข้าและตัวแทนจำหน่ายเครื่องมืออุตสาหกรรม ระบบวิทยาศาสตร์ และโซลูชันอัตโนมัติ พร้อมทีมงานมืออาชีพและบริการหลังการขายครบวงจร"
+        : "Importer and distributor of industrial instruments, scientific systems, and automation solutions backed by experienced teams and end-to-end after-sales service."),
+    cta: isThaiLocale ? "เกี่ยวกับเรา" : "About us",
+    heading:
+      richTextToPlainText(
+        getLocalizedText(locale, aboutSantaSetting?.headlineTh, aboutSantaSetting?.headlineEn),
+      ) || "Santa Technology",
+    imageUrl: aboutSantaSetting?.imgUrl?.[0]?.trim() || "/assets/about_santa.svg",
+  };
+}
+
 function getCategoryCardCopy(category: CategoryRow, locale: Locale) {
   const name = richTextToPlainText(
     getLocalizedText(locale, category.nameTh, category.nameEn),
@@ -166,6 +193,7 @@ export default async function Home({ params }: HomeProps) {
   const businessUnitSetting = homeSettingsResponse?.items.find(
     (item) => item.name === "business-unit",
   );
+  const aboutSantaSetting = homeSettingsResponse?.items.find((item) => item.name === "about-santa");
   const heroImageUrl = heroSetting?.imgUrl?.[0]?.trim() || "/assets/hero-section-bg.svg";
   const heroContent = {
     eyebrow: "One Stop Service",
@@ -183,6 +211,7 @@ export default async function Home({ params }: HomeProps) {
     ctaHref: `/${locale}/products-services`,
   };
   const businessUnitContent = getHomeSectionContent({ businessUnitSetting, locale });
+  const aboutSantaContent = getAboutSantaContent({ aboutSantaSetting, locale });
   const businessUnitCategories = (categoriesResponse?.items ?? [])
     .filter((item) => item.isActive)
     .sort((left, right) => left.rank - right.rank || left.nameTh.localeCompare(right.nameTh));
@@ -255,6 +284,27 @@ export default async function Home({ params }: HomeProps) {
             })}
           </div>
         ) : null}
+      </section>
+
+      <section className="home-about-santa" aria-labelledby="home-about-santa-title">
+        <div className="home-about-santa-media">
+          <Image
+            alt={aboutSantaContent.heading}
+            className="home-about-santa-image"
+            fill
+            priority={false}
+            sizes="(max-width: 1024px) 100vw, 52vw"
+            src={aboutSantaContent.imageUrl}
+            unoptimized
+          />
+        </div>
+        <div className="home-about-santa-copy">
+          <h2 id="home-about-santa-title" className="home-about-santa-heading">
+            {aboutSantaContent.heading}
+          </h2>
+          <p className="home-about-santa-body">{aboutSantaContent.body}</p>
+          <span className="home-about-santa-cta">{aboutSantaContent.cta}</span>
+        </div>
       </section>
     </main>
   );
