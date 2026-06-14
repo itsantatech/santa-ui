@@ -201,10 +201,9 @@ input {
   min-height: 36px;
   padding: 8px 16px;
   color: #0f172a;
-  font-family: Inter, Arial, Helvetica, sans-serif;
   font-size: 14px;
   font-weight: 500;
-  line-height: 20px;
+  line-height: 1.4;
   text-align: center;
   border-radius: 8px;
 }
@@ -3968,7 +3967,7 @@ button.admin-table-page-link:disabled {
 .site-footer-column h2 {
   margin: 0;
   color: #111111;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -3978,7 +3977,7 @@ button.admin-table-page-link:disabled {
 .site-footer-contact-copy {
   margin: 0;
   color: #111111;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 500;
   line-height: 1.55;
 }
@@ -4029,7 +4028,7 @@ button.admin-table-page-link:disabled {
 .site-footer-copyright {
   margin: 0;
   color: rgb(17 17 17 / 82%);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 500;
   line-height: 1.4;
 }
@@ -4349,7 +4348,7 @@ button.admin-table-page-link:disabled {
   }
 
   .site-footer-column h2 {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .site-footer-column p,
