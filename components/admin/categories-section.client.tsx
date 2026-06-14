@@ -255,7 +255,7 @@ export function CategoriesSectionClient({
         ),
       },
     ],
-    [labels, locale],
+    [labels],
   );
 
   const subCategoryColumns = useMemo<AdminDataTableColumn<SubCategoryRow>[]>(
@@ -326,7 +326,7 @@ export function CategoriesSectionClient({
         ),
       },
     ],
-    [labels],
+    [labels, locale],
   );
 
   return (
