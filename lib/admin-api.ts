@@ -11,6 +11,8 @@ export type AdminListResponse<Row> = {
 type AdminListOptions = {
   brandCode?: string;
   categoryCode?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
   page: number;
   pageSize?: number;
   isActive?: boolean;
@@ -39,6 +41,8 @@ export async function fetchAdminList<Row>(
     page,
     pageSize = defaultPageSize,
     search,
+    sortBy,
+    sortOrder,
     subCategoryCode,
   }: AdminListOptions,
 ): Promise<AdminListResponse<Row> | null> {
@@ -62,6 +66,12 @@ export async function fetchAdminList<Row>(
   }
   if (brandCode) {
     url.searchParams.set("brandCode", brandCode);
+  }
+  if (sortBy) {
+    url.searchParams.set("sortBy", sortBy);
+  }
+  if (sortOrder) {
+    url.searchParams.set("sortOrder", sortOrder);
   }
 
   try {
