@@ -1375,12 +1375,13 @@ function UserModal({
   const [isSaving, setIsSaving] = useState(false);
   const [roleOptions, setRoleOptions] = useState<UserRoleOption[]>([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
+  const initialRole = initialUser?.role ?? "";
   const [form, setForm] = useState(() => ({
     displayName: initialUser?.displayName ?? "",
     email: initialUser?.email ?? "",
     isActive: initialUser?.isActive ?? true,
     password: "",
-    role: initialUser?.role ?? "",
+    role: initialRole,
     username: initialUser?.username ?? "",
   }));
 
@@ -1405,7 +1406,7 @@ function UserModal({
 
       const payload = (await response.json()) as string[];
       setRoleOptions(
-        currentRoleIsMissing(form.role, payload) ? [form.role, ...payload] : payload,
+        currentRoleIsMissing(initialRole, payload) ? [initialRole, ...payload] : payload,
       );
       setForm((current) => ({
         ...current,
@@ -1419,7 +1420,7 @@ function UserModal({
     return () => {
       isMounted = false;
     };
-  }, [labels.common.error]);
+  }, [initialRole, labels.common.error]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

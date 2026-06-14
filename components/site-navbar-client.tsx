@@ -157,7 +157,7 @@ export function SiteNavbarClient({
                   {openMenu === "categories" ? (
                     <ul className="primary-nav-menu primary-nav-menu-categories" role="menu">
                       {categories.map((category) => {
-                        const href = `/${locale}/products/categories/${category.slug}`;
+                        const href = `/${locale}/products/categories/${category.slug.trim()}`;
                         const isActive = pathname === href;
 
                         return (

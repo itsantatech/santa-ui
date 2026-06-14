@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ProductSearch, type ProductSearchSuggestion } from "@/components/product-search";
-import { fetchAdminList, type AdminListResponse, createSantaApiUrl } from "@/lib/admin-api";
+import type { ProductSearchSuggestion } from "@/components/product-search";
+import { fetchAdminList, createSantaApiUrl } from "@/lib/admin-api";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import {
   AdminDataTable,
@@ -44,8 +44,6 @@ type InventoryRow = {
     brands: ProductRelation[];
   };
 };
-
-type InventoryResponse = AdminListResponse<InventoryRow>;
 
 export async function InventorySection({
   filters,

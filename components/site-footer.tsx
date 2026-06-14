@@ -6,6 +6,7 @@ type FooterCategory = {
   code: string;
   nameEn: string;
   nameTh: string;
+  slug: string;
 };
 
 type FooterSocialContact = {
@@ -43,10 +44,11 @@ function getFooterContent(locale: Locale) {
         copyright: "Santa Technology Co., Ltd. All rights reserved.",
         menu: {
           about: "เกี่ยวกับเรา",
+          articles: "บทความ",
           brands: "แบรนด์",
           faq: "คำถามที่พบบ่อย",
           home: "หน้าแรก",
-          news: "ข่าวสารและบทความ",
+          news: "ข่าวสารและกิจกรรม",
           products: "สินค้าและบริการ",
         },
         menuTitle: "เมนู",
@@ -66,10 +68,11 @@ function getFooterContent(locale: Locale) {
         copyright: "Santa Technology Co., Ltd. All rights reserved.",
         menu: {
           about: "About Us",
+          articles: "Articles",
           brands: "Brands",
           faq: "Frequently Asked Questions",
           home: "Home",
-          news: "News & Articles",
+          news: "News & Activities",
           products: "Products & Services",
         },
         menuTitle: "Menu",
@@ -87,6 +90,7 @@ export function SiteFooter({
 }) {
   const content = getFooterContent(locale);
   const sortedCategories = [...categories]
+    .filter((item) => item.slug.trim().length > 0)
     .sort((left, right) => left.nameTh.localeCompare(right.nameTh))
     .slice(0, 8);
   const availableSocials = socialIcons
@@ -115,7 +119,7 @@ export function SiteFooter({
           <ul className="site-footer-list">
             {sortedCategories.map((category) => (
               <li key={category.code}>
-                <Link href={`/${locale}/products-services?categoryCode=${encodeURIComponent(category.code)}`}>
+                <Link href={`/${locale}/products/categories/${category.slug.trim()}`}>
                   {getLocalizedCategoryName(locale, category)}
                 </Link>
               </li>
@@ -127,11 +131,12 @@ export function SiteFooter({
           <h2>{content.menuTitle}</h2>
           <ul className="site-footer-list">
             <li><Link href={`/${locale}`}>{content.menu.home}</Link></li>
-            <li><Link href={`/${locale}/products-services`}>{content.menu.products}</Link></li>
-            <li><Link href={`/${locale}#home-brand-section`}>{content.menu.brands}</Link></li>
-            <li><Link href={`/${locale}/news`}>{content.menu.news}</Link></li>
-            <li><Link href={`/${locale}#home-about-santa`}>{content.menu.about}</Link></li>
-            <li><Link href={`/${locale}#home-faq-section`}>{content.menu.faq}</Link></li>
+            <li><Link href={`/${locale}/products`}>{content.menu.products}</Link></li>
+            <li><Link href={`/${locale}/products/brands`}>{content.menu.brands}</Link></li>
+            <li><Link href={`/${locale}/news-and-activities`}>{content.menu.news}</Link></li>
+            <li><Link href={`/${locale}/articles`}>{content.menu.articles}</Link></li>
+            <li><Link href={`/${locale}/about-us`}>{content.menu.about}</Link></li>
+            <li><Link href={`/${locale}/faqs`}>{content.menu.faq}</Link></li>
           </ul>
         </nav>
 
