@@ -25,7 +25,6 @@ type NavbarCategory = {
 export async function SiteNavbar({
   locale,
   variant = "default",
-  adminSection,
 }: SiteNavbarProps) {
   const [session, categoriesResponse] = await Promise.all([
     getSession(),
@@ -35,12 +34,7 @@ export async function SiteNavbar({
       pageSize: 100,
     }),
   ]);
-  const isAdminVariant = variant === "admin";
   const alternateLocale = getAlternateLocale(locale);
-  const alternateLocaleHref =
-    isAdminVariant && adminSection
-      ? `/${alternateLocale}/admin?section=${adminSection}`
-      : `/${alternateLocale}`;
   const categories = [...(categoriesResponse?.items ?? [])]
     .filter((item) => item.isActive && item.slug.trim().length > 0)
     .sort((left, right) => left.rank - right.rank || left.nameTh.localeCompare(right.nameTh));
@@ -48,7 +42,6 @@ export async function SiteNavbar({
   return (
     <SiteNavbarClient
       alternateLocale={alternateLocale}
-      alternateLocaleHref={alternateLocaleHref}
       categories={categories}
       locale={locale}
       session={session}

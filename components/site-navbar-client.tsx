@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { AuthSession } from "@/lib/auth/keycloak";
 import {
@@ -13,7 +13,6 @@ import {
 
 type SiteNavbarClientProps = {
   alternateLocale: Locale;
-  alternateLocaleHref: string;
   categories: NavbarCategory[];
   locale: Locale;
   session: AuthSession | null;
@@ -84,7 +83,6 @@ function LocaleFlag({ locale }: { locale: Locale }) {
 
 export function SiteNavbarClient({
   alternateLocale,
-  alternateLocaleHref,
   categories,
   locale,
   session,
@@ -92,6 +90,7 @@ export function SiteNavbarClient({
 }: SiteNavbarClientProps) {
   const content = getDictionary(locale);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const navRef = useRef<HTMLElement | null>(null);
   const isAdminVariant = variant === "admin";
   const [openMenu, setOpenMenu] = useState<"categories" | "news" | null>(null);
@@ -113,6 +112,11 @@ export function SiteNavbarClient({
   const isArticlesActive =
     pathname === `/${locale}/articles` ||
     pathname.startsWith(`/${locale}/articles/`);
+  const alternateLocaleHref = getAlternateLocaleHref({
+    alternateLocale,
+    pathname,
+    searchParams: searchParams.toString(),
+  });
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -287,6 +291,26 @@ export function SiteNavbarClient({
       </div>
     </header>
   );
+}
+
+function getAlternateLocaleHref({
+  alternateLocale,
+  pathname,
+  searchParams,
+}: {
+  alternateLocale: Locale;
+  pathname: string;
+  searchParams: string;
+}) {
+  const segments = pathname.split("/");
+
+  if (segments.length > 1) {
+    segments[1] = alternateLocale;
+  }
+
+  const nextPathname = segments.join("/") || `/${alternateLocale}`;
+
+  return searchParams.length > 0 ? `${nextPathname}?${searchParams}` : nextPathname;
 }
 
 function getNavbarHref({
