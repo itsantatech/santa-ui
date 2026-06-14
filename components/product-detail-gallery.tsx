@@ -13,6 +13,21 @@ export function ProductDetailGallery({
   const normalizedImages = images.filter((image) => image.trim().length > 0);
   const [activeIndex, setActiveIndex] = useState(0);
   const activeImage = normalizedImages[activeIndex] ?? null;
+  const hasMultipleImages = normalizedImages.length > 1;
+
+  function showPreviousImage() {
+    setActiveIndex((current) =>
+      normalizedImages.length === 0
+        ? 0
+        : (current - 1 + normalizedImages.length) % normalizedImages.length,
+    );
+  }
+
+  function showNextImage() {
+    setActiveIndex((current) =>
+      normalizedImages.length === 0 ? 0 : (current + 1) % normalizedImages.length,
+    );
+  }
 
   return (
     <div className="product-detail-gallery">
@@ -45,14 +60,36 @@ export function ProductDetailGallery({
 
       <div className="product-detail-gallery-main">
         {activeImage ? (
-          <Image
-            alt={alt}
-            className="product-detail-gallery-image"
-            fill
-            sizes="640px"
-            src={activeImage}
-            unoptimized
-          />
+          <>
+            <Image
+              alt={alt}
+              className="product-detail-gallery-image"
+              fill
+              sizes="640px"
+              src={activeImage}
+              unoptimized
+            />
+            {hasMultipleImages ? (
+              <>
+                <button
+                  aria-label="Previous image"
+                  className="product-detail-gallery-nav product-detail-gallery-nav-prev"
+                  onClick={showPreviousImage}
+                  type="button"
+                >
+                  <span aria-hidden="true">‹</span>
+                </button>
+                <button
+                  aria-label="Next image"
+                  className="product-detail-gallery-nav product-detail-gallery-nav-next"
+                  onClick={showNextImage}
+                  type="button"
+                >
+                  <span aria-hidden="true">›</span>
+                </button>
+              </>
+            ) : null}
+          </>
         ) : (
           <span className="product-detail-gallery-placeholder" aria-hidden="true" />
         )}

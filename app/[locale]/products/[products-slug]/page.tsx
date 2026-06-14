@@ -29,6 +29,13 @@ type FooterSocialContact = {
   isActive: boolean;
 };
 
+type InventoryStockRow = {
+  id: string;
+  productSku: string;
+  stockQuantity: number;
+  isActive: boolean;
+};
+
 type ProductRelation = {
   code: string;
   categoryCode?: string;
@@ -107,6 +114,15 @@ export default async function ProductDetailPage({
     notFound();
   }
 
+  const [stockResponse] = await Promise.all([
+    fetchAdminList<InventoryStockRow>("/inventory-stocks", {
+      isActive: true,
+      page: 1,
+      pageSize: 20,
+      search: product.sku,
+    }),
+  ]);
+
   const relatedCategoryCode =
     product.categories[0]?.code || product.subCategories[0]?.categoryCode;
   const relatedBrandCode = product.brands[0]?.code;
@@ -137,10 +153,19 @@ export default async function ProductDetailPage({
       : "Products & Services";
   const brand = product.brands[0];
   const currentPrice = product.discountedPrice ?? product.price;
+  const stockQuantity =
+    stockResponse?.items.find((item) => item.productSku === product.sku)?.stockQuantity ?? 0;
   const discountPercent =
     product.price && product.discountedPrice && product.price > product.discountedPrice
       ? Math.round(((product.price - product.discountedPrice) / product.price) * 100)
       : null;
+  const lineContactUrl =
+    socialContactsResponse?.items.find(
+      (item) =>
+        item.isActive &&
+        item.code === "SM-LINE" &&
+        item.contactUrl.trim().length > 0,
+    )?.contactUrl.trim() ?? null;
 
   return (
     <main className="site-shell">
@@ -165,29 +190,24 @@ export default async function ProductDetailPage({
               <p className="product-detail-short-description">{productShortDescription}</p>
 
               <div className="product-detail-brand-meta">
-                <div className="product-detail-brand-card">
-                  {brand?.imgUrl ? (
+                {brand?.imgUrl ? (
+                  <div className="product-detail-brand-card">
                     <Image
                       alt={brand.nameEn}
-                      height={48}
+                      height={88}
                       src={brand.imgUrl}
                       unoptimized
-                      width={48}
+                      width={88}
                     />
-                  ) : (
-                    <span className="material-symbols-outlined" aria-hidden="true">
-                      link
-                    </span>
-                  )}
-                  <strong>
-                    {brand ? (locale === "th" ? brand.nameTh : brand.nameEn) : "Santa"}
-                  </strong>
-                </div>
+                  </div>
+                ) : null}
 
                 <div className="product-detail-meta-copy">
                   <span>SKU: {product.sku}</span>
                   <span>
-                    {locale === "th" ? "สินค้าพร้อมจัดส่ง" : "Available for order"}
+                    {locale === "th"
+                      ? `สินค้าคงเหลือ ${stockQuantity} ชิ้น`
+                      : `${stockQuantity} items remaining`}
                   </span>
                 </div>
               </div>
@@ -208,7 +228,15 @@ export default async function ProductDetailPage({
                 ) : null}
               </div>
 
-              <ProductDetailActions locale={locale} />
+              <ProductDetailActions
+                canAddToCart={Boolean(currentPrice)}
+                lineUrl={lineContactUrl}
+                locale={locale}
+                productNameEn={product.nameEn}
+                productNameTh={product.nameTh}
+                productSku={product.sku}
+                productSlug={product.slug}
+              />
             </div>
           </div>
 

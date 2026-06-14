@@ -13,6 +13,7 @@ const allowedResources = new Set([
   "home-section-settings",
   "inventory-stocks",
   "news-and-activities",
+  "quotation-requests",
   "social-media-contacts",
   "sub-categories",
 ]);
