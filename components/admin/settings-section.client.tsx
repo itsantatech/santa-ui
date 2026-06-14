@@ -17,7 +17,21 @@ import {
 } from "./admin-data-table";
 import { useAdminTableEditRequest } from "./admin-table-events";
 import type { Locale } from "@/lib/i18n";
-import { formatAdminDateTime } from "@/lib/admin-api";
+
+function stripHtmlToPlainText(value: string) {
+  return value
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>\s*<p[^>]*>/gi, "\n")
+    .replace(/<\/?p[^>]*>/gi, "")
+    .replace(/<\/?[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .trim();
+}
 
 type HomeSettingRow = {
   id: string;
@@ -26,6 +40,7 @@ type HomeSettingRow = {
   headlineEn: string;
   contentTh?: string | null;
   contentEn?: string | null;
+  imgUrl?: string[] | null;
   isActive: boolean;
 };
 
@@ -701,22 +716,79 @@ function HomeContentCard({
   labels: ReturnType<typeof getLabels>;
 }) {
   const router = useRouter();
+  const sectionKey = normalizeHomeSectionKey(card.name);
+  const supportsSectionImage = sectionKey === "hero" || sectionKey === "about";
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [form, setForm] = useState(() => ({
-    contentEn: card.contentEn,
-    contentTh: card.contentTh,
-    headlineEn: card.headlineEn,
-    headlineTh: card.headlineTh,
+    contentEn: stripHtmlToPlainText(card.contentEn),
+    contentTh: stripHtmlToPlainText(card.contentTh),
+    headlineEn: stripHtmlToPlainText(card.headlineEn),
+    headlineTh: stripHtmlToPlainText(card.headlineTh),
+    imageUrl: card.imgUrl[0] ?? "",
     isActive: card.isActive,
   }));
 
+  async function handleImageSelected(files: FileList | null) {
+    const file = files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!isMediaFile(file)) {
+      setError(labels.home.validation.imageType);
+      return;
+    }
+
+    setError("");
+    setIsUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("visibility", "public");
+      formData.append("folder", "settings/home-sections");
+
+      const response = await fetch("/api/admin/files/upload", {
+        body: formData,
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error(labels.common.error);
+      }
+
+      const result = (await response.json()) as UploadedFileResponse;
+      const nextUrl = result.url ?? result.signedUrl;
+
+      if (!nextUrl) {
+        throw new Error(labels.common.error);
+      }
+
+      setForm((current) => ({ ...current, imageUrl: nextUrl }));
+    } catch {
+      setError(labels.common.error);
+    } finally {
+      setIsUploading(false);
+      if (imageInputRef.current) {
+        imageInputRef.current.value = "";
+      }
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const headlineThLength = form.headlineTh.trim().length;
-    const headlineEnLength = form.headlineEn.trim().length;
-    const contentThLength = countRichTextCharacters(form.contentTh);
-    const contentEnLength = countRichTextCharacters(form.contentEn);
+    const headlineTh = stripHtmlToPlainText(form.headlineTh);
+    const headlineEn = stripHtmlToPlainText(form.headlineEn);
+    const contentTh = stripHtmlToPlainText(form.contentTh);
+    const contentEn = stripHtmlToPlainText(form.contentEn);
+    const headlineThLength = headlineTh.length;
+    const headlineEnLength = headlineEn.length;
+    const contentThLength = contentTh.length;
+    const contentEnLength = contentEn.length;
 
     if (headlineThLength > 150 || headlineEnLength > 150) {
       setError(labels.home.validation.headlineMax);
@@ -735,17 +807,20 @@ function HomeContentCard({
       card.resource === "home-section-settings"
         ? {
             name: card.name,
-            headlineTh: form.headlineTh,
-            headlineEn: form.headlineEn,
-            contentTh: form.contentTh,
-            contentEn: form.contentEn,
+            headlineTh,
+            headlineEn,
+            contentTh,
+            contentEn,
+            ...(supportsSectionImage
+              ? { imgUrl: form.imageUrl ? [form.imageUrl] : [] }
+              : {}),
             isActive: form.isActive,
           }
         : {
-            headlineTh: form.headlineTh,
-            headlineEn: form.headlineEn,
-            contentTh: form.contentTh,
-            contentEn: form.contentEn,
+            headlineTh,
+            headlineEn,
+            contentTh,
+            contentEn,
             imgUrl: card.imgUrl,
           };
 
@@ -776,50 +851,114 @@ function HomeContentCard({
         <h2>{card.title}</h2>
       </div>
       <div className="admin-settings-card-grid admin-settings-about-grid">
-        <SettingsField
+        <SettingsTextarea
           label={labels.home.fields.headlineTh}
           maxLength={150}
-          placeholder={labels.home.placeholders.headlineTh}
           onChange={(value) =>
             setForm((current) => ({ ...current, headlineTh: value.slice(0, 150) }))
           }
+          placeholder={labels.home.placeholders.headlineTh}
           value={form.headlineTh}
         />
-        <SettingsField
+        <SettingsTextarea
           label={labels.home.fields.headlineEn}
           maxLength={150}
-          placeholder={labels.home.placeholders.headlineEn}
           onChange={(value) =>
             setForm((current) => ({ ...current, headlineEn: value.slice(0, 150) }))
           }
+          placeholder={labels.home.placeholders.headlineEn}
           value={form.headlineEn}
         />
-        <div className="admin-settings-richtext-field">
-          <RichTextEditor
-            label={labels.home.fields.contentTh}
-            maxCharacters={500}
-            onChange={(value) => setForm((current) => ({ ...current, contentTh: value }))}
-            placeholder={labels.home.placeholders.contentTh}
-            showToolbar={false}
-            value={form.contentTh}
-          />
-          <span className="admin-settings-field-hint">
-            {countRichTextCharacters(form.contentTh)}/500
-          </span>
-        </div>
-        <div className="admin-settings-richtext-field">
-          <RichTextEditor
-            label={labels.home.fields.contentEn}
-            maxCharacters={500}
-            onChange={(value) => setForm((current) => ({ ...current, contentEn: value }))}
-            placeholder={labels.home.placeholders.contentEn}
-            showToolbar={false}
-            value={form.contentEn}
-          />
-          <span className="admin-settings-field-hint">
-            {countRichTextCharacters(form.contentEn)}/500
-          </span>
-        </div>
+        <SettingsTextarea
+          label={labels.home.fields.contentTh}
+          maxLength={500}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, contentTh: value.slice(0, 500) }))
+          }
+          placeholder={labels.home.placeholders.contentTh}
+          value={form.contentTh}
+        />
+        <SettingsTextarea
+          label={labels.home.fields.contentEn}
+          maxLength={500}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, contentEn: value.slice(0, 500) }))
+          }
+          placeholder={labels.home.placeholders.contentEn}
+          value={form.contentEn}
+        />
+        {supportsSectionImage ? (
+          <div className="admin-settings-about-image-card">
+            <div className="admin-settings-about-image-copy">
+              <strong>{labels.home.fields.image}</strong>
+            </div>
+            <div className="admin-upload-actions">
+              <input
+                accept="image/*,video/mp4,video/quicktime,video/webm,video/x-m4v"
+                className="admin-settings-hidden-file-input"
+                onChange={(event) => void handleImageSelected(event.target.files)}
+                ref={imageInputRef}
+                type="file"
+              />
+              <button
+                className="admin-product-secondary-button"
+                disabled={isUploading}
+                onClick={() => imageInputRef.current?.click()}
+                type="button"
+              >
+                {isUploading ? labels.home.uploadingImage : labels.home.uploadImage}
+              </button>
+              {form.imageUrl ? (
+                <button
+                  className="admin-product-secondary-button"
+                  onClick={() => setForm((current) => ({ ...current, imageUrl: "" }))}
+                  type="button"
+                >
+                  {labels.home.removeImage}
+                </button>
+              ) : null}
+            </div>
+            {form.imageUrl ? (
+              <div className="admin-upload-media-grid">
+                <div className="admin-upload-preview-card">
+                  <div className="admin-upload-preview-frame">
+                    {isVideoUrl(form.imageUrl) ? (
+                      <video
+                        className="admin-upload-preview-video"
+                        controls
+                        playsInline
+                        src={form.imageUrl}
+                      />
+                    ) : (
+                      <Image
+                        alt={labels.home.imageAlt}
+                        className="admin-upload-preview-image"
+                        height={220}
+                        src={form.imageUrl}
+                        unoptimized
+                        width={420}
+                      />
+                    )}
+                  </div>
+                  <div className="admin-upload-preview-meta">
+                    <a
+                      className="admin-upload-preview-link"
+                      href={form.imageUrl}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      {labels.home.previewImage}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="admin-upload-empty admin-settings-about-image-empty">
+                {labels.home.noImage}
+              </p>
+            )}
+          </div>
+        ) : null}
       </div>
       <div className="admin-settings-card-footer">
         {card.resource === "home-section-settings" ? (
@@ -843,10 +982,27 @@ function HomeContentCard({
           <span />
         )}
         <div className="admin-settings-card-actions">
-          <button className="admin-product-secondary-button" type="button">
+          <button
+            className="admin-product-secondary-button"
+            onClick={() =>
+              setForm({
+                contentEn: stripHtmlToPlainText(card.contentEn),
+                contentTh: stripHtmlToPlainText(card.contentTh),
+                headlineEn: stripHtmlToPlainText(card.headlineEn),
+                headlineTh: stripHtmlToPlainText(card.headlineTh),
+                imageUrl: card.imgUrl[0] ?? "",
+                isActive: card.isActive,
+              })
+            }
+            type="button"
+          >
             {labels.common.cancel}
           </button>
-          <button className="admin-product-add-button" disabled={isSaving} type="submit">
+          <button
+            className="admin-product-add-button"
+            disabled={isSaving || isUploading}
+            type="submit"
+          >
             {isSaving ? labels.common.saving : labels.common.save}
           </button>
         </div>
@@ -1219,12 +1375,13 @@ function UserModal({
   const [isSaving, setIsSaving] = useState(false);
   const [roleOptions, setRoleOptions] = useState<UserRoleOption[]>([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
+  const initialRole = initialUser?.role ?? "";
   const [form, setForm] = useState(() => ({
     displayName: initialUser?.displayName ?? "",
     email: initialUser?.email ?? "",
     isActive: initialUser?.isActive ?? true,
     password: "",
-    role: initialUser?.role ?? "",
+    role: initialRole,
     username: initialUser?.username ?? "",
   }));
 
@@ -1249,7 +1406,7 @@ function UserModal({
 
       const payload = (await response.json()) as string[];
       setRoleOptions(
-        currentRoleIsMissing(form.role, payload) ? [form.role, ...payload] : payload,
+        currentRoleIsMissing(initialRole, payload) ? [initialRole, ...payload] : payload,
       );
       setForm((current) => ({
         ...current,
@@ -1263,7 +1420,7 @@ function UserModal({
     return () => {
       isMounted = false;
     };
-  }, [labels.common.error]);
+  }, [initialRole, labels.common.error]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1699,20 +1856,25 @@ function SettingsField({
 }
 
 function SettingsTextarea({
+  className,
   label,
+  maxLength,
   onChange,
   placeholder,
   value,
 }: {
+  className?: string;
   label: string;
+  maxLength?: number;
   onChange: (value: string) => void;
   placeholder?: string;
   value: string;
 }) {
   return (
-    <label className="admin-product-field">
+    <label className={className ? `admin-product-field ${className}` : "admin-product-field"}>
       <span>{label}</span>
       <textarea
+        maxLength={maxLength}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         value={value}
@@ -1728,6 +1890,7 @@ function buildHomeSectionCards(
   const defaultCards = [
     createFallbackHomeCard("hero-banner", labels.home.sectionTitles.hero),
     createFallbackHomeCard("business-unit", labels.home.sectionTitles.businessUnit),
+    createFallbackHomeCard("about-santa", labels.home.sectionTitles.about),
     createFallbackHomeCard("brand", labels.home.sectionTitles.brand),
     createFallbackHomeCard("news-activities", labels.home.sectionTitles.news),
     createFallbackHomeCard("recommended-product", labels.home.sectionTitles.recommended),
@@ -1745,7 +1908,7 @@ function buildHomeSectionCards(
       headlineEn: item.headlineEn,
       headlineTh: item.headlineTh,
       id: item.id,
-      imgUrl: [] as string[],
+      imgUrl: item.imgUrl ?? ([] as string[]),
       isActive: item.isActive,
       name: item.name,
       resource: "home-section-settings" as const,
@@ -1934,6 +2097,10 @@ function resolveHomeSectionTitle(
     return sectionTitles.businessUnit;
   }
 
+  if (normalized.includes("about")) {
+    return sectionTitles.about;
+  }
+
   if (normalized.includes("brand")) {
     return sectionTitles.brand;
   }
@@ -2113,7 +2280,7 @@ function getLabels(locale: Locale) {
     ? {
         title: "ตั้งค่า",
         tabs: {
-          about: "เกี่ยวกับเรา",
+          about: "เกี่ยวกับซานต้าเทคโนโลยี",
           faq: "FAQ",
           users: "ผู้ใช้งาน",
           homeContent: "เนื้อหาหน้าแรก",
@@ -2172,15 +2339,20 @@ function getLabels(locale: Locale) {
             contentTh: "เนื้อหา (Content) ภาษาไทย (TH)",
             headlineEn: "พาดหัว (Headline) ภาษาอังกฤษ (EN)",
             headlineTh: "พาดหัว (Headline) ภาษาไทย (TH)",
+            image: "รูปประจำ Section",
           },
+          imageAlt: "รูปประจำ Section",
+          noImage: "ยังไม่ได้อัปโหลดรูปภาพหรือวิดีโอสำหรับ Section นี้",
           placeholders: {
             contentEn: "ไม่เกิน 500 ตัวอักษร",
             contentTh: "ไม่เกิน 500 ตัวอักษร",
             headlineEn: "ไม่เกิน 150 ตัวอักษร",
             headlineTh: "ไม่เกิน 150 ตัวอักษร",
           },
+          previewImage: "เปิดดูไฟล์",
+          removeImage: "ลบไฟล์",
           sectionTitles: {
-            about: "เกี่ยวกับเรา - About US Section",
+            about: "เกี่ยวกับซานต้า - About Santa Section",
             brand: "แบรนด์ - Brand Section",
             businessUnit: "หมวดหมู่สินค้าและบริการ - Business Unit Section",
             hero: "ฮีโร่แบนเนอร์ - Hero Banner Section",
@@ -2189,9 +2361,12 @@ function getLabels(locale: Locale) {
           },
           toggleDescription: "ตั้งค่าการแสดงบนหน้าแรกของ Section",
           toggleTitle: "การแสดงผล",
+          uploadImage: "อัปโหลดรูปภาพหรือวิดีโอ",
+          uploadingImage: "กำลังอัปโหลดไฟล์...",
           validation: {
             contentMax: "เนื้อหาต้องมีความยาวไม่เกิน 500 ตัวอักษร",
             headlineMax: "พาดหัวต้องมีความยาวไม่เกิน 150 ตัวอักษร",
+            imageType: "กรุณาเลือกไฟล์รูปภาพหรือวิดีโอเท่านั้น",
           },
         },
         about: {
@@ -2200,19 +2375,19 @@ function getLabels(locale: Locale) {
             contentTh: "เนื้อหา (Content) ภาษาไทย (TH)",
             headlineEn: "หัวข้อภาษาอังกฤษ (EN)",
             headlineTh: "หัวข้อภาษาไทย (TH)",
-            image: "สื่อเกี่ยวกับเรา",
+            image: "สื่อเกี่ยวกับซานต้าเทคโนโลยี",
           },
-          imageAlt: "สื่อเกี่ยวกับเรา",
+          imageAlt: "สื่อเกี่ยวกับซานต้าเทคโนโลยี",
           noImage: "ยังไม่ได้อัปโหลดรูปภาพหรือวิดีโอ",
           placeholders: {
-            contentEn: "ใส่เนื้อหาเกี่ยวกับเรา ภาษาอังกฤษ",
-            contentTh: "ใส่เนื้อหาเกี่ยวกับเรา ภาษาไทย",
-            headlineEn: "ใส่หัวข้อเกี่ยวกับเรา ภาษาอังกฤษ",
-            headlineTh: "ใส่หัวข้อเกี่ยวกับเรา ภาษาไทย",
+            contentEn: "ใส่เนื้อหาเกี่ยวกับซานต้าเทคโนโลยี ภาษาอังกฤษ",
+            contentTh: "ใส่เนื้อหาเกี่ยวกับซานต้าเทคโนโลยี ภาษาไทย",
+            headlineEn: "ใส่หัวข้อเกี่ยวกับซานต้าเทคโนโลยี ภาษาอังกฤษ",
+            headlineTh: "ใส่หัวข้อเกี่ยวกับซานต้าเทคโนโลยี ภาษาไทย",
           },
           previewImage: "เปิดดูไฟล์",
           removeImage: "ลบไฟล์",
-          title: "เกี่ยวกับเรา",
+          title: "เกี่ยวกับซานต้าเทคโนโลยี",
           uploadImage: "อัปโหลดรูปภาพหรือวิดีโอ",
           uploadingImage: "กำลังอัปโหลดไฟล์...",
           validation: {
@@ -2319,15 +2494,20 @@ function getLabels(locale: Locale) {
             contentTh: "Content (TH)",
             headlineEn: "Headline (EN)",
             headlineTh: "Headline (TH)",
+            image: "Section image",
           },
+          imageAlt: "Section image",
+          noImage: "No image or video uploaded for this section yet",
           placeholders: {
             contentEn: "No more than 500 characters",
             contentTh: "No more than 500 characters",
             headlineEn: "No more than 150 characters",
             headlineTh: "No more than 150 characters",
           },
+          previewImage: "Open file",
+          removeImage: "Remove file",
           sectionTitles: {
-            about: "About Us - About US Section",
+            about: "About Santa - About Santa Section",
             brand: "Brand - Brand Section",
             businessUnit: "Business Unit - Business Unit Section",
             hero: "Hero Banner - Hero Banner Section",
@@ -2336,9 +2516,12 @@ function getLabels(locale: Locale) {
           },
           toggleDescription: "Control section visibility on the home page",
           toggleTitle: "Visibility",
+          uploadImage: "Upload image or video",
+          uploadingImage: "Uploading file...",
           validation: {
             contentMax: "Content must be 500 characters or fewer",
             headlineMax: "Headline must be 150 characters or fewer",
+            imageType: "Please select an image or video file only",
           },
         },
         about: {

@@ -1,18 +1,199 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { fetchAdminList } from "@/lib/admin-api";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
-import { getDictionary, isLocale, locales } from "@/lib/i18n";
+import { fetchAdminList } from "@/lib/admin-api";
+import { getDictionary, isLocale, locales, type Locale } from "@/lib/i18n";
 
 type HomeProps = {
   params: Promise<{ locale: string }>;
 };
 
-type CategoryOption = {
+type HomeSettingRow = {
+  id: string;
+  name: string;
+  headlineTh?: string | null;
+  headlineEn?: string | null;
+  contentTh?: string | null;
+  contentEn?: string | null;
+  imgUrl?: string[] | null;
+  isActive: boolean;
+};
+
+type CategoryRow = {
   code: string;
+  descriptionTh?: string | null;
+  descriptionEn?: string | null;
+  iconImgUrl?: string | null;
+  isActive: boolean;
+  nameEn: string;
+  nameTh: string;
+  rank: number;
+  slug: string;
+};
+
+type BrandRow = {
+  code: string;
+  rank: number;
   nameTh: string;
   nameEn: string;
+  slug: string;
+  imgUrl: string | null;
+  isActive: boolean;
 };
+
+type SocialContactRow = {
+  code: string;
+  contactUrl: string;
+  isActive: boolean;
+};
+
+const fallbackCategoryIcons = [
+  "factory",
+  "precision_manufacturing",
+  "construction",
+  "inventory_2",
+  "science",
+  "electrical_services",
+  "devices",
+  "settings",
+] as const;
+
+function richTextToPlainText(value?: string | null) {
+  if (!value) {
+    return "";
+  }
+
+  return value
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>\s*<p[^>]*>/gi, "\n")
+    .replace(/<\/?p[^>]*>/gi, "")
+    .replace(/<\/?[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+function getLocalizedText(locale: Locale, th?: string | null, en?: string | null) {
+  return locale === "th" ? th ?? en ?? "" : en ?? th ?? "";
+}
+
+function getHomeSectionContent({
+  businessUnitSetting,
+  locale,
+}: {
+  businessUnitSetting?: HomeSettingRow | null;
+  locale: Locale;
+}) {
+  const isThaiLocale = locale === "th";
+
+  return {
+    body:
+      richTextToPlainText(
+        getLocalizedText(locale, businessUnitSetting?.contentTh, businessUnitSetting?.contentEn),
+      ) ||
+      (isThaiLocale
+        ? "รวมหมวดหมู่สินค้าและบริการหลักที่พร้อมตอบโจทย์งานอุตสาหกรรม ตั้งแต่เครื่องมือวัดไปจนถึงระบบอัตโนมัติ"
+        : "Explore the main product and service categories built for industrial operations, from measuring instruments to automation systems."),
+    cta: isThaiLocale ? "คำถามที่พบบ่อย - FAQs" : "Frequently asked questions - FAQs",
+    eyebrow: isThaiLocale ? "หมวดหมู่สินค้าและบริการ" : "Business unit",
+    heading:
+      richTextToPlainText(
+        getLocalizedText(locale, businessUnitSetting?.headlineTh, businessUnitSetting?.headlineEn),
+      ) ||
+      (isThaiLocale
+        ? "หมวดหมู่สินค้าและบริการ"
+        : "Industrial products and services categories"),
+  };
+}
+
+function getAboutSantaContent({
+  aboutSantaSetting,
+  locale,
+}: {
+  aboutSantaSetting?: HomeSettingRow | null;
+  locale: Locale;
+}) {
+  const isThaiLocale = locale === "th";
+
+  return {
+    body:
+      richTextToPlainText(
+        getLocalizedText(locale, aboutSantaSetting?.contentTh, aboutSantaSetting?.contentEn),
+      ) ||
+      (isThaiLocale
+        ? "ผู้นำเข้าและตัวแทนจำหน่ายเครื่องมืออุตสาหกรรม ระบบวิทยาศาสตร์ และโซลูชันอัตโนมัติ พร้อมทีมงานมืออาชีพและบริการหลังการขายครบวงจร"
+        : "Importer and distributor of industrial instruments, scientific systems, and automation solutions backed by experienced teams and end-to-end after-sales service."),
+    cta: isThaiLocale ? "เกี่ยวกับเรา" : "About us",
+    heading:
+      richTextToPlainText(
+        getLocalizedText(locale, aboutSantaSetting?.headlineTh, aboutSantaSetting?.headlineEn),
+      ) || "Santa Technology",
+    imageUrl: aboutSantaSetting?.imgUrl?.[0]?.trim() || "/assets/about-santa-section.svg",
+  };
+}
+
+function getBrandSectionContent({
+  brandSetting,
+  locale,
+}: {
+  brandSetting?: HomeSettingRow | null;
+  locale: Locale;
+}) {
+  const isThaiLocale = locale === "th";
+
+  return {
+    body: isThaiLocale
+      ? richTextToPlainText(brandSetting?.contentTh) ||
+        "เราเป็นตัวแทนจำหน่ายอย่างเป็นทางการจากแบรนด์มาตรฐานสากลทั่วโลก ครอบคลุมทั้งภาคอุตสาหกรรม โรงงาน และหน่วยงานราชการ พร้อมส่งมอบสินค้าคุณภาพสูงและบริการหลังการขายโดยทีมวิศวกรผู้เชี่ยวชาญ"
+      : richTextToPlainText(brandSetting?.contentEn) ||
+        "We are an authorized distributor for leading global brands serving industrial, factory, and government sectors with high-quality products and expert after-sales support.",
+    cta: isThaiLocale ? "ดูแบรนด์ทั้งหมด" : "Browse all brands",
+    heading: isThaiLocale
+      ? richTextToPlainText(brandSetting?.headlineTh) || "แบรนด์ชั้นนำที่เราคัดสรรมาเพื่อคุณ"
+      : richTextToPlainText(brandSetting?.headlineEn) || "Leading brands we selected for you",
+  };
+}
+
+function getFaqSectionContent(locale: Locale) {
+  return locale === "th"
+    ? {
+        body: "ดูคำถามที่พบบ่อย\nหรือ ติดต่อทีมผู้เชี่ยวชาญของเรา",
+        cta: "คำถามที่พบบ่อย",
+        heading: "ยังมีข้อสงสัย?",
+      }
+    : {
+        body: "Browse frequently asked questions\nor contact our team of specialists",
+        cta: "Frequently asked questions",
+        heading: "Still have questions?",
+      };
+}
+
+function getCategoryCardCopy(category: CategoryRow, locale: Locale) {
+  const name = richTextToPlainText(
+    getLocalizedText(locale, category.nameTh, category.nameEn),
+  );
+  const description = richTextToPlainText(
+    getLocalizedText(locale, category.descriptionTh, category.descriptionEn),
+  );
+
+  return {
+    description,
+    name,
+  };
+}
+
+function getFallbackIcon(index: number) {
+  return fallbackCategoryIcons[index % fallbackCategoryIcons.length] ?? "category";
+}
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -48,57 +229,223 @@ export default async function Home({ params }: HomeProps) {
     notFound();
   }
 
-  const isThaiLocale = locale === "th";
-  const categoryResponse = await fetchAdminList<CategoryOption>("/categories", {
-    page: 1,
-    pageSize: 100,
-  });
-  const categoryOptions = (categoryResponse?.items ?? []).map((category) => ({
-    label: isThaiLocale ? category.nameTh : category.nameEn,
-    value: category.code,
-  }));
-  const productFilterContent = {
-    fields: [
-      {
-        id: "category",
-        label: isThaiLocale ? "หมวดหมู่" : "Category",
-        options: categoryOptions,
-        placeholder: isThaiLocale ? "เลือกหมวดหมู่" : "Select category",
-      },
-      {
-        id: "subCategory",
-        label: isThaiLocale ? "หมวดหมู่ย่อย" : "Sub-category",
-        selected: [
-          {
-            label: isThaiLocale
-              ? "เครื่องมือวัดงานทางด้านคุณภาพน้ำ"
-              : "Water quality measuring tools",
-            value: "water-quality-measuring-tools",
-          },
-        ],
-      },
-      {
-        id: "brand",
-        label: isThaiLocale ? "แบรนด์" : "Brand",
-        selected: [
-          {
-            label: "Tenmars",
-            value: "tenmars",
-          },
-        ],
-      },
-    ],
-    removeFilterLabel: isThaiLocale ? "ลบตัวกรอง" : "Remove filter",
-    resultLabel: isThaiLocale ? "ผลการค้นหาจำนวน" : "Search results",
-    resultUnit: isThaiLocale ? "รายการ" : "items",
-    title: isThaiLocale ? "ตัวกรอง" : "Filters",
+  const [homeSettingsResponse, categoriesResponse, brandsResponse, socialContactsResponse] = await Promise.all([
+    fetchAdminList<HomeSettingRow>("/home-section-settings", {
+      isActive: true,
+      page: 1,
+      pageSize: 20,
+    }),
+    fetchAdminList<CategoryRow>("/categories", {
+      isActive: true,
+      page: 1,
+      pageSize: 100,
+    }),
+    fetchAdminList<BrandRow>("/brands", {
+      isActive: true,
+      page: 1,
+      pageSize: 36,
+    }),
+    fetchAdminList<SocialContactRow>("/social-media-contacts", {
+      isActive: true,
+      page: 1,
+      pageSize: 20,
+    }),
+  ]);
+
+  const heroSetting = homeSettingsResponse?.items.find((item) => item.name === "hero-banner");
+  const businessUnitSetting = homeSettingsResponse?.items.find(
+    (item) => item.name === "business-unit",
+  );
+  const aboutSantaSetting = homeSettingsResponse?.items.find((item) => item.name === "about-santa");
+  const brandSetting = homeSettingsResponse?.items.find((item) => item.name === "brand");
+  const heroImageUrl = heroSetting?.imgUrl?.[0]?.trim() || "/assets/hero-section-bg.svg";
+  const heroContent = {
+    eyebrow: "One Stop Service",
+    heading: locale === "th"
+      ? richTextToPlainText(heroSetting?.headlineTh) ||
+        "ผู้จำหน่ายอุปกรณ์, เครื่องจักร, เครื่องมือ และเครื่องวัดวิทยาศาสตร์ ที่ใช้ในโรงงานอุตสาหกรรม ครบวงจร"
+      : richTextToPlainText(heroSetting?.headlineEn) ||
+        "Supplier of equipment, machinery, tools, and scientific instruments for industrial plants, all in one place",
+    body: locale === "th"
+      ? richTextToPlainText(heroSetting?.contentTh) ||
+        "ครบทุกโซลูชันด้านโรงงานอุตสาหกรรม จากเครื่องมือวัดสู่ระบบอัตโนมัติ"
+      : richTextToPlainText(heroSetting?.contentEn) ||
+        "Complete industrial solutions, from measuring instruments to automation systems.",
+    cta: locale === "th" ? "เลือกชมสินค้าและบริการ" : "Browse products and services",
+    ctaHref: `/${locale}/products-services`,
   };
+  const businessUnitContent = getHomeSectionContent({ businessUnitSetting, locale });
+  const aboutSantaContent = getAboutSantaContent({ aboutSantaSetting, locale });
+  const brandSectionContent = getBrandSectionContent({ brandSetting, locale });
+  const faqSectionContent = getFaqSectionContent(locale);
+  const businessUnitCategories = (categoriesResponse?.items ?? [])
+    .filter((item) => item.isActive)
+    .sort((left, right) => left.rank - right.rank || left.nameTh.localeCompare(right.nameTh));
+  const featuredBrands = (brandsResponse?.items ?? [])
+    .filter((item) => item.isActive && item.imgUrl)
+    .sort((left, right) => right.rank - left.rank || left.code.localeCompare(right.code))
+    .slice(0, 36);
 
   return (
     <main className="site-shell">
       <SiteNavbar locale={locale} />
+      <section
+        className="home-hero"
+        aria-labelledby="home-hero-title"
+        style={{
+          backgroundImage: `linear-gradient(90deg, rgb(10 18 42 / 68%) 0%, rgb(10 18 42 / 34%) 52%, rgb(10 18 42 / 8%) 100%), url("${heroImageUrl}")`,
+        }}
+      >
+        <div className="home-hero-copy">
+          <h1 id="home-hero-title" className="home-hero-heading">
+            {heroContent.heading}
+          </h1>
+          <p className="home-hero-eyebrow">{heroContent.eyebrow}</p>
+          <p className="home-hero-body">{heroContent.body}</p>
+          <Link className="home-hero-cta" href={heroContent.ctaHref}>
+            {heroContent.cta}
+          </Link>
+        </div>
+      </section>
 
-     
+      <section className="home-business-unit" aria-labelledby="home-business-unit-title">
+        <div className="home-business-unit-header">
+          <div className="home-business-unit-copy">
+            <h2 id="home-business-unit-title" className="home-business-unit-heading">
+              {businessUnitContent.heading}
+            </h2>
+            <p className="home-business-unit-body">{businessUnitContent.body}</p>
+          </div>
+          <Link className="home-business-unit-cta" href={`/${locale}/products-services`}>
+            {businessUnitContent.cta}
+          </Link>
+        </div>
+
+        {businessUnitCategories.length > 0 ? (
+          <div className="home-business-unit-grid">
+            {businessUnitCategories.map((category, index) => {
+              const cardCopy = getCategoryCardCopy(category, locale);
+              const categoryHref = `/${locale}/products-services?categoryCode=${encodeURIComponent(category.code)}`;
+
+              return (
+                <Link
+                  aria-label={`${cardCopy.name}${cardCopy.description ? ` - ${cardCopy.description}` : ""}`}
+                  className="home-business-unit-card"
+                  href={categoryHref}
+                  key={category.code}
+                >
+                  <span className="home-business-unit-card-icon" aria-hidden="true">
+                    {category.iconImgUrl ? (
+                      <span
+                        className="home-business-unit-card-image"
+                        style={{ backgroundImage: `url("${encodeURI(category.iconImgUrl)}")` }}
+                      />
+                    ) : (
+                      <span className="material-symbols-outlined home-business-unit-card-symbol">
+                        {getFallbackIcon(index)}
+                      </span>
+                    )}
+                  </span>
+                  <span className="home-business-unit-card-copy">
+                    <strong className="home-business-unit-card-title">{cardCopy.name}</strong>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        ) : null}
+      </section>
+
+      <section
+        className="home-about-santa"
+        id="home-about-santa"
+        aria-labelledby="home-about-santa-title"
+      >
+        <div className="home-about-santa-media">
+          <Image
+            alt={aboutSantaContent.heading}
+            className="home-about-santa-image"
+            fill
+            priority={false}
+            sizes="(max-width: 1024px) 100vw, 52vw"
+            src={aboutSantaContent.imageUrl}
+            unoptimized
+          />
+        </div>
+        <div className="home-about-santa-copy">
+          <h2 id="home-about-santa-title" className="home-about-santa-heading">
+            {aboutSantaContent.heading}
+          </h2>
+          <p className="home-about-santa-body">{aboutSantaContent.body}</p>
+          <span className="home-about-santa-cta">{aboutSantaContent.cta}</span>
+        </div>
+      </section>
+
+      <section
+        className="home-brand-section"
+        id="home-brand-section"
+        aria-labelledby="home-brand-section-title"
+      >
+        <div className="home-brand-section-copy">
+          <h2 id="home-brand-section-title" className="home-brand-section-heading">
+            {brandSectionContent.heading}
+          </h2>
+          <p className="home-brand-section-body">{brandSectionContent.body}</p>
+        </div>
+
+        {featuredBrands.length > 0 ? (
+          <div className="home-brand-grid">
+            {featuredBrands.map((brand) => (
+              <div className="home-brand-card" key={brand.code}>
+                <div className="home-brand-card-media">
+                  <Image
+                    alt={getLocalizedText(locale, brand.nameTh, brand.nameEn)}
+                    className="home-brand-card-image"
+                    fill
+                    sizes="(max-width: 1024px) 25vw, 8vw"
+                    src={brand.imgUrl ?? ""}
+                    unoptimized
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <Link className="home-brand-section-cta" href={`/${locale}/products-services`}>
+          {brandSectionContent.cta}
+        </Link>
+      </section>
+
+      <section
+        className="home-faq-section"
+        id="home-faq-section"
+        aria-labelledby="home-faq-section-title"
+      >
+        <Image
+          alt={faqSectionContent.heading}
+          className="home-faq-section-image"
+          fill
+          priority={false}
+          sizes="100vw"
+          src="/assets/faq-section.svg"
+          unoptimized
+        />
+        <div className="home-faq-section-overlay" />
+        <div className="home-faq-section-copy">
+          <h2 id="home-faq-section-title" className="home-faq-section-heading">
+            {faqSectionContent.heading}
+          </h2>
+          <p className="home-faq-section-body">{faqSectionContent.body}</p>
+          <span className="home-faq-section-cta">{faqSectionContent.cta}</span>
+        </div>
+      </section>
+
+      <SiteFooter
+        categories={businessUnitCategories}
+        locale={locale}
+        socialContacts={socialContactsResponse?.items ?? []}
+      />
     </main>
   );
 }

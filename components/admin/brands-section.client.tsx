@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 import { BrandSearch } from "@/components/brand-search";
@@ -616,13 +617,16 @@ function BrandLogoPreview({ src, title }: { src: string | null; title: string })
   }
 
   return (
-    <img
+    <Image
       alt=""
       className="admin-resource-thumbnail admin-resource-thumbnail-logo"
+      height={48}
       loading="lazy"
       onError={() => setHasError(true)}
       src={src}
       title={title}
+      unoptimized
+      width={48}
     />
   );
 }
