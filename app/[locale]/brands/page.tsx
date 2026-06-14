@@ -15,6 +15,7 @@ type FooterCategory = {
   nameEn: string;
   nameTh: string;
   rank: number;
+  slug: string;
 };
 
 type FooterSocialContact = {
