@@ -41,8 +41,8 @@ export function ProductCard({
       : null;
 
   return (
-    <article className="product-card">
-      <Link className="product-card-media" href={href}>
+    <Link className="product-card" href={href}>
+      <div className="product-card-media">
         {imageSrc ? (
           <Image
             alt={name}
@@ -55,15 +55,13 @@ export function ProductCard({
         ) : (
           <span className="product-card-image-placeholder" aria-hidden="true" />
         )}
-      </Link>
+      </div>
 
       <div className="product-card-copy">
         <p className="product-card-brand">
           {product.isPromotion ? (locale === "th" ? "โปรโมชัน" : "Promotion") : "\u00A0"}
         </p>
-        <Link className="product-card-name" href={href}>
-          {name}
-        </Link>
+        <span className="product-card-name">{name}</span>
         <p className="product-card-description">{description}</p>
 
         {currentPrice ? (
@@ -86,7 +84,7 @@ export function ProductCard({
           </span>
         )}
       </div>
-    </article>
+    </Link>
   );
 }
 
