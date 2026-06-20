@@ -316,7 +316,7 @@ export default async function Home({ params }: HomeProps) {
             </h2>
             <p className="home-business-unit-body">{businessUnitContent.body}</p>
           </div>
-          <Link className="home-business-unit-cta" href={`/${locale}/products-services`}>
+          <Link className="home-business-unit-cta" href={`/${locale}/faqs`}>
             {businessUnitContent.cta}
           </Link>
         </div>
