@@ -1029,17 +1029,17 @@ function AboutSettingsCard({
     contentTh: aboutSetting.contentTh,
     headlineEn: aboutSetting.headlineEn,
     headlineTh: aboutSetting.headlineTh,
-    imageUrl: aboutSetting.imgUrl[0] ?? "",
+    imageUrls: aboutSetting.imgUrl,
   }));
 
   async function handleImageSelected(files: FileList | null) {
-    const file = files?.[0];
-
-    if (!file) {
+    if (!files?.length) {
       return;
     }
 
-    if (!isMediaFile(file)) {
+    const selectedFiles = Array.from(files);
+
+    if (selectedFiles.some((file) => !isMediaFile(file))) {
       setError(labels.about.validation.imageType);
       return;
     }
@@ -1048,28 +1048,16 @@ function AboutSettingsCard({
     setIsUploading(true);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("visibility", "public");
-      formData.append("folder", "settings/about");
+      const uploadedUrls: string[] = [];
 
-      const response = await fetch("/api/admin/files/upload", {
-        body: formData,
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error(labels.common.error);
+      for (const file of selectedFiles) {
+        uploadedUrls.push(await uploadAdminMediaFile(file, "settings/about", labels.common.error));
       }
 
-      const result = (await response.json()) as UploadedFileResponse;
-      const nextUrl = result.url ?? result.signedUrl;
-
-      if (!nextUrl) {
-        throw new Error(labels.common.error);
-      }
-
-      setForm((current) => ({ ...current, imageUrl: nextUrl }));
+      setForm((current) => ({
+        ...current,
+        imageUrls: [...current.imageUrls, ...uploadedUrls],
+      }));
     } catch {
       setError(labels.common.error);
     } finally {
@@ -1090,7 +1078,7 @@ function AboutSettingsCard({
       headlineEn: form.headlineEn.trim(),
       contentTh: form.contentTh,
       contentEn: form.contentEn,
-      imgUrl: form.imageUrl ? [form.imageUrl] : [],
+      imgUrl: form.imageUrls,
     };
 
     const response = await fetch(
@@ -1122,7 +1110,7 @@ function AboutSettingsCard({
         <h2>{labels.about.title}</h2>
       </div>
       <div className="admin-settings-card-grid">
-        <SettingsField
+        <SettingsTextarea
           label={labels.about.fields.headlineTh}
           maxLength={200}
           onChange={(value) =>
@@ -1131,7 +1119,7 @@ function AboutSettingsCard({
           placeholder={labels.about.placeholders.headlineTh}
           value={form.headlineTh}
         />
-        <SettingsField
+        <SettingsTextarea
           label={labels.about.fields.headlineEn}
           maxLength={200}
           onChange={(value) =>
@@ -1173,6 +1161,7 @@ function AboutSettingsCard({
               accept="image/*,video/mp4,video/quicktime,video/webm,video/x-m4v"
               className="admin-settings-hidden-file-input"
               onChange={(event) => void handleImageSelected(event.target.files)}
+              multiple
               ref={imageInputRef}
               type="file"
             />
@@ -1184,44 +1173,58 @@ function AboutSettingsCard({
             >
               {isUploading ? labels.about.uploadingImage : labels.about.uploadImage}
             </button>
-            {form.imageUrl ? (
+            {form.imageUrls.length > 0 ? (
               <button
                 className="admin-product-secondary-button"
-                onClick={() => setForm((current) => ({ ...current, imageUrl: "" }))}
+                onClick={() => setForm((current) => ({ ...current, imageUrls: [] }))}
                 type="button"
               >
-                {labels.about.removeImage}
+                {labels.about.removeAllImages}
               </button>
             ) : null}
           </div>
-          {form.imageUrl ? (
+          {form.imageUrls.length > 0 ? (
             <div className="admin-upload-media-grid">
-              <div className="admin-upload-preview-card">
-                <div className="admin-upload-preview-frame">
-                  {isVideoUrl(form.imageUrl) ? (
-                    <video
-                      className="admin-upload-preview-video"
-                      controls
-                      playsInline
-                      src={form.imageUrl}
-                    />
-                  ) : (
-                    <Image
-                      alt={labels.about.imageAlt}
-                      className="admin-upload-preview-image"
-                      height={220}
-                      src={form.imageUrl}
-                      unoptimized
-                      width={420}
-                    />
-                  )}
+              {form.imageUrls.map((imageUrl) => (
+                <div className="admin-upload-preview-card" key={imageUrl}>
+                  <div className="admin-upload-preview-frame">
+                    {isVideoUrl(imageUrl) ? (
+                      <video
+                        className="admin-upload-preview-video"
+                        controls
+                        playsInline
+                        src={imageUrl}
+                      />
+                    ) : (
+                      <Image
+                        alt={labels.about.imageAlt}
+                        className="admin-upload-preview-image"
+                        height={220}
+                        src={imageUrl}
+                        unoptimized
+                        width={420}
+                      />
+                    )}
+                  </div>
+                  <div className="admin-upload-preview-meta admin-upload-preview-meta-actions">
+                    <a className="admin-upload-preview-link" href={imageUrl} rel="noreferrer" target="_blank">
+                      {labels.about.previewImage}
+                    </a>
+                    <button
+                      className="admin-product-secondary-button"
+                      onClick={() =>
+                        setForm((current) => ({
+                          ...current,
+                          imageUrls: current.imageUrls.filter((url) => url !== imageUrl),
+                        }))
+                      }
+                      type="button"
+                    >
+                      {labels.about.removeImage}
+                    </button>
+                  </div>
                 </div>
-                <div className="admin-upload-preview-meta">
-                  <a className="admin-upload-preview-link" href={form.imageUrl} rel="noreferrer" target="_blank">
-                    {labels.about.previewImage}
-                  </a>
-                </div>
-              </div>
+              ))}
             </div>
           ) : (
             <p className="admin-upload-empty admin-settings-about-image-empty">
@@ -1241,7 +1244,7 @@ function AboutSettingsCard({
                 contentTh: aboutSetting.contentTh,
                 headlineEn: aboutSetting.headlineEn,
                 headlineTh: aboutSetting.headlineTh,
-                imageUrl: aboutSetting.imgUrl[0] ?? "",
+                imageUrls: aboutSetting.imgUrl,
               })
             }
             type="button"
@@ -1264,6 +1267,35 @@ function AboutSettingsCard({
 
 function isMediaFile(file: File) {
   return file.type.startsWith("image/") || file.type.startsWith("video/");
+}
+
+async function uploadAdminMediaFile(
+  file: File,
+  folder: string,
+  fallbackErrorMessage: string,
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("visibility", "public");
+  formData.append("folder", folder);
+
+  const response = await fetch("/api/admin/files/upload", {
+    body: formData,
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(fallbackErrorMessage);
+  }
+
+  const result = (await response.json()) as UploadedFileResponse;
+  const nextUrl = result.url ?? result.signedUrl;
+
+  if (!nextUrl) {
+    throw new Error(fallbackErrorMessage);
+  }
+
+  return nextUrl;
 }
 
 function isVideoUrl(url: string) {
@@ -2280,7 +2312,7 @@ function getLabels(locale: Locale) {
     ? {
         title: "ตั้งค่า",
         tabs: {
-          about: "เกี่ยวกับซานต้าเทคโนโลยี",
+          about: "เกี่ยวกับเรา",
           faq: "FAQ",
           users: "ผู้ใช้งาน",
           homeContent: "เนื้อหาหน้าแรก",
@@ -2375,9 +2407,9 @@ function getLabels(locale: Locale) {
             contentTh: "เนื้อหา (Content) ภาษาไทย (TH)",
             headlineEn: "หัวข้อภาษาอังกฤษ (EN)",
             headlineTh: "หัวข้อภาษาไทย (TH)",
-            image: "สื่อเกี่ยวกับซานต้าเทคโนโลยี",
+            image: "รูปภาพและวิดีโอ",
           },
-          imageAlt: "สื่อเกี่ยวกับซานต้าเทคโนโลยี",
+          imageAlt: "รูปภาพและวิดีโอ",
           noImage: "ยังไม่ได้อัปโหลดรูปภาพหรือวิดีโอ",
           placeholders: {
             contentEn: "ใส่เนื้อหาเกี่ยวกับซานต้าเทคโนโลยี ภาษาอังกฤษ",
@@ -2387,7 +2419,8 @@ function getLabels(locale: Locale) {
           },
           previewImage: "เปิดดูไฟล์",
           removeImage: "ลบไฟล์",
-          title: "เกี่ยวกับซานต้าเทคโนโลยี",
+          removeAllImages: "ลบทั้งหมด",
+          title: "เกี่ยวกับเรา",
           uploadImage: "อัปโหลดรูปภาพหรือวิดีโอ",
           uploadingImage: "กำลังอัปโหลดไฟล์...",
           validation: {
@@ -2435,7 +2468,7 @@ function getLabels(locale: Locale) {
     : {
         title: "Settings",
         tabs: {
-          about: "About",
+          about: "About Us",
           faq: "FAQ",
           users: "Users",
           homeContent: "Home Content",
@@ -2530,9 +2563,9 @@ function getLabels(locale: Locale) {
             contentTh: "Content (TH)",
             headlineEn: "Heading (EN)",
             headlineTh: "Heading (TH)",
-            image: "About media",
+            image: "Images & Videos",
           },
-          imageAlt: "About media",
+          imageAlt: "Images & Videos",
           noImage: "No image or video uploaded yet",
           placeholders: {
             contentEn: "Enter the English about content",
@@ -2542,7 +2575,8 @@ function getLabels(locale: Locale) {
           },
           previewImage: "Open file",
           removeImage: "Remove file",
-          title: "About",
+          removeAllImages: "Remove all",
+          title: "About Us",
           uploadImage: "Upload image or video",
           uploadingImage: "Uploading file...",
           validation: {
