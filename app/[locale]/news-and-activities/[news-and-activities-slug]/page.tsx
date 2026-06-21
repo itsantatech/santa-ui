@@ -1,27 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { PublicContentDetail } from "@/components/public-content";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
-import { fetchAdminList } from "@/lib/admin-api";
+import {
+  fetchPublicChrome,
+  fetchPublicContentBySlug,
+  getLocalizedContent,
+} from "@/lib/public-content";
 import { isLocale, locales } from "@/lib/i18n";
 
 type NewsDetailPageProps = {
   params: Promise<{ locale: string; "news-and-activities-slug": string }>;
-};
-
-type FooterCategory = {
-  code: string;
-  isActive: boolean;
-  nameEn: string;
-  nameTh: string;
-  rank: number;
-  slug: string;
-};
-
-type FooterSocialContact = {
-  code: string;
-  contactUrl: string;
-  isActive: boolean;
 };
 
 export function generateStaticParams() {
@@ -31,65 +21,53 @@ export function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: NewsDetailPageProps): Promise<Metadata> {
-  const { locale, "news-and-activities-slug": newsSlug } = await params;
+  const { locale, "news-and-activities-slug": slug } = await params;
 
   if (!isLocale(locale)) {
     return {};
   }
 
-  const title = `${locale === "th" ? "ข่าวสารและกิจกรรม" : "News & Activities"}: ${formatSlugLabel(newsSlug)}`;
+  const item = await fetchPublicContentBySlug("news-and-activities", slug);
+  const title =
+    item && isLocale(locale)
+      ? getLocalizedContent(item, locale).topic
+      : locale === "th"
+        ? "ข่าวสารและกิจกรรม"
+        : "News & Activities";
 
-  return { title, description: title };
+  return {
+    title,
+    description: title,
+  };
 }
 
-export default async function NewsDetailPage({
-  params,
-}: NewsDetailPageProps) {
-  const { locale, "news-and-activities-slug": newsSlug } = await params;
+export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
+  const { locale, "news-and-activities-slug": slug } = await params;
 
   if (!isLocale(locale)) {
     notFound();
   }
 
-  const [categoriesResponse, socialContactsResponse] = await Promise.all([
-    fetchAdminList<FooterCategory>("/categories", {
-      isActive: true,
-      page: 1,
-      pageSize: 100,
-    }),
-    fetchAdminList<FooterSocialContact>("/social-media-contacts", {
-      isActive: true,
-      page: 1,
-      pageSize: 20,
-    }),
+  const [{ categories, socialContacts }, item] = await Promise.all([
+    fetchPublicChrome(),
+    fetchPublicContentBySlug("news-and-activities", slug),
   ]);
 
-  const categories = sortFooterCategories(categoriesResponse?.items ?? []);
-  const title = `${locale === "th" ? "ข่าวสารและกิจกรรม" : "News & Activities"}: ${formatSlugLabel(newsSlug)}`;
+  if (!item) {
+    notFound();
+  }
 
   return (
     <main className="site-shell">
       <SiteNavbar locale={locale} />
-      <section className="public-page-empty-section" aria-labelledby="public-page-title">
-        <div className="public-page-empty-copy">
-          <h1 id="public-page-title">{title}</h1>
-        </div>
-      </section>
-      <SiteFooter
-        categories={categories}
+      <PublicContentDetail
+        item={item}
         locale={locale}
-        socialContacts={socialContactsResponse?.items ?? []}
+        mediaVariant="about"
+        sectionHref={`/${locale}/news-and-activities`}
+        sectionLabel={locale === "th" ? "ข่าวสารและกิจกรรม" : "News & Activities"}
       />
+      <SiteFooter categories={categories} locale={locale} socialContacts={socialContacts} />
     </main>
   );
-}
-
-function formatSlugLabel(slug: string) {
-  return decodeURIComponent(slug).replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function sortFooterCategories(categories: FooterCategory[]) {
-  return [...categories]
-    .filter((item) => item.isActive)
-    .sort((left, right) => left.rank - right.rank || left.nameTh.localeCompare(right.nameTh));
 }

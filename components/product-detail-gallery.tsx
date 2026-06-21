@@ -31,10 +31,10 @@ export function ProductDetailGallery({
 
   return (
     <div className="product-detail-gallery">
-      <div className="product-detail-gallery-thumbs" aria-label="Product images">
+      <div className="product-detail-gallery-thumbs" aria-label="Product media">
         {(normalizedImages.length > 0 ? normalizedImages : [null]).map((image, index) => (
           <button
-            aria-label={`Preview image ${index + 1}`}
+            aria-label={`Preview media ${index + 1}`}
             className={
               index === activeIndex
                 ? "product-detail-thumb product-detail-thumb-active"
@@ -45,14 +45,29 @@ export function ProductDetailGallery({
             type="button"
           >
             {image ? (
-              <Image
-                alt=""
-                className="product-detail-thumb-image"
-                fill
-                sizes="96px"
-                src={image}
-                unoptimized
-              />
+              isVideoUrl(image) ? (
+                <>
+                  <video
+                    aria-hidden="true"
+                    className="product-detail-thumb-video"
+                    muted
+                    playsInline
+                    preload="metadata"
+                    src={image}
+                  />
+                  <span className="product-detail-thumb-badge">Video</span>
+                  <span className="product-detail-thumb-play" aria-hidden="true">▶</span>
+                </>
+              ) : (
+                <Image
+                  alt=""
+                  className="product-detail-thumb-image"
+                  fill
+                  sizes="96px"
+                  src={image}
+                  unoptimized
+                />
+              )
             ) : null}
           </button>
         ))}
@@ -61,18 +76,28 @@ export function ProductDetailGallery({
       <div className="product-detail-gallery-main">
         {activeImage ? (
           <>
-            <Image
-              alt={alt}
-              className="product-detail-gallery-image"
-              fill
-              sizes="640px"
-              src={activeImage}
-              unoptimized
-            />
+            {isVideoUrl(activeImage) ? (
+              <video
+                className="product-detail-gallery-video"
+                controls
+                playsInline
+                preload="metadata"
+                src={activeImage}
+              />
+            ) : (
+              <Image
+                alt={alt}
+                className="product-detail-gallery-image"
+                fill
+                sizes="640px"
+                src={activeImage}
+                unoptimized
+              />
+            )}
             {hasMultipleImages ? (
               <>
                 <button
-                  aria-label="Previous image"
+                  aria-label="Previous media"
                   className="product-detail-gallery-nav product-detail-gallery-nav-prev"
                   onClick={showPreviousImage}
                   type="button"
@@ -80,7 +105,7 @@ export function ProductDetailGallery({
                   <span aria-hidden="true">‹</span>
                 </button>
                 <button
-                  aria-label="Next image"
+                  aria-label="Next media"
                   className="product-detail-gallery-nav product-detail-gallery-nav-next"
                   onClick={showNextImage}
                   type="button"
@@ -96,4 +121,8 @@ export function ProductDetailGallery({
       </div>
     </div>
   );
+}
+
+function isVideoUrl(url: string) {
+  return /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(url);
 }

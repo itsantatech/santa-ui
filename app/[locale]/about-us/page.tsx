@@ -1,27 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { AboutPageContent } from "@/components/public-content";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
-import { fetchAdminList } from "@/lib/admin-api";
+import { fetchAboutPageSetting, fetchPublicChrome } from "@/lib/public-content";
 import { isLocale, locales } from "@/lib/i18n";
 
 type LocalePageProps = {
   params: Promise<{ locale: string }>;
-};
-
-type FooterCategory = {
-  code: string;
-  isActive: boolean;
-  nameEn: string;
-  nameTh: string;
-  rank: number;
-  slug: string;
-};
-
-type FooterSocialContact = {
-  code: string;
-  contactUrl: string;
-  isActive: boolean;
 };
 
 export function generateStaticParams() {
@@ -50,41 +36,16 @@ export default async function AboutUsPage({ params }: LocalePageProps) {
     notFound();
   }
 
-  const [categoriesResponse, socialContactsResponse] = await Promise.all([
-    fetchAdminList<FooterCategory>("/categories", {
-      isActive: true,
-      page: 1,
-      pageSize: 100,
-    }),
-    fetchAdminList<FooterSocialContact>("/social-media-contacts", {
-      isActive: true,
-      page: 1,
-      pageSize: 20,
-    }),
+  const [{ categories, socialContacts }, aboutSetting] = await Promise.all([
+    fetchPublicChrome(),
+    fetchAboutPageSetting(),
   ]);
-
-  const categories = sortFooterCategories(categoriesResponse?.items ?? []);
-  const title = locale === "th" ? "เกี่ยวกับเรา" : "About Us";
 
   return (
     <main className="site-shell">
       <SiteNavbar locale={locale} />
-      <section className="public-page-empty-section" aria-labelledby="public-page-title">
-        <div className="public-page-empty-copy">
-          <h1 id="public-page-title">{title}</h1>
-        </div>
-      </section>
-      <SiteFooter
-        categories={categories}
-        locale={locale}
-        socialContacts={socialContactsResponse?.items ?? []}
-      />
+      <AboutPageContent locale={locale} setting={aboutSetting} socialContacts={socialContacts} />
+      <SiteFooter categories={categories} locale={locale} socialContacts={socialContacts} />
     </main>
   );
-}
-
-function sortFooterCategories(categories: FooterCategory[]) {
-  return [...categories]
-    .filter((item) => item.isActive)
-    .sort((left, right) => left.rank - right.rank || left.nameTh.localeCompare(right.nameTh));
 }
