@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  HomeRecommendedProducts,
+  type RecommendedProductTab,
+} from "@/components/home-recommended-products";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
+import type { ProductCardData } from "@/components/product-card";
 import { fetchAdminList } from "@/lib/admin-api";
 import { getDictionary, isLocale, locales, type Locale } from "@/lib/i18n";
 import {
@@ -54,6 +59,14 @@ type SocialContactRow = {
   code: string;
   contactUrl: string;
   isActive: boolean;
+};
+
+type ProductRow = ProductCardData & {
+  rank: number;
+  isActive: boolean;
+  isNewProduct: boolean;
+  isBestSeller: boolean;
+  isPromotion: boolean;
 };
 
 const fallbackCategoryIcons = [
@@ -196,6 +209,45 @@ function getNewsSectionContent({
   };
 }
 
+function getRecommendedSectionContent({
+  locale,
+  recommendedSetting,
+}: {
+  locale: Locale;
+  recommendedSetting?: HomeSettingRow | null;
+}) {
+  const isThaiLocale = locale === "th";
+
+  return {
+    body:
+      richTextToPlainText(
+        getLocalizedText(
+          locale,
+          recommendedSetting?.contentTh,
+          recommendedSetting?.contentEn,
+        ),
+      ) ||
+      (isThaiLocale
+        ? "คัดสรรสินค้าเด่นและโซลูชันที่ตอบโจทย์งานอุตสาหกรรม เพื่อเพิ่มประสิทธิภาพการทำงานของคุณ"
+        : "Explore standout products and industrial solutions selected to improve your workflow."),
+    cta: isThaiLocale ? "ดูสินค้าและบริการทั้งหมด" : "View all products & services",
+    empty: isThaiLocale ? "ยังไม่มีสินค้าแนะนำในหมวดนี้" : "No recommended products in this category",
+    heading:
+      richTextToPlainText(
+        getLocalizedText(
+          locale,
+          recommendedSetting?.headlineTh,
+          recommendedSetting?.headlineEn,
+        ),
+      ) || (isThaiLocale ? "สินค้าแนะนำที่คุณไม่ควรพลาด" : "Recommended Products You Shouldn't Miss"),
+    tabs: {
+      bestSeller: isThaiLocale ? "สินค้ายอดนิยม" : "Best sellers",
+      newProduct: isThaiLocale ? "สินค้าใหม่ล่าสุด" : "New arrivals",
+      promotion: isThaiLocale ? "ราคาพิเศษและส่วนลด" : "Special offers",
+    },
+  };
+}
+
 function getFaqSectionContent(locale: Locale) {
   return locale === "th"
     ? {
@@ -262,6 +314,14 @@ function compareContentByLatest(
   return right.id.localeCompare(left.id);
 }
 
+function compareProductsByRank(left: ProductRow, right: ProductRow) {
+  if (left.rank !== right.rank) {
+    return right.rank - left.rank;
+  }
+
+  return left.sku.localeCompare(right.sku);
+}
+
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
@@ -302,6 +362,7 @@ export default async function Home({ params }: HomeProps) {
     brandsResponse,
     socialContactsResponse,
     newsAndActivitiesResponse,
+    productsResponse,
   ] = await Promise.all([
     fetchAdminList<HomeSettingRow>("/home-section-settings", {
       isActive: true,
@@ -328,6 +389,13 @@ export default async function Home({ params }: HomeProps) {
       page: 1,
       pageSize: 12,
     }),
+    fetchAdminList<ProductRow>("/products", {
+      isActive: true,
+      page: 1,
+      pageSize: 100,
+      sortBy: "rank",
+      sortOrder: "desc",
+    }),
   ]);
 
   const heroSetting = homeSettingsResponse?.items.find((item) => item.name === "hero-banner");
@@ -338,6 +406,9 @@ export default async function Home({ params }: HomeProps) {
   const brandSetting = homeSettingsResponse?.items.find((item) => item.name === "brand");
   const newsSetting = homeSettingsResponse?.items.find((item) =>
     normalizeHomeSectionKey(item.name).includes("news"),
+  );
+  const recommendedSetting = homeSettingsResponse?.items.find((item) =>
+    normalizeHomeSectionKey(item.name).includes("recommend"),
   );
   const heroImageUrl = heroSetting?.imgUrl?.[0]?.trim() || "/assets/hero-section-bg.svg";
   const heroContent = {
@@ -359,6 +430,10 @@ export default async function Home({ params }: HomeProps) {
   const aboutSantaContent = getAboutSantaContent({ aboutSantaSetting, locale });
   const brandSectionContent = getBrandSectionContent({ brandSetting, locale });
   const newsSectionContent = getNewsSectionContent({ locale, newsSetting });
+  const recommendedSectionContent = getRecommendedSectionContent({
+    locale,
+    recommendedSetting,
+  });
   const faqSectionContent = getFaqSectionContent(locale);
   const businessUnitCategories = (categoriesResponse?.items ?? [])
     .filter((item) => item.isActive)
@@ -372,6 +447,26 @@ export default async function Home({ params }: HomeProps) {
     .sort(compareContentByLatest);
   const featuredNewsAndActivities = latestNewsAndActivities.slice(0, 2);
   const listedNewsAndActivities = latestNewsAndActivities.slice(2, 12);
+  const recommendedProducts = (productsResponse?.items ?? [])
+    .filter((item) => item.isActive)
+    .sort(compareProductsByRank);
+  const recommendedProductTabs: RecommendedProductTab[] = [
+    {
+      key: "new-product",
+      label: recommendedSectionContent.tabs.newProduct,
+      products: recommendedProducts.filter((item) => item.isNewProduct),
+    },
+    {
+      key: "best-seller",
+      label: recommendedSectionContent.tabs.bestSeller,
+      products: recommendedProducts.filter((item) => item.isBestSeller),
+    },
+    {
+      key: "promotion",
+      label: recommendedSectionContent.tabs.promotion,
+      products: recommendedProducts.filter((item) => item.isPromotion),
+    },
+  ];
 
   return (
     <main className="site-shell">
@@ -599,6 +694,30 @@ export default async function Home({ params }: HomeProps) {
         <Link className="home-news-section-cta" href={`/${locale}/news-and-activities`}>
           {newsSectionContent.cta}
         </Link>
+      </section>
+
+      <section
+        className="home-recommended-section"
+        id="home-recommended-section"
+        aria-labelledby="home-recommended-section-title"
+      >
+        <div className="home-recommended-section-copy">
+          <h2
+            id="home-recommended-section-title"
+            className="home-recommended-section-heading"
+          >
+            {recommendedSectionContent.heading}
+          </h2>
+          <p className="home-recommended-section-body">{recommendedSectionContent.body}</p>
+        </div>
+
+        <HomeRecommendedProducts
+          ctaHref={`/${locale}/products`}
+          ctaLabel={recommendedSectionContent.cta}
+          emptyLabel={recommendedSectionContent.empty}
+          locale={locale}
+          tabs={recommendedProductTabs}
+        />
       </section>
 
       <section
