@@ -2,10 +2,21 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  HomeRecommendedProducts,
+  type RecommendedProductTab,
+} from "@/components/home-recommended-products";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
+import type { ProductCardData } from "@/components/product-card";
 import { fetchAdminList } from "@/lib/admin-api";
 import { getDictionary, isLocale, locales, type Locale } from "@/lib/i18n";
+import {
+  createContentExcerpt,
+  fetchPublicContentList,
+  formatContentDate,
+  type PublicContentItem,
+} from "@/lib/public-content";
 
 type HomeProps = {
   params: Promise<{ locale: string }>;
@@ -48,6 +59,14 @@ type SocialContactRow = {
   code: string;
   contactUrl: string;
   isActive: boolean;
+};
+
+type ProductRow = ProductCardData & {
+  rank: number;
+  isActive: boolean;
+  isNewProduct: boolean;
+  isBestSeller: boolean;
+  isPromotion: boolean;
 };
 
 const fallbackCategoryIcons = [
@@ -163,6 +182,72 @@ function getBrandSectionContent({
   };
 }
 
+function getNewsSectionContent({
+  locale,
+  newsSetting,
+}: {
+  locale: Locale;
+  newsSetting?: HomeSettingRow | null;
+}) {
+  const isThaiLocale = locale === "th";
+
+  return {
+    body:
+      richTextToPlainText(
+        getLocalizedText(locale, newsSetting?.contentTh, newsSetting?.contentEn),
+      ) ||
+      (isThaiLocale
+        ? "ติดตามข่าวสารและกิจกรรมของเรา พร้อมอัปเดตนวัตกรรมใหม่ ๆ ในแวดวงอุตสาหกรรมอย่างต่อเนื่อง"
+        : "Follow our latest news, activities, and ongoing industrial innovation updates."),
+    cta: isThaiLocale ? "ดูข่าวสารและกิจกรรมทั้งหมด" : "View all news & activities",
+    heading:
+      richTextToPlainText(
+        getLocalizedText(locale, newsSetting?.headlineTh, newsSetting?.headlineEn),
+      ) || (isThaiLocale ? "ข่าวสารและกิจกรรมล่าสุด" : "Latest News & Activities"),
+    listCta: isThaiLocale ? "อ่านเพิ่มเติม" : "Read more",
+    listTypeLabel: isThaiLocale ? "ข่าวสารกิจกรรม" : "News & Activities",
+  };
+}
+
+function getRecommendedSectionContent({
+  locale,
+  recommendedSetting,
+}: {
+  locale: Locale;
+  recommendedSetting?: HomeSettingRow | null;
+}) {
+  const isThaiLocale = locale === "th";
+
+  return {
+    body:
+      richTextToPlainText(
+        getLocalizedText(
+          locale,
+          recommendedSetting?.contentTh,
+          recommendedSetting?.contentEn,
+        ),
+      ) ||
+      (isThaiLocale
+        ? "คัดสรรสินค้าเด่นและโซลูชันที่ตอบโจทย์งานอุตสาหกรรม เพื่อเพิ่มประสิทธิภาพการทำงานของคุณ"
+        : "Explore standout products and industrial solutions selected to improve your workflow."),
+    cta: isThaiLocale ? "ดูสินค้าและบริการทั้งหมด" : "View all products & services",
+    empty: isThaiLocale ? "ยังไม่มีสินค้าแนะนำในหมวดนี้" : "No recommended products in this category",
+    heading:
+      richTextToPlainText(
+        getLocalizedText(
+          locale,
+          recommendedSetting?.headlineTh,
+          recommendedSetting?.headlineEn,
+        ),
+      ) || (isThaiLocale ? "สินค้าแนะนำที่คุณไม่ควรพลาด" : "Recommended Products You Shouldn't Miss"),
+    tabs: {
+      bestSeller: isThaiLocale ? "สินค้ายอดนิยม" : "Best sellers",
+      newProduct: isThaiLocale ? "สินค้าใหม่ล่าสุด" : "New arrivals",
+      promotion: isThaiLocale ? "ราคาพิเศษและส่วนลด" : "Special offers",
+    },
+  };
+}
+
 function getFaqSectionContent(locale: Locale) {
   return locale === "th"
     ? {
@@ -193,6 +278,48 @@ function getCategoryCardCopy(category: CategoryRow, locale: Locale) {
 
 function getFallbackIcon(index: number) {
   return fallbackCategoryIcons[index % fallbackCategoryIcons.length] ?? "category";
+}
+
+function normalizeHomeSectionKey(name?: string | null) {
+  return name?.trim().toLowerCase().replace(/[_\s-]+/g, " ") ?? "";
+}
+
+function getContentPublishedAt(item: Pick<PublicContentItem, "createdAt" | "updatedAt">) {
+  return item.createdAt ?? item.updatedAt ?? "";
+}
+
+function getNewsActivityHref(locale: Locale, item: Pick<PublicContentItem, "slug">) {
+  const slug = item.slug?.trim();
+
+  if (!slug) {
+    return `/${locale}/news-and-activities`;
+  }
+
+  return `/${locale}/news-and-activities/${encodeURIComponent(slug)}`;
+}
+
+function compareContentByLatest(
+  left: Pick<PublicContentItem, "createdAt" | "updatedAt" | "id">,
+  right: Pick<PublicContentItem, "createdAt" | "updatedAt" | "id">,
+) {
+  const leftTime = Date.parse(getContentPublishedAt(left));
+  const rightTime = Date.parse(getContentPublishedAt(right));
+  const normalizedLeftTime = Number.isNaN(leftTime) ? 0 : leftTime;
+  const normalizedRightTime = Number.isNaN(rightTime) ? 0 : rightTime;
+
+  if (normalizedLeftTime !== normalizedRightTime) {
+    return normalizedRightTime - normalizedLeftTime;
+  }
+
+  return right.id.localeCompare(left.id);
+}
+
+function compareProductsByRank(left: ProductRow, right: ProductRow) {
+  if (left.rank !== right.rank) {
+    return right.rank - left.rank;
+  }
+
+  return left.sku.localeCompare(right.sku);
 }
 
 export function generateStaticParams() {
@@ -229,7 +356,14 @@ export default async function Home({ params }: HomeProps) {
     notFound();
   }
 
-  const [homeSettingsResponse, categoriesResponse, brandsResponse, socialContactsResponse] = await Promise.all([
+  const [
+    homeSettingsResponse,
+    categoriesResponse,
+    brandsResponse,
+    socialContactsResponse,
+    newsAndActivitiesResponse,
+    productsResponse,
+  ] = await Promise.all([
     fetchAdminList<HomeSettingRow>("/home-section-settings", {
       isActive: true,
       page: 1,
@@ -250,6 +384,18 @@ export default async function Home({ params }: HomeProps) {
       page: 1,
       pageSize: 20,
     }),
+    fetchPublicContentList("news-and-activities", {
+      isActive: true,
+      page: 1,
+      pageSize: 12,
+    }),
+    fetchAdminList<ProductRow>("/products", {
+      isActive: true,
+      page: 1,
+      pageSize: 100,
+      sortBy: "rank",
+      sortOrder: "desc",
+    }),
   ]);
 
   const heroSetting = homeSettingsResponse?.items.find((item) => item.name === "hero-banner");
@@ -258,6 +404,12 @@ export default async function Home({ params }: HomeProps) {
   );
   const aboutSantaSetting = homeSettingsResponse?.items.find((item) => item.name === "about-santa");
   const brandSetting = homeSettingsResponse?.items.find((item) => item.name === "brand");
+  const newsSetting = homeSettingsResponse?.items.find((item) =>
+    normalizeHomeSectionKey(item.name).includes("news"),
+  );
+  const recommendedSetting = homeSettingsResponse?.items.find((item) =>
+    normalizeHomeSectionKey(item.name).includes("recommend"),
+  );
   const heroImageUrl = heroSetting?.imgUrl?.[0]?.trim() || "/assets/hero-section-bg.svg";
   const heroContent = {
     eyebrow: "One Stop Service",
@@ -272,11 +424,16 @@ export default async function Home({ params }: HomeProps) {
       : richTextToPlainText(heroSetting?.contentEn) ||
         "Complete industrial solutions, from measuring instruments to automation systems.",
     cta: locale === "th" ? "เลือกชมสินค้าและบริการ" : "Browse products and services",
-    ctaHref: `/${locale}/products-services`,
+    ctaHref: `/${locale}/products`,
   };
   const businessUnitContent = getHomeSectionContent({ businessUnitSetting, locale });
   const aboutSantaContent = getAboutSantaContent({ aboutSantaSetting, locale });
   const brandSectionContent = getBrandSectionContent({ brandSetting, locale });
+  const newsSectionContent = getNewsSectionContent({ locale, newsSetting });
+  const recommendedSectionContent = getRecommendedSectionContent({
+    locale,
+    recommendedSetting,
+  });
   const faqSectionContent = getFaqSectionContent(locale);
   const businessUnitCategories = (categoriesResponse?.items ?? [])
     .filter((item) => item.isActive)
@@ -285,6 +442,31 @@ export default async function Home({ params }: HomeProps) {
     .filter((item) => item.isActive && item.imgUrl)
     .sort((left, right) => right.rank - left.rank || left.code.localeCompare(right.code))
     .slice(0, 36);
+  const latestNewsAndActivities = (newsAndActivitiesResponse?.items ?? [])
+    .filter((item) => item.isActive)
+    .sort(compareContentByLatest);
+  const featuredNewsAndActivities = latestNewsAndActivities.slice(0, 2);
+  const listedNewsAndActivities = latestNewsAndActivities.slice(2, 12);
+  const recommendedProducts = (productsResponse?.items ?? [])
+    .filter((item) => item.isActive)
+    .sort(compareProductsByRank);
+  const recommendedProductTabs: RecommendedProductTab[] = [
+    {
+      key: "new-product",
+      label: recommendedSectionContent.tabs.newProduct,
+      products: recommendedProducts.filter((item) => item.isNewProduct),
+    },
+    {
+      key: "best-seller",
+      label: recommendedSectionContent.tabs.bestSeller,
+      products: recommendedProducts.filter((item) => item.isBestSeller),
+    },
+    {
+      key: "promotion",
+      label: recommendedSectionContent.tabs.promotion,
+      products: recommendedProducts.filter((item) => item.isPromotion),
+    },
+  ];
 
   return (
     <main className="site-shell">
@@ -377,7 +559,9 @@ export default async function Home({ params }: HomeProps) {
             {aboutSantaContent.heading}
           </h2>
           <p className="home-about-santa-body">{aboutSantaContent.body}</p>
-          <span className="home-about-santa-cta">{aboutSantaContent.cta}</span>
+          <Link className="home-about-santa-cta" href={`/${locale}/about-us`}>
+            {aboutSantaContent.cta}
+          </Link>
         </div>
       </section>
 
@@ -412,9 +596,130 @@ export default async function Home({ params }: HomeProps) {
           </div>
         ) : null}
 
-        <Link className="home-brand-section-cta" href={`/${locale}/products-services`}>
+        <Link className="home-brand-section-cta" href={`/${locale}/products/brands`}>
           {brandSectionContent.cta}
         </Link>
+      </section>
+
+      <section
+        className="home-news-section"
+        id="home-news-section"
+        aria-labelledby="home-news-section-title"
+      >
+        <div className="home-news-section-copy">
+          <h2 id="home-news-section-title" className="home-news-section-heading">
+            {newsSectionContent.heading}
+          </h2>
+          <p className="home-news-section-body">{newsSectionContent.body}</p>
+        </div>
+
+        {featuredNewsAndActivities.length > 0 ? (
+          <div className="home-news-featured-grid">
+            {featuredNewsAndActivities.map((item) => {
+              const newsHref = getNewsActivityHref(locale, item);
+              const topic = getLocalizedText(locale, item.topicTh, item.topicEn);
+              const excerpt = createContentExcerpt(
+                locale === "th" ? item.contentTh : item.contentEn,
+                150,
+              );
+
+              return (
+                <article className="home-news-card" key={item.id}>
+                  <Link className="home-news-card-media" href={newsHref}>
+                    {item.imgUrl[0]?.trim() ? (
+                      <Image
+                        alt={topic}
+                        className="home-news-card-image"
+                        fill
+                        sizes="(max-width: 760px) 100vw, 50vw"
+                        src={item.imgUrl[0]}
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="home-news-card-placeholder">
+                        <span>{newsSectionContent.listTypeLabel}</span>
+                      </div>
+                    )}
+                  </Link>
+                  <div className="home-news-card-copy">
+                    <div className="home-news-card-side">
+                      <span className="home-news-card-type">{newsSectionContent.listTypeLabel}</span>
+                      <time
+                        className="home-news-card-date"
+                        dateTime={getContentPublishedAt(item)}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="material-symbols-outlined home-news-card-date-icon"
+                        >
+                          calendar_month
+                        </span>
+                        {formatContentDate(getContentPublishedAt(item), locale)}
+                      </time>
+                    </div>
+                    <div className="home-news-card-main">
+                      <h3 className="home-news-card-title">
+                        <Link href={newsHref}>{topic}</Link>
+                      </h3>
+                      <p className="home-news-card-excerpt">{excerpt}</p>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {listedNewsAndActivities.length > 0 ? (
+          <div className="home-news-list" role="list">
+            {listedNewsAndActivities.map((item) => {
+              const newsHref = getNewsActivityHref(locale, item);
+              const topic = getLocalizedText(locale, item.topicTh, item.topicEn);
+
+              return (
+                <article className="home-news-list-item" key={item.id} role="listitem">
+                  <Link className="home-news-list-title" href={newsHref}>
+                    {topic}
+                  </Link>
+                  <time className="home-news-list-date" dateTime={getContentPublishedAt(item)}>
+                    {formatContentDate(getContentPublishedAt(item), locale)}
+                  </time>
+                  <Link className="home-news-list-cta" href={newsHref}>
+                    {newsSectionContent.listCta}
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+        ) : null}
+
+        <Link className="home-news-section-cta" href={`/${locale}/news-and-activities`}>
+          {newsSectionContent.cta}
+        </Link>
+      </section>
+
+      <section
+        className="home-recommended-section"
+        id="home-recommended-section"
+        aria-labelledby="home-recommended-section-title"
+      >
+        <div className="home-recommended-section-copy">
+          <h2
+            id="home-recommended-section-title"
+            className="home-recommended-section-heading"
+          >
+            {recommendedSectionContent.heading}
+          </h2>
+          <p className="home-recommended-section-body">{recommendedSectionContent.body}</p>
+        </div>
+
+        <HomeRecommendedProducts
+          ctaHref={`/${locale}/products`}
+          ctaLabel={recommendedSectionContent.cta}
+          emptyLabel={recommendedSectionContent.empty}
+          locale={locale}
+          tabs={recommendedProductTabs}
+        />
       </section>
 
       <section
@@ -437,7 +742,9 @@ export default async function Home({ params }: HomeProps) {
             {faqSectionContent.heading}
           </h2>
           <p className="home-faq-section-body">{faqSectionContent.body}</p>
-          <span className="home-faq-section-cta">{faqSectionContent.cta}</span>
+          <Link className="home-faq-section-cta" href={`/${locale}/faqs`}>
+            {faqSectionContent.cta}
+          </Link>
         </div>
       </section>
 
