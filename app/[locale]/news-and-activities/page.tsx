@@ -10,6 +10,7 @@ import {
   getContentSortQuery,
   getPositiveInteger,
   getSearchParam,
+  type PublicContentItem,
 } from "@/lib/public-content";
 import { isLocale, locales } from "@/lib/i18n";
 
@@ -60,6 +61,7 @@ export default async function NewsAndActivitiesPage({
       sortOrder: sortQuery.sortOrder,
     }),
   ]);
+  const sortedItems = [...(response?.items ?? [])].sort(compareContentByLatest);
 
   return (
     <main className="site-shell">
@@ -75,7 +77,7 @@ export default async function NewsAndActivitiesPage({
         getPageHref={(nextPage) =>
           buildPageHref(`/${locale}/news-and-activities`, resolvedSearchParams, nextPage)
         }
-        items={response?.items ?? []}
+        items={sortedItems}
         locale={locale}
         searchParams={resolvedSearchParams}
         sectionLabel={locale === "th" ? "ข่าวสารกิจกรรม" : "News & Activities"}
@@ -86,4 +88,20 @@ export default async function NewsAndActivitiesPage({
       <SiteFooter categories={categories} locale={locale} socialContacts={socialContacts} />
     </main>
   );
+}
+
+function compareContentByLatest(
+  left: Pick<PublicContentItem, "createdAt" | "updatedAt" | "id">,
+  right: Pick<PublicContentItem, "createdAt" | "updatedAt" | "id">,
+) {
+  const leftTime = Date.parse(left.createdAt ?? left.updatedAt ?? "");
+  const rightTime = Date.parse(right.createdAt ?? right.updatedAt ?? "");
+  const normalizedLeftTime = Number.isNaN(leftTime) ? 0 : leftTime;
+  const normalizedRightTime = Number.isNaN(rightTime) ? 0 : rightTime;
+
+  if (normalizedLeftTime !== normalizedRightTime) {
+    return normalizedRightTime - normalizedLeftTime;
+  }
+
+  return right.id.localeCompare(left.id);
 }

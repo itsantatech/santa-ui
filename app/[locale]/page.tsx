@@ -424,7 +424,7 @@ export default async function Home({ params }: HomeProps) {
       : richTextToPlainText(heroSetting?.contentEn) ||
         "Complete industrial solutions, from measuring instruments to automation systems.",
     cta: locale === "th" ? "เลือกชมสินค้าและบริการ" : "Browse products and services",
-    ctaHref: `/${locale}/products-services`,
+    ctaHref: `/${locale}/products`,
   };
   const businessUnitContent = getHomeSectionContent({ businessUnitSetting, locale });
   const aboutSantaContent = getAboutSantaContent({ aboutSantaSetting, locale });
@@ -559,7 +559,9 @@ export default async function Home({ params }: HomeProps) {
             {aboutSantaContent.heading}
           </h2>
           <p className="home-about-santa-body">{aboutSantaContent.body}</p>
-          <span className="home-about-santa-cta">{aboutSantaContent.cta}</span>
+          <Link className="home-about-santa-cta" href={`/${locale}/about-us`}>
+            {aboutSantaContent.cta}
+          </Link>
         </div>
       </section>
 
@@ -594,7 +596,7 @@ export default async function Home({ params }: HomeProps) {
           </div>
         ) : null}
 
-        <Link className="home-brand-section-cta" href={`/${locale}/products-services`}>
+        <Link className="home-brand-section-cta" href={`/${locale}/products/brands`}>
           {brandSectionContent.cta}
         </Link>
       </section>
@@ -740,7 +742,9 @@ export default async function Home({ params }: HomeProps) {
             {faqSectionContent.heading}
           </h2>
           <p className="home-faq-section-body">{faqSectionContent.body}</p>
-          <span className="home-faq-section-cta">{faqSectionContent.cta}</span>
+          <Link className="home-faq-section-cta" href={`/${locale}/faqs`}>
+            {faqSectionContent.cta}
+          </Link>
         </div>
       </section>
 
