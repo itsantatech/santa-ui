@@ -26,23 +26,39 @@ type ProductSearchLabels = {
 export function ProductSearch<
   Row extends ProductSearchSuggestion = ProductSearchSuggestion,
 >({
+  buttonClassName,
   disabled = false,
   embedded = false,
+  emptyClassName,
+  fieldClassName,
+  hintClassName,
+  inputClassName,
   initialSearch = "",
   labels,
   locale,
   onSearch,
   onSelect,
   placeholder,
+  rootClassName,
+  suggestionClassName,
+  suggestionsClassName,
 }: {
+  buttonClassName?: string;
   disabled?: boolean;
   embedded?: boolean;
+  emptyClassName?: string;
+  fieldClassName?: string;
+  hintClassName?: string;
+  inputClassName?: string;
   initialSearch?: string;
   labels?: ProductSearchLabels;
   locale: "th" | "en";
   onSearch?: (query: string) => void;
   onSelect?: (product: Row) => void;
   placeholder?: string;
+  rootClassName?: string;
+  suggestionClassName?: string;
+  suggestionsClassName?: string;
 }) {
   const inputId = useId();
   const pathname = usePathname();
@@ -143,7 +159,7 @@ export function ProductSearch<
 
   const content = (
     <>
-      <div className="admin-product-search-field">
+      <div className={fieldClassName ?? "admin-product-search-field"}>
         <label className="sr-only" htmlFor={inputId}>
           {searchPlaceholder}
         </label>
@@ -176,20 +192,21 @@ export function ProductSearch<
           role="combobox"
           type="search"
           value={query}
+          className={inputClassName}
         />
         {query.trim().length > 0 && query.trim().length < 3 ? (
-          <span className="admin-product-search-hint">{searchTooShort}</span>
+          <span className={hintClassName ?? "admin-product-search-hint"}>{searchTooShort}</span>
         ) : null}
         {isOpen ? (
           <div
-            className="admin-product-suggestions"
+            className={suggestionsClassName ?? "admin-product-suggestions"}
             id={`${inputId}-suggestions`}
             role="listbox"
           >
             {suggestions.length > 0 ? (
               suggestions.map((suggestion) => (
                 <button
-                  className="admin-product-suggestion"
+                  className={suggestionClassName ?? "admin-product-suggestion"}
                   key={suggestion.sku}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => {
@@ -213,7 +230,7 @@ export function ProductSearch<
                 </button>
               ))
             ) : (
-              <span className="admin-product-suggestion-empty">
+              <span className={emptyClassName ?? "admin-product-suggestion-empty"}>
                 {isLoading ? searchLabel : noSuggestions}
               </span>
             )}
@@ -221,6 +238,7 @@ export function ProductSearch<
         ) : null}
       </div>
       <button
+        className={buttonClassName}
         disabled={disabled}
         onClick={embedded ? handleSearch : undefined}
         type={embedded ? "button" : "submit"}
@@ -232,11 +250,15 @@ export function ProductSearch<
 
   return (
     embedded ? (
-      <div className="admin-product-search" role="search">
+      <div className={rootClassName ?? "admin-product-search"} role="search">
         {content}
       </div>
     ) : (
-      <form className="admin-product-search" role="search" onSubmit={handleSubmit}>
+      <form
+        className={rootClassName ?? "admin-product-search"}
+        role="search"
+        onSubmit={handleSubmit}
+      >
         {content}
       </form>
     )

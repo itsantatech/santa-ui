@@ -581,7 +581,12 @@ export default async function Home({ params }: HomeProps) {
         {featuredBrands.length > 0 ? (
           <div className="home-brand-grid">
             {featuredBrands.map((brand) => (
-              <div className="home-brand-card" key={brand.code}>
+              <Link
+                aria-label={getLocalizedText(locale, brand.nameTh, brand.nameEn)}
+                className="home-brand-card"
+                href={`/${locale}/products/brands/${brand.slug.trim()}`}
+                key={brand.code}
+              >
                 <div className="home-brand-card-media">
                   <Image
                     alt={getLocalizedText(locale, brand.nameTh, brand.nameEn)}
@@ -592,7 +597,7 @@ export default async function Home({ params }: HomeProps) {
                     unoptimized
                   />
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         ) : null}
