@@ -1,6 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Locale } from "@/lib/i18n";
+import {
+  getAvailableSocialLinks,
+  type SocialContact as FooterSocialContact,
+} from "@/lib/social-links";
 
 type FooterCategory = {
   code: string;
@@ -8,20 +12,6 @@ type FooterCategory = {
   nameTh: string;
   slug: string;
 };
-
-type FooterSocialContact = {
-  code: string;
-  contactUrl: string;
-  isActive: boolean;
-};
-
-const socialIcons = [
-  { code: "SM-FACEBOOK", label: "Facebook", src: "/assets/facebook.svg" },
-  { code: "SM-LINE", label: "Line", src: "/assets/line.svg" },
-  { code: "SM-YOUTUBE", label: "YouTube", src: "/assets/youtube.svg" },
-  { code: "SM-INSTAGRAM", label: "Instagram", src: "/assets/ig.svg" },
-  { code: "SM-TIKTOK", label: "TikTok", src: "/assets/tiktok.svg" },
-] as const;
 
 function getLocalizedCategoryName(locale: Locale, category: FooterCategory) {
   return locale === "th" ? category.nameTh : category.nameEn;
@@ -93,18 +83,7 @@ export function SiteFooter({
     .filter((item) => item.slug.trim().length > 0)
     .sort((left, right) => left.nameTh.localeCompare(right.nameTh))
     .slice(0, 8);
-  const availableSocials = socialIcons
-    .map((icon) => {
-      const match = socialContacts.find(
-        (contact) =>
-          contact.isActive &&
-          contact.code === icon.code &&
-          contact.contactUrl.trim().length > 0,
-      );
-
-      return match ? { ...icon, href: match.contactUrl.trim() } : null;
-    })
-    .filter((item): item is (typeof socialIcons)[number] & { href: string } => Boolean(item));
+  const availableSocials = getAvailableSocialLinks(socialContacts);
 
   return (
     <footer className="site-footer">

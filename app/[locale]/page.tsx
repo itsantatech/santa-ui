@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FloatingSocialChat } from "@/components/floating-social-chat";
 import {
   HomeRecommendedProducts,
   type RecommendedProductTab,
@@ -750,6 +751,10 @@ export default async function Home({ params }: HomeProps) {
 
       <SiteFooter
         categories={businessUnitCategories}
+        locale={locale}
+        socialContacts={socialContactsResponse?.items ?? []}
+      />
+      <FloatingSocialChat
         locale={locale}
         socialContacts={socialContactsResponse?.items ?? []}
       />

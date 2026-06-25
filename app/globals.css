@@ -5852,6 +5852,105 @@ button.admin-table-page-link:disabled {
   border-radius: 999px;
 }
 
+.floating-social-chat {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.floating-social-chat-links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.floating-social-chat-links-open {
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.floating-social-chat-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  background: #ffffff;
+  border: 1px solid rgb(15 23 42 / 10%);
+  border-radius: 999px;
+  box-shadow: 0 16px 32px rgb(15 23 42 / 16%);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.floating-social-chat-link:hover,
+.floating-social-chat-link:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 36px rgb(15 23 42 / 22%);
+}
+
+.floating-social-chat-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.floating-social-chat-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 20px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  background: rgb(17 24 39 / 78%);
+  border-radius: 14px;
+  box-shadow: 0 18px 36px rgb(15 23 42 / 20%);
+  backdrop-filter: blur(8px);
+}
+
+.floating-social-chat-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  color: #ffffff;
+  cursor: pointer;
+  background: linear-gradient(180deg, #2da8ff 0%, #1286ff 100%);
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 18px 36px rgb(18 134 255 / 35%);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.floating-social-chat-toggle:hover,
+.floating-social-chat-toggle:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 40px rgb(18 134 255 / 42%);
+}
+
+.floating-social-chat-toggle-icon {
+  width: 28px;
+  height: 28px;
+}
+
 .site-footer {
   display: grid;
   gap: 56px;
@@ -6495,6 +6594,22 @@ button.admin-table-page-link:disabled {
     font-size: 15px;
   }
 
+  .floating-social-chat {
+    right: 16px;
+    bottom: 16px;
+  }
+
+  .floating-social-chat-label {
+    min-height: 42px;
+    padding-inline: 16px;
+    font-size: 14px;
+  }
+
+  .floating-social-chat-toggle {
+    width: 54px;
+    height: 54px;
+  }
+
   .site-footer {
     gap: 42px;
     padding: 56px 20px 32px;
@@ -6833,5 +6948,37 @@ button.admin-table-page-link:disabled {
 
   .site-header-inner:not(.site-header-inner-admin) .nav-session {
     justify-content: space-between;
+  }
+
+  .floating-social-chat {
+    right: 12px;
+    bottom: 12px;
+    gap: 10px;
+  }
+
+  .floating-social-chat-links {
+    gap: 8px;
+  }
+
+  .floating-social-chat-controls {
+    gap: 10px;
+  }
+
+  .floating-social-chat-label {
+    min-height: 40px;
+    max-width: min(62vw, 220px);
+    padding-inline: 14px;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .floating-social-chat-toggle {
+    width: 50px;
+    height: 50px;
+  }
+
+  .floating-social-chat-toggle-icon {
+    width: 24px;
+    height: 24px;
   }
 }
