@@ -214,6 +214,8 @@ export function AboutPageContent({
         item.code === "SM-LINE" &&
         item.contactUrl.trim().length > 0,
     )?.contactUrl.trim() ?? null;
+  const mapEmbedUrl =
+    "https://maps.google.com/maps?q=Santa%20Technology%20Company%20Limited%2014.0504953,100.6783732&z=17&output=embed";
 
   return (
     <section className="products-page-section">
@@ -252,6 +254,40 @@ export function AboutPageContent({
           className="public-richtext about-page-richtext"
           dangerouslySetInnerHTML={{ __html: normalizeRichTextHtml(richText) }}
         />
+
+        <section className="about-page-map-section" aria-labelledby="about-map-heading">
+          <div className="about-page-map-copy">
+            <span className="about-page-map-eyebrow">
+              {locale === "th" ? "แผนที่" : "Location"}
+            </span>
+            <h2 id="about-map-heading">
+              {locale === "th" ? "แผนที่การเดินทาง" : "Find Us on the Map"}
+            </h2>
+            <div className="about-page-map-place">
+              <strong>Santa Technology Company Limited</strong>
+              <span>บริษัท แซนต้า เทคโนโลยี จำกัด</span>
+            </div>
+            <p>
+              {locale === "th"
+                ? "ดูตำแหน่งบริษัทบน Google Maps และใช้เส้นทางเพื่อนำทางมายังสำนักงานได้ทันที"
+                : "View our office location on Google Maps and start navigation instantly."}
+            </p>
+          </div>
+
+          <div className="about-page-map-frame">
+            <iframe
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              src={mapEmbedUrl}
+              title={
+                locale === "th"
+                  ? "แผนที่บริษัท แซนต้า เทคโนโลยี จำกัด"
+                  : "Santa Technology Company Limited map"
+              }
+            />
+          </div>
+        </section>
       </div>
     </section>
   );
