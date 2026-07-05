@@ -3,6 +3,9 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useRef, useState, useTransition } from "react";
 import { ProductSearch, type ProductSearchSuggestion } from "@/components/product-search";
+import { getErrorMessage } from "@/lib/api-error";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { getTransactionToastCopy } from "@/lib/transaction-toast";
 import {
   AdminBatchFieldModal,
   type AdminBatchFieldModalConfig,
@@ -70,12 +73,14 @@ export function InventoryToolbarActions({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toastCopy = getTransactionToastCopy(locale);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
 
   async function handleDownload(path: string, fallbackFilename: string) {
     const response = await fetch(path, { cache: "no-store" });
     if (!response.ok) {
+      showErrorToast(toastCopy.error, labels.error);
       return;
     }
     const blob = await response.blob();
@@ -128,7 +133,7 @@ export function InventoryToolbarActions({
         />
       ) : null}
       {isUploadOpen ? (
-        <InventoryUploadModal labels={labels} onClose={() => setIsUploadOpen(false)} />
+        <InventoryUploadModal labels={labels} locale={locale} onClose={() => setIsUploadOpen(false)} />
       ) : null}
     </>
   );
@@ -172,6 +177,7 @@ export function InventoryRowActions({
         <DeleteInventoryModal
           inventory={inventory}
           labels={labels}
+          locale={locale}
           onClose={() => setMode(null)}
           onDeleted={() => {
             setMode(null);
@@ -193,6 +199,7 @@ export function InventoryTableEditController({
   rows: InventoryManagementRow[];
 }) {
   const router = useRouter();
+  const toastCopy = getTransactionToastCopy(locale);
   const [editingInventory, setEditingInventory] =
     useState<InventoryManagementRow | null>(null);
   const [bulkEditingInventories, setBulkEditingInventories] = useState<
@@ -259,12 +266,17 @@ export function InventoryTableEditController({
               ),
             );
 
-            if (responses.some((response) => !response.ok)) {
-              throw new Error("bulk-edit-failed");
+            const failedResponse = responses.find((response) => !response.ok);
+
+            if (failedResponse) {
+              const message = await getErrorMessage(failedResponse, labels.error);
+              showErrorToast(toastCopy.error, message);
+              throw new Error(message);
             }
 
             setBulkEditingAction(null);
             setBulkEditingInventories([]);
+            showSuccessToast(toastCopy.updated);
             router.refresh();
           }}
           saveLabel={labels.save}
@@ -352,6 +364,15 @@ function buildInventoryPayload(
   };
 }
 
+function summaryDescription(
+  locale: "th" | "en",
+  result: { created: number; failed: number; updated: number },
+) {
+  return locale === "th"
+    ? `สร้าง ${result.created} รายการ, อัปเดต ${result.updated} รายการ, ไม่สำเร็จ ${result.failed} รายการ`
+    : `Created ${result.created}, updated ${result.updated}, failed ${result.failed}`;
+}
+
 function InventoryFormModal({
   inventory,
   labels,
@@ -365,6 +386,7 @@ function InventoryFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const toastCopy = getTransactionToastCopy(locale);
   const [selectedProduct, setSelectedProduct] = useState<ProductSearchSuggestion | null>(
     inventory
       ? {
@@ -410,10 +432,13 @@ function InventoryFormModal({
     setIsSaving(false);
 
     if (!response.ok) {
-      setError(labels.error);
+      const message = await getErrorMessage(response, labels.error);
+      setError(message);
+      showErrorToast(toastCopy.error, message);
       return;
     }
 
+    showSuccessToast(inventory ? toastCopy.updated : toastCopy.created);
     onSaved();
   }
 
@@ -469,14 +494,17 @@ function InventoryFormModal({
 function DeleteInventoryModal({
   inventory,
   labels,
+  locale,
   onClose,
   onDeleted,
 }: {
   inventory: InventoryManagementRow;
   labels: InventoryLabels;
+  locale: "th" | "en";
   onClose: () => void;
   onDeleted: () => void;
 }) {
+  const toastCopy = getTransactionToastCopy(locale);
   const [isDeleting, setIsDeleting] = useState(false);
   return (
     <div className="admin-product-modal-backdrop" role="presentation">
@@ -495,9 +523,18 @@ function DeleteInventoryModal({
             disabled={isDeleting}
             onClick={async () => {
               setIsDeleting(true);
-              await fetch(`/api/admin/inventory-stocks/${encodeURIComponent(inventory.id)}`, {
+              const response = await fetch(`/api/admin/inventory-stocks/${encodeURIComponent(inventory.id)}`, {
                 method: "DELETE",
               });
+
+              if (!response.ok) {
+                const message = await getErrorMessage(response, labels.error);
+                showErrorToast(toastCopy.error, message);
+                setIsDeleting(false);
+                return;
+              }
+
+              showSuccessToast(toastCopy.deleted);
               onDeleted();
             }}
             type="button"
@@ -512,12 +549,15 @@ function DeleteInventoryModal({
 
 function InventoryUploadModal({
   labels,
+  locale,
   onClose,
 }: {
   labels: InventoryLabels;
+  locale: "th" | "en";
   onClose: () => void;
 }) {
   const router = useRouter();
+  const toastCopy = getTransactionToastCopy(locale);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
@@ -531,6 +571,7 @@ function InventoryUploadModal({
 
     if (!response.ok) {
       setError(labels.error);
+      showErrorToast(toastCopy.error, labels.error);
       return;
     }
 
@@ -561,7 +602,9 @@ function InventoryUploadModal({
     });
     setIsSaving(false);
     if (!response.ok) {
-      setError(labels.error);
+      const message = await getErrorMessage(response, labels.error);
+      setError(message);
+      showErrorToast(toastCopy.error, message);
       return;
     }
 
@@ -574,6 +617,7 @@ function InventoryUploadModal({
     setSummary(
       `Created ${result.created}, updated ${result.updated}, failed ${result.failed}`,
     );
+    showSuccessToast(toastCopy.imported, summaryDescription(locale, result));
     router.refresh();
   }
 

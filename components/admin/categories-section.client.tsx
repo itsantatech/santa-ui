@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
+import { getErrorMessage } from "@/lib/api-error";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { getTransactionToastCopy } from "@/lib/transaction-toast";
 import {
   AdminBatchFieldModal,
   type AdminBatchFieldModalConfig,
@@ -133,6 +136,7 @@ export function CategoriesSectionClient({
   subCategories: SubCategoryListResponse | null;
 }) {
   const labels = getLabels(locale);
+  const toastCopy = getTransactionToastCopy(locale);
   const router = useRouter();
   const [mode, setMode] = useState<Mode | null>(null);
   const [bulkCategoryRows, setBulkCategoryRows] = useState<CategoryRow[]>([]);
@@ -409,6 +413,7 @@ export function CategoriesSectionClient({
 
       {mode?.type === "add-category" ? (
         <CategoryModal
+          locale={locale}
           labels={labels}
           onClose={() => setMode(null)}
           onSaved={() => {
@@ -420,6 +425,7 @@ export function CategoriesSectionClient({
       {mode?.type === "edit-category" ? (
         <CategoryModal
           initialRow={mode.row}
+          locale={locale}
           labels={labels}
           onClose={() => setMode(null)}
           onSaved={() => {
@@ -433,10 +439,18 @@ export function CategoriesSectionClient({
           body={labels.category.deleteBody(mode.row.nameTh)}
           onClose={() => setMode(null)}
           onConfirm={async () => {
-            await fetch(`/api/admin/categories/${encodeURIComponent(mode.row.code)}`, {
+            const response = await fetch(`/api/admin/categories/${encodeURIComponent(mode.row.code)}`, {
               method: "DELETE",
             });
+
+            if (!response.ok) {
+              const message = await getErrorMessage(response, labels.common.error);
+              showErrorToast(toastCopy.error, message);
+              throw new Error(message);
+            }
+
             setMode(null);
+            showSuccessToast(toastCopy.deleted);
             router.refresh();
           }}
           title={labels.category.deleteTitle}
@@ -472,10 +486,18 @@ export function CategoriesSectionClient({
           body={labels.subCategory.deleteBody(mode.row.nameTh)}
           onClose={() => setMode(null)}
           onConfirm={async () => {
-            await fetch(`/api/admin/sub-categories/${encodeURIComponent(mode.row.code)}`, {
+            const response = await fetch(`/api/admin/sub-categories/${encodeURIComponent(mode.row.code)}`, {
               method: "DELETE",
             });
+
+            if (!response.ok) {
+              const message = await getErrorMessage(response, labels.common.error);
+              showErrorToast(toastCopy.error, message);
+              throw new Error(message);
+            }
+
             setMode(null);
+            showSuccessToast(toastCopy.deleted);
             router.refresh();
           }}
           title={labels.subCategory.deleteTitle}
@@ -510,12 +532,17 @@ export function CategoriesSectionClient({
               ),
             );
 
-            if (responses.some((response) => !response.ok)) {
-              throw new Error("bulk-edit-failed");
+            const failedResponse = responses.find((response) => !response.ok);
+
+            if (failedResponse) {
+              const message = await getErrorMessage(failedResponse, labels.common.error);
+              showErrorToast(toastCopy.error, message);
+              throw new Error(message);
             }
 
             setBulkCategoryAction(null);
             setBulkCategoryRows([]);
+            showSuccessToast(toastCopy.updated);
             router.refresh();
           }}
           saveLabel={labels.common.save}
@@ -558,12 +585,17 @@ export function CategoriesSectionClient({
               ),
             );
 
-            if (responses.some((response) => !response.ok)) {
-              throw new Error("bulk-edit-failed");
+            const failedResponse = responses.find((response) => !response.ok);
+
+            if (failedResponse) {
+              const message = await getErrorMessage(failedResponse, labels.common.error);
+              showErrorToast(toastCopy.error, message);
+              throw new Error(message);
             }
 
             setBulkSubCategoryAction(null);
             setBulkSubCategoryRows([]);
+            showSuccessToast(toastCopy.updated);
             router.refresh();
           }}
           saveLabel={labels.common.save}
@@ -769,14 +801,17 @@ function getSubCategoryBatchFieldConfig(
 function CategoryModal({
   initialRow,
   labels,
+  locale,
   onClose,
   onSaved,
 }: {
   initialRow?: CategoryRow;
   labels: ReturnType<typeof getLabels>;
+  locale: Locale;
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const toastCopy = getTransactionToastCopy(locale);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<CategoryFormState>(() =>
@@ -820,10 +855,19 @@ function CategoryModal({
 
       try {
         iconImgUrl = await uploadGoogleIconAsset(form.googleIconName);
-      } catch {
+      } catch (uploadError) {
         setIsSaving(false);
         setIsUploadingIcon(false);
-        setError(labels.common.error);
+        const message =
+          uploadError instanceof Error &&
+          uploadError.message !== "upload-failed" &&
+          uploadError.message !== "missing-upload-url" &&
+          uploadError.message !== "canvas-unavailable" &&
+          uploadError.message !== "blob-unavailable"
+            ? uploadError.message
+            : labels.common.error;
+        setError(message);
+        showErrorToast(toastCopy.error, message);
         return;
       }
 
@@ -861,10 +905,13 @@ function CategoryModal({
     setIsSaving(false);
 
     if (!response.ok) {
-      setError(labels.common.error);
+      const message = await getErrorMessage(response, labels.common.error);
+      setError(message);
+      showErrorToast(toastCopy.error, message);
       return;
     }
 
+    showSuccessToast(initialRow ? toastCopy.updated : toastCopy.created);
     onSaved();
   }
 
@@ -973,6 +1020,7 @@ function SubCategoryModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const toastCopy = getTransactionToastCopy(locale);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<SubCategoryFormState>(() =>
@@ -1034,10 +1082,13 @@ function SubCategoryModal({
     setIsSaving(false);
 
     if (!response.ok) {
-      setError(labels.common.error);
+      const message = await getErrorMessage(response, labels.common.error);
+      setError(message);
+      showErrorToast(toastCopy.error, message);
       return;
     }
 
+    showSuccessToast(initialRow ? toastCopy.updated : toastCopy.created);
     onSaved();
   }
 
@@ -1168,7 +1219,11 @@ function DeleteModal({
             disabled={isDeleting}
             onClick={async () => {
               setIsDeleting(true);
-              await onConfirm();
+              try {
+                await onConfirm();
+              } finally {
+                setIsDeleting(false);
+              }
             }}
             type="button"
           >

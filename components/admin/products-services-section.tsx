@@ -28,6 +28,12 @@ import {
 import { useAdminTableEditRequest } from "./admin-table-events";
 import { getProductContextMenuActions } from "./products-services-shared";
 import { RichTextEditor } from "@/components/rich-text-editor";
+import { getErrorMessage, localizeErrorMessage } from "@/lib/api-error";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@/lib/toast";
+import { getTransactionToastCopy } from "@/lib/transaction-toast";
 
 export type ProductManagementRow = ProductSearchSuggestion & {
   id: number;
@@ -328,6 +334,7 @@ export function ProductToolbarActions({
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isInlineEditMode, setIsInlineEditMode] = useState(false);
   const searchParams = useSearchParams();
+  const toastCopy = getTransactionToastCopy(locale);
 
   useEffect(() => {
     function handleInlineEditState(event: Event) {
@@ -356,6 +363,7 @@ export function ProductToolbarActions({
     const response = await fetch(path, { cache: "no-store" });
 
     if (!response.ok) {
+      showErrorToast(toastCopy.error, labels.error);
       return;
     }
 
@@ -447,7 +455,11 @@ export function ProductToolbarActions({
         />
       ) : null}
       {isUploadOpen ? (
-        <ProductUploadModal labels={labels} onClose={() => setIsUploadOpen(false)} />
+        <ProductUploadModal
+          labels={labels}
+          locale={locale}
+          onClose={() => setIsUploadOpen(false)}
+        />
       ) : null}
     </div>
   );
@@ -534,6 +546,7 @@ export function ProductTableEditController({
   subCategoryOptions: ProductEditorOption[];
 }) {
   const router = useRouter();
+  const toastCopy = getTransactionToastCopy(locale);
   const [editingProduct, setEditingProduct] = useState<ProductManagementRow | null>(
     null,
   );
@@ -642,12 +655,18 @@ export function ProductTableEditController({
               ),
             );
 
-            if (responses.some((response) => !response.ok)) {
-              throw new Error("bulk-edit-failed");
+            const failedResponse = responses.find((response) => !response.ok);
+
+            if (failedResponse) {
+              const message = await getErrorMessage(failedResponse, labels.error);
+
+              showErrorToast(toastCopy.error, message);
+              throw new Error(message);
             }
 
             setBulkEditingAction(null);
             setBulkEditingProducts([]);
+            showSuccessToast(toastCopy.updated);
             router.refresh();
           }}
           saveLabel={labels.save}
@@ -681,6 +700,7 @@ export function ProductInlineEditTable({
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toastCopy = getTransactionToastCopy(locale);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSavingAll, setIsSavingAll] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -836,16 +856,27 @@ export function ProductInlineEditTable({
         ),
       );
 
-      if (responses.some((response) => !response.ok)) {
-        throw new Error("inline-edit-save-failed");
+      const failedResponse = responses.find((response) => !response.ok);
+
+      if (failedResponse) {
+        const message = await getErrorMessage(failedResponse, labels.error);
+
+        showErrorToast(toastCopy.error, message);
+        throw new Error(message);
       }
 
       setIsEditMode(false);
       setDrafts({});
       setHasInlineValidationAttempted(false);
+      showSuccessToast(toastCopy.updated);
       router.refresh();
-    } catch {
-      setSaveError(labels.error);
+    } catch (error) {
+      const message = localizeErrorMessage(
+        error instanceof Error && error.message ? error.message : labels.error,
+        labels.error,
+      );
+
+      setSaveError(message);
     } finally {
       setIsSavingAll(false);
     }
@@ -884,15 +915,24 @@ export function ProductInlineEditTable({
           };
         });
       } catch (error) {
-        setSaveError(error instanceof Error ? error.message : labels.uploadError);
+        const message = localizeErrorMessage(
+          error instanceof Error ? error.message : labels.uploadError,
+          labels.uploadError,
+        );
+
+        setSaveError(message);
+        showErrorToast(toastCopy.error, message);
+        return;
       } finally {
         setUploadingMediaBySku((current) => ({
           ...current,
           [row.sku]: false,
         }));
       }
+
+      showSuccessToast(toastCopy.uploaded);
     },
-    [labels.uploadError, updateDraft],
+    [labels.uploadError, toastCopy.error, toastCopy.uploaded, updateDraft],
   );
 
   const handleInlineDatasheetSelected = useCallback(
@@ -905,6 +945,7 @@ export function ProductInlineEditTable({
 
       if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
         setSaveError(labels.uploadError);
+        showErrorToast(toastCopy.error, labels.uploadError);
         return;
       }
 
@@ -926,15 +967,24 @@ export function ProductInlineEditTable({
           datasheetUrl: url,
         }));
       } catch (error) {
-        setSaveError(error instanceof Error ? error.message : labels.uploadError);
+        const message = localizeErrorMessage(
+          error instanceof Error ? error.message : labels.uploadError,
+          labels.uploadError,
+        );
+
+        setSaveError(message);
+        showErrorToast(toastCopy.error, message);
+        return;
       } finally {
         setUploadingDatasheetBySku((current) => ({
           ...current,
           [row.sku]: false,
         }));
       }
+
+      showSuccessToast(toastCopy.uploaded);
     },
-    [labels.uploadError, updateDraft],
+    [labels.uploadError, toastCopy.error, toastCopy.uploaded, updateDraft],
   );
 
   const columns = useMemo<AdminDataTableColumn<ProductManagementRow>[]>(() => {
@@ -2046,7 +2096,7 @@ async function uploadAdminProductFile(
   });
 
   if (!response.ok) {
-    throw new Error(fallbackErrorMessage);
+    throw new Error(await getErrorMessage(response, fallbackErrorMessage));
   }
 
   const result = (await response.json()) as UploadedFileResponse;
@@ -2059,14 +2109,28 @@ async function uploadAdminProductFile(
   return nextUrl;
 }
 
+function getProductImportSummary(
+  locale: "th" | "en",
+  result: { created: number; failed: number; updated: number },
+) {
+  if (locale === "th") {
+    return `เพิ่ม ${result.created} รายการ, อัปเดต ${result.updated} รายการ, ไม่สำเร็จ ${result.failed} รายการ`;
+  }
+
+  return `Created ${result.created}, updated ${result.updated}, failed ${result.failed}`;
+}
+
 function ProductUploadModal({
   labels,
+  locale,
   onClose,
 }: {
   labels: ProductLabels;
+  locale: "th" | "en";
   onClose: () => void;
 }) {
   const router = useRouter();
+  const toastCopy = getTransactionToastCopy(locale);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
@@ -2080,6 +2144,7 @@ function ProductUploadModal({
 
     if (!response.ok) {
       setError(labels.error);
+      showErrorToast(toastCopy.error, labels.error);
       return;
     }
 
@@ -2114,7 +2179,10 @@ function ProductUploadModal({
     setIsUploading(false);
 
     if (!response.ok) {
-      setError(labels.error);
+      const message = await getErrorMessage(response, labels.error);
+
+      setError(message);
+      showErrorToast(toastCopy.error, message);
       return;
     }
 
@@ -2124,9 +2192,10 @@ function ProductUploadModal({
       failed: number;
     };
 
-    setSummary(
-      `Created ${result.created}, updated ${result.updated}, failed ${result.failed}`,
-    );
+    const nextSummary = getProductImportSummary(locale, result);
+
+    setSummary(nextSummary);
+    showSuccessToast(toastCopy.imported, nextSummary);
     router.refresh();
   }
 
@@ -2866,6 +2935,7 @@ function ProductFormModal({
   subCategoryOptions: ProductEditorOption[];
 }) {
   const router = useRouter();
+  const toastCopy = getTransactionToastCopy(locale);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingDatasheet, setIsUploadingDatasheet] = useState(false);
@@ -2904,6 +2974,7 @@ function ProductFormModal({
 
     if (file.type !== "application/pdf") {
       setError(labels.uploadError);
+      showErrorToast(toastCopy.error, labels.uploadError);
       return;
     }
 
@@ -2913,10 +2984,15 @@ function ProductFormModal({
     try {
       const url = await uploadFile({ file, folder: "products/datasheets" });
       setForm((current) => ({ ...current, datasheetUrl: url }));
+      showSuccessToast(toastCopy.uploaded);
     } catch (uploadError) {
-      setError(
+      const message = localizeErrorMessage(
         uploadError instanceof Error ? uploadError.message : labels.uploadError,
+        labels.uploadError,
       );
+
+      setError(message);
+      showErrorToast(toastCopy.error, message);
     } finally {
       setIsUploadingDatasheet(false);
       if (datasheetInputRef.current) {
@@ -2946,10 +3022,15 @@ function ProductFormModal({
         ...current,
         imgUrl: [...current.imgUrl, ...uploadedUrls],
       }));
+      showSuccessToast(toastCopy.uploaded);
     } catch (uploadError) {
-      setError(
+      const message = localizeErrorMessage(
         uploadError instanceof Error ? uploadError.message : labels.uploadError,
+        labels.uploadError,
       );
+
+      setError(message);
+      showErrorToast(toastCopy.error, message);
     } finally {
       setIsUploadingMedia(false);
       if (mediaInputRef.current) {
@@ -2975,10 +3056,14 @@ function ProductFormModal({
     setIsSaving(false);
 
     if (!response.ok) {
-      setError(labels.error);
+      const message = await getErrorMessage(response, labels.error);
+
+      setError(message);
+      showErrorToast(toastCopy.error, message);
       return;
     }
 
+    showSuccessToast(product ? toastCopy.updated : toastCopy.created);
     router.refresh();
     onClose();
   }
@@ -3220,6 +3305,7 @@ function DeleteProductsModal({
   products: ProductManagementRow[];
 }) {
   const router = useRouter();
+  const toastCopy = getTransactionToastCopy(locale);
   const [error, setError] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const isBulkDelete = products.length > 1;
@@ -3238,23 +3324,31 @@ function DeleteProductsModal({
     setIsDeleting(true);
     setError("");
 
-    const responses = await Promise.all(
-      products.map((product) =>
-        fetch(`/api/admin/products/${encodeURIComponent(product.sku)}`, {
-          method: "DELETE",
-        }),
-      ),
-    );
+    try {
+      const responses = await Promise.all(
+        products.map((product) =>
+          fetch(`/api/admin/products/${encodeURIComponent(product.sku)}`, {
+            method: "DELETE",
+          }),
+        ),
+      );
 
-    setIsDeleting(false);
+      const failedResponse = responses.find((response) => !response.ok);
 
-    if (responses.some((response) => !response.ok)) {
-      setError(labels.error);
-      return;
+      if (failedResponse) {
+        const message = await getErrorMessage(failedResponse, labels.error);
+
+        setError(message);
+        showErrorToast(toastCopy.error, message);
+        return;
+      }
+
+      showSuccessToast(toastCopy.deleted);
+      router.refresh();
+      onClose();
+    } finally {
+      setIsDeleting(false);
     }
-
-    router.refresh();
-    onClose();
   }
 
   return (
@@ -3314,6 +3408,7 @@ function ProductPromotionModal({
   products: ProductManagementRow[];
 }) {
   const router = useRouter();
+  const toastCopy = getTransactionToastCopy(locale);
   const [discountedPrice, setDiscountedPrice] = useState(
     products[0]?.discountedPrice === null || products[0]?.discountedPrice === undefined
       ? ""
@@ -3342,6 +3437,7 @@ function ProductPromotionModal({
 
     if (!Number.isFinite(parsedValue)) {
       setError(labels.error);
+      showErrorToast(toastCopy.error, labels.error);
       return;
     }
 
@@ -3364,14 +3460,27 @@ function ProductPromotionModal({
         ),
       );
 
-      if (responses.some((response) => !response.ok)) {
-        throw new Error("promotion-update-failed");
+      const failedResponse = responses.find((response) => !response.ok);
+
+      if (failedResponse) {
+        const message = await getErrorMessage(failedResponse, labels.error);
+
+        showErrorToast(toastCopy.error, message);
+        throw new Error(message);
       }
 
+      showSuccessToast(toastCopy.updated);
       router.refresh();
       onClose();
-    } catch {
-      setError(labels.error);
+    } catch (submitError) {
+      setError(
+        localizeErrorMessage(
+          submitError instanceof Error && submitError.message
+            ? submitError.message
+            : labels.error,
+          labels.error,
+        ),
+      );
     } finally {
       setIsSaving(false);
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useMemo, useState } from "react";
+import { localizeErrorMessage } from "@/lib/api-error";
 
 export type AdminBatchFieldModalConfig = {
   fieldLabel: string;
@@ -62,8 +63,15 @@ export function AdminBatchFieldModal({
 
     try {
       await onSubmit(selectedValue);
-    } catch {
-      setError(errorMessage);
+    } catch (submitError) {
+      setError(
+        localizeErrorMessage(
+          submitError instanceof Error && submitError.message
+            ? submitError.message
+            : errorMessage,
+          errorMessage,
+        ),
+      );
       setIsSaving(false);
       return;
     }

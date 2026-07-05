@@ -6,8 +6,11 @@ import { type FormEvent, type RefObject, useMemo, useRef, useState } from "react
 import { ProductSearch, type ProductSearchSuggestion } from "@/components/product-search";
 import { ContentSearch } from "@/components/content-search";
 import { RichTextEditor } from "@/components/rich-text-editor";
+import { getErrorMessage, localizeErrorMessage } from "@/lib/api-error";
 import { formatAdminDateTime } from "@/lib/admin-api";
 import type { Locale } from "@/lib/i18n";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { getTransactionToastCopy } from "@/lib/transaction-toast";
 import {
   AdminBatchFieldModal,
   type AdminBatchFieldModalConfig,
@@ -71,6 +74,7 @@ export function ContentManagementSectionClient({
   section: ContentSection;
 }) {
   const labels = getLabels(locale, section);
+  const toastCopy = getTransactionToastCopy(locale);
   const router = useRouter();
   const [editingRow, setEditingRow] = useState<ContentRow | null>(null);
   const [bulkEditingRows, setBulkEditingRows] = useState<ContentRow[]>([]);
@@ -271,10 +275,18 @@ export function ContentManagementSectionClient({
           deletingLabel={labels.deleting}
           onClose={() => setDeletingRow(null)}
           onConfirm={async () => {
-            await fetch(`/api/admin/${resource}/${encodeURIComponent(deletingRow.id)}`, {
+            const response = await fetch(`/api/admin/${resource}/${encodeURIComponent(deletingRow.id)}`, {
               method: "DELETE",
             });
+
+            if (!response.ok) {
+              const message = await getErrorMessage(response, labels.error);
+              showErrorToast(toastCopy.error, message);
+              throw new Error(message);
+            }
+
             setDeletingRow(null);
+            showSuccessToast(toastCopy.deleted);
             router.refresh();
           }}
           title={labels.deleteTitle}
@@ -309,12 +321,17 @@ export function ContentManagementSectionClient({
               ),
             );
 
-            if (responses.some((response) => !response.ok)) {
-              throw new Error("bulk-edit-failed");
+            const failedResponse = responses.find((response) => !response.ok);
+
+            if (failedResponse) {
+              const message = await getErrorMessage(failedResponse, labels.error);
+              showErrorToast(toastCopy.error, message);
+              throw new Error(message);
             }
 
             setBulkEditingAction(null);
             setBulkEditingRows([]);
+            showSuccessToast(toastCopy.updated);
             router.refresh();
           }}
           saveLabel={labels.save}
@@ -343,6 +360,7 @@ function ContentModal({
   onSaved: () => void;
   resource: ContentResource;
 }) {
+  const toastCopy = getTransactionToastCopy(locale);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -396,7 +414,7 @@ function ContentModal({
         });
 
         if (!response.ok) {
-          throw new Error(labels.uploadError);
+          throw new Error(await getErrorMessage(response, labels.uploadError));
         }
 
         const result = (await response.json()) as UploadedFileResponse;
@@ -413,10 +431,14 @@ function ContentModal({
         ...current,
         imgUrl: [...current.imgUrl, ...uploadedUrls],
       }));
+      showSuccessToast(toastCopy.uploaded);
     } catch (uploadError) {
-      setError(
+      const message = localizeErrorMessage(
         uploadError instanceof Error ? uploadError.message : labels.uploadError,
+        labels.uploadError,
       );
+      setError(message);
+      showErrorToast(toastCopy.error, message);
     } finally {
       setIsUploadingFiles(false);
 
@@ -459,10 +481,13 @@ function ContentModal({
     setIsSaving(false);
 
     if (!response.ok) {
-      setError(labels.error);
+      const message = await getErrorMessage(response, labels.error);
+      setError(message);
+      showErrorToast(toastCopy.error, message);
       return;
     }
 
+    showSuccessToast(initialRow ? toastCopy.updated : toastCopy.created);
     onSaved();
   }
 
@@ -728,7 +753,11 @@ function DeleteContentModal({
             disabled={isDeleting}
             onClick={async () => {
               setIsDeleting(true);
-              await onConfirm();
+              try {
+                await onConfirm();
+              } finally {
+                setIsDeleting(false);
+              }
             }}
             type="button"
           >

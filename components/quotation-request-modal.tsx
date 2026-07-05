@@ -1,6 +1,9 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
+import { getErrorMessage, localizeErrorMessage } from "@/lib/api-error";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { getTransactionToastCopy } from "@/lib/transaction-toast";
 
 type QuotationRequestModalProps = {
   defaultQuantity: number;
@@ -30,6 +33,7 @@ export function QuotationRequestModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const toastCopy = getTransactionToastCopy(locale);
   const labels =
     locale === "th"
       ? {
@@ -75,16 +79,30 @@ export function QuotationRequestModal({
       });
 
       if (!response.ok) {
-        throw new Error("Unable to submit quotation request.");
+        throw new Error(
+          await getErrorMessage(
+            response,
+            locale === "th"
+              ? "ไม่สามารถส่งคำขอใบเสนอราคาได้ในขณะนี้"
+              : "Unable to submit the quotation request right now.",
+          ),
+        );
       }
 
       setIsSubmitted(true);
-    } catch {
-      setError(
+      showSuccessToast(toastCopy.submitted);
+    } catch (submitError) {
+      const fallbackMessage =
         locale === "th"
           ? "ไม่สามารถส่งคำขอใบเสนอราคาได้ในขณะนี้"
-          : "Unable to submit the quotation request right now.",
+          : "Unable to submit the quotation request right now.";
+      const message = localizeErrorMessage(
+        submitError instanceof Error ? submitError.message : fallbackMessage,
+        fallbackMessage,
       );
+
+      setError(message);
+      showErrorToast(toastCopy.error, message);
     } finally {
       setIsSubmitting(false);
     }

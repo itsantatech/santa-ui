@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { RichTextEditor } from "@/components/rich-text-editor";
+import { getErrorMessage, localizeErrorMessage } from "@/lib/api-error";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { getTransactionToastCopy } from "@/lib/transaction-toast";
 import {
   AdminBatchFieldModal,
   type AdminBatchFieldModalConfig,
@@ -149,6 +152,7 @@ export function SettingsSectionClient({
   userMeta?: PaginationMeta;
   users: AdminUserRow[];
 }) {
+  const toastCopy = getTransactionToastCopy(locale);
   const labels = getLabels(locale);
   const router = useRouter();
   const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null);
@@ -479,6 +483,7 @@ export function SettingsSectionClient({
           {canManageUsers && isCreateUserOpen ? (
             <UserModal
               labels={labels}
+              locale={locale}
               onClose={() => setIsCreateUserOpen(false)}
               onSaved={() => {
                 setIsCreateUserOpen(false);
@@ -490,6 +495,7 @@ export function SettingsSectionClient({
             <UserModal
               initialUser={editingUser}
               labels={labels}
+              locale={locale}
               onClose={() => setEditingUser(null)}
               onSaved={() => {
                 setEditingUser(null);
@@ -503,10 +509,18 @@ export function SettingsSectionClient({
               labels={labels}
               onClose={() => setDeletingUser(null)}
               onConfirm={async () => {
-                await fetch(`/api/admin/admin-users/${encodeURIComponent(deletingUser.id)}`, {
+                const response = await fetch(`/api/admin/admin-users/${encodeURIComponent(deletingUser.id)}`, {
                   method: "DELETE",
                 });
+
+                if (!response.ok) {
+                  const message = await getErrorMessage(response, labels.common.error);
+                  showErrorToast(toastCopy.error, message);
+                  throw new Error(message);
+                }
+
                 setDeletingUser(null);
+                showSuccessToast(toastCopy.deleted);
                 router.refresh();
               }}
               title={labels.user.deleteTitle}
@@ -543,12 +557,17 @@ export function SettingsSectionClient({
                   ),
                 );
 
-                if (responses.some((response) => !response.ok)) {
-                  throw new Error("bulk-edit-failed");
+                const failedResponse = responses.find((response) => !response.ok);
+
+                if (failedResponse) {
+                  const message = await getErrorMessage(failedResponse, labels.common.error);
+                  showErrorToast(toastCopy.error, message);
+                  throw new Error(message);
                 }
 
                 setBulkEditingUserAction(null);
                 setBulkEditingUsers([]);
+                showSuccessToast(toastCopy.updated);
                 router.refresh();
               }}
               saveLabel={labels.common.save}
@@ -568,6 +587,7 @@ export function SettingsSectionClient({
               card={section}
               key={`${section.resource}-${section.id || section.name}`}
               labels={labels}
+              locale={locale}
             />
           ))}
         </div>
@@ -575,7 +595,7 @@ export function SettingsSectionClient({
 
       {activeTab === "about" ? (
         <div className="admin-settings-card-stack">
-          <AboutSettingsCard aboutSetting={aboutCard} labels={labels} />
+          <AboutSettingsCard aboutSetting={aboutCard} labels={labels} locale={locale} />
         </div>
       ) : null}
 
@@ -647,10 +667,18 @@ export function SettingsSectionClient({
               labels={labels}
               onClose={() => setDeletingFaq(null)}
               onConfirm={async () => {
-                await fetch(`/api/admin/faqs/${encodeURIComponent(deletingFaq.id)}`, {
+                const response = await fetch(`/api/admin/faqs/${encodeURIComponent(deletingFaq.id)}`, {
                   method: "DELETE",
                 });
+
+                if (!response.ok) {
+                  const message = await getErrorMessage(response, labels.common.error);
+                  showErrorToast(toastCopy.error, message);
+                  throw new Error(message);
+                }
+
                 setDeletingFaq(null);
+                showSuccessToast(toastCopy.deleted);
                 router.refresh();
               }}
               title={labels.faq.deleteTitle}
@@ -687,12 +715,17 @@ export function SettingsSectionClient({
                   ),
                 );
 
-                if (responses.some((response) => !response.ok)) {
-                  throw new Error("bulk-edit-failed");
+                const failedResponse = responses.find((response) => !response.ok);
+
+                if (failedResponse) {
+                  const message = await getErrorMessage(failedResponse, labels.common.error);
+                  showErrorToast(toastCopy.error, message);
+                  throw new Error(message);
                 }
 
                 setBulkEditingFaqAction(null);
                 setBulkEditingFaqs([]);
+                showSuccessToast(toastCopy.updated);
                 router.refresh();
               }}
               saveLabel={labels.common.save}
@@ -711,11 +744,14 @@ export function SettingsSectionClient({
 function HomeContentCard({
   card,
   labels,
+  locale,
 }: {
   card: ReturnType<typeof buildHomeSectionCards>[number];
   labels: ReturnType<typeof getLabels>;
+  locale: Locale;
 }) {
   const router = useRouter();
+  const toastCopy = getTransactionToastCopy(locale);
   const sectionKey = normalizeHomeSectionKey(card.name);
   const supportsSectionImage = sectionKey === "hero" || sectionKey === "about";
   const homeImageHelper =
@@ -762,7 +798,7 @@ function HomeContentCard({
       });
 
       if (!response.ok) {
-        throw new Error(labels.common.error);
+        throw new Error(await getErrorMessage(response, labels.common.error));
       }
 
       const result = (await response.json()) as UploadedFileResponse;
@@ -773,8 +809,14 @@ function HomeContentCard({
       }
 
       setForm((current) => ({ ...current, imageUrl: nextUrl }));
-    } catch {
-      setError(labels.common.error);
+      showSuccessToast(toastCopy.uploaded);
+    } catch (uploadError) {
+      const message = localizeErrorMessage(
+        uploadError instanceof Error ? uploadError.message : labels.common.error,
+        labels.common.error,
+      );
+      setError(message);
+      showErrorToast(toastCopy.error, message);
     } finally {
       setIsUploading(false);
       if (imageInputRef.current) {
@@ -842,10 +884,13 @@ function HomeContentCard({
     setIsSaving(false);
 
     if (!response.ok) {
-      setError(labels.common.error);
+      const message = await getErrorMessage(response, labels.common.error);
+      setError(message);
+      showErrorToast(toastCopy.error, message);
       return;
     }
 
+    showSuccessToast(toastCopy.updated);
     router.refresh();
   }
 
@@ -1020,11 +1065,14 @@ function HomeContentCard({
 function AboutSettingsCard({
   aboutSetting,
   labels,
+  locale,
 }: {
   aboutSetting: ReturnType<typeof buildAboutCard>;
   labels: ReturnType<typeof getLabels>;
+  locale: Locale;
 }) {
   const router = useRouter();
+  const toastCopy = getTransactionToastCopy(locale);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -1063,8 +1111,14 @@ function AboutSettingsCard({
         ...current,
         imageUrls: [...current.imageUrls, ...uploadedUrls],
       }));
-    } catch {
-      setError(labels.common.error);
+      showSuccessToast(toastCopy.uploaded);
+    } catch (uploadError) {
+      const message = localizeErrorMessage(
+        uploadError instanceof Error ? uploadError.message : labels.common.error,
+        labels.common.error,
+      );
+      setError(message);
+      showErrorToast(toastCopy.error, message);
     } finally {
       setIsUploading(false);
       if (imageInputRef.current) {
@@ -1102,10 +1156,13 @@ function AboutSettingsCard({
     setIsSaving(false);
 
     if (!response.ok) {
-      setError(labels.common.error);
+      const message = await getErrorMessage(response, labels.common.error);
+      setError(message);
+      showErrorToast(toastCopy.error, message);
       return;
     }
 
+    showSuccessToast(toastCopy.updated);
     router.refresh();
   }
 
@@ -1291,7 +1348,7 @@ async function uploadAdminMediaFile(
   });
 
   if (!response.ok) {
-    throw new Error(fallbackErrorMessage);
+    throw new Error(await getErrorMessage(response, fallbackErrorMessage));
   }
 
   const result = (await response.json()) as UploadedFileResponse;
@@ -1318,6 +1375,7 @@ function SocialMediaCard({
   socialContacts: SocialContactRow[];
 }) {
   const router = useRouter();
+  const toastCopy = getTransactionToastCopy(locale);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState(() =>
@@ -1356,12 +1414,15 @@ function SocialMediaCard({
 
       if (!response.ok) {
         setIsSaving(false);
-        setError(labels.common.error);
+        const message = await getErrorMessage(response, labels.common.error);
+        setError(message);
+        showErrorToast(toastCopy.error, message);
         return;
       }
     }
 
     setIsSaving(false);
+    showSuccessToast(toastCopy.updated);
     router.refresh();
   }
 
@@ -1401,14 +1462,17 @@ function SocialMediaCard({
 function UserModal({
   initialUser,
   labels,
+  locale,
   onClose,
   onSaved,
 }: {
   initialUser?: AdminUserRow;
   labels: ReturnType<typeof getLabels>;
+  locale: Locale;
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const toastCopy = getTransactionToastCopy(locale);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [roleOptions, setRoleOptions] = useState<UserRoleOption[]>([]);
@@ -1490,10 +1554,13 @@ function UserModal({
     setIsSaving(false);
 
     if (!response.ok) {
-      setError(labels.user.error);
+      const message = await getErrorMessage(response, labels.user.error);
+      setError(message);
+      showErrorToast(toastCopy.error, message);
       return;
     }
 
+    showSuccessToast(initialUser ? toastCopy.updated : toastCopy.created);
     onSaved();
   }
 
@@ -1624,7 +1691,11 @@ function DeleteUserModal({
             disabled={isDeleting}
             onClick={async () => {
               setIsDeleting(true);
-              await onConfirm();
+              try {
+                await onConfirm();
+              } finally {
+                setIsDeleting(false);
+              }
             }}
             type="button"
           >
@@ -1651,6 +1722,7 @@ function FaqModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const toastCopy = getTransactionToastCopy(locale);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState(() => ({
@@ -1694,10 +1766,13 @@ function FaqModal({
     setIsSaving(false);
 
     if (!response.ok) {
-      setError(labels.faq.error);
+      const message = await getErrorMessage(response, labels.faq.error);
+      setError(message);
+      showErrorToast(toastCopy.error, message);
       return;
     }
 
+    showSuccessToast(initialFaq ? toastCopy.updated : toastCopy.created);
     onSaved();
   }
 
@@ -1847,7 +1922,11 @@ function DeleteFaqModal({
             disabled={isDeleting}
             onClick={async () => {
               setIsDeleting(true);
-              await onConfirm();
+              try {
+                await onConfirm();
+              } finally {
+                setIsDeleting(false);
+              }
             }}
             type="button"
           >
