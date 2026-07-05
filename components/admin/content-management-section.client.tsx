@@ -586,6 +586,7 @@ function MediaUploader({
           </span>
           {isUploading ? labels.uploadingMedia : labels.addMedia}
         </button>
+        <p className="admin-upload-helper">{labels.uploadMediaHelper}</p>
         {files.length > 0 ? (
           <div className="admin-upload-media-grid">
             {files.map((url) => (
@@ -921,6 +922,8 @@ function getLabels(locale: Locale, section: ContentSection) {
         addMedia: "อัปโหลดรูปภาพหรือวิดีโอ",
         uploadingMedia: "กำลังอัปโหลด...",
         uploadError: "ไม่สามารถอัปโหลดไฟล์ได้",
+        uploadMediaHelper:
+          "ใช้แสดงในการ์ดข่าวหน้าแรก 647 x 446 px และหน้ารายการ/หน้ารายละเอียดบทความ แนะนำอัปโหลด 1280 x 880 px ขนาดไฟล์ไม่เกิน 10 MB",
         noMedia: "ยังไม่มีไฟล์",
         noRelatedSku: "ยังไม่มีสินค้าเกี่ยวข้อง",
         active: "แสดง",
@@ -997,6 +1000,8 @@ function getLabels(locale: Locale, section: ContentSection) {
         addMedia: "Upload images or videos",
         uploadingMedia: "Uploading...",
         uploadError: "Unable to upload file",
+        uploadMediaHelper:
+          "Shown in the 647 x 446 px home news card and in article/news list and detail pages. Recommended upload size 1280 x 880 px, maximum file size 10 MB",
         noMedia: "No media uploaded",
         noRelatedSku: "No related products selected",
         active: "Visible",

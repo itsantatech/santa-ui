@@ -718,6 +718,10 @@ function HomeContentCard({
   const router = useRouter();
   const sectionKey = normalizeHomeSectionKey(card.name);
   const supportsSectionImage = sectionKey === "hero" || sectionKey === "about";
+  const homeImageHelper =
+    sectionKey === "hero"
+      ? labels.home.uploadHeroImageHelper
+      : labels.home.uploadAboutImageHelper;
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -918,6 +922,7 @@ function HomeContentCard({
                 </button>
               ) : null}
             </div>
+            <p className="admin-upload-helper">{homeImageHelper}</p>
             {form.imageUrl ? (
               <div className="admin-upload-media-grid">
                 <div className="admin-upload-preview-card">
@@ -1183,6 +1188,7 @@ function AboutSettingsCard({
               </button>
             ) : null}
           </div>
+          <p className="admin-upload-helper">{labels.about.uploadImageHelper}</p>
           {form.imageUrls.length > 0 ? (
             <div className="admin-upload-media-grid">
               {form.imageUrls.map((imageUrl) => (
@@ -2394,6 +2400,10 @@ function getLabels(locale: Locale) {
           toggleDescription: "ตั้งค่าการแสดงบนหน้าแรกของ Section",
           toggleTitle: "การแสดงผล",
           uploadImage: "อัปโหลดรูปภาพหรือวิดีโอ",
+          uploadHeroImageHelper:
+            "ใช้แสดงเป็น Hero banner หน้าแรก แนะนำอัปโหลด 1920 x 720 px ขนาดไฟล์ไม่เกิน 10 MB",
+          uploadAboutImageHelper:
+            "ใช้แสดงใน Section About Santa หน้าแรก แนะนำอัปโหลด 960 x 720 px ขนาดไฟล์ไม่เกิน 10 MB",
           uploadingImage: "กำลังอัปโหลดไฟล์...",
           validation: {
             contentMax: "เนื้อหาต้องมีความยาวไม่เกิน 500 ตัวอักษร",
@@ -2422,6 +2432,8 @@ function getLabels(locale: Locale) {
           removeAllImages: "ลบทั้งหมด",
           title: "เกี่ยวกับเรา",
           uploadImage: "อัปโหลดรูปภาพหรือวิดีโอ",
+          uploadImageHelper:
+            "ใช้แสดงในแกลเลอรีหน้า About Us แนะนำอัปโหลด 1280 x 720 px ขนาดไฟล์ไม่เกิน 10 MB",
           uploadingImage: "กำลังอัปโหลดไฟล์...",
           validation: {
             imageType: "กรุณาเลือกไฟล์รูปภาพหรือวิดีโอเท่านั้น",
@@ -2550,6 +2562,10 @@ function getLabels(locale: Locale) {
           toggleDescription: "Control section visibility on the home page",
           toggleTitle: "Visibility",
           uploadImage: "Upload image or video",
+          uploadHeroImageHelper:
+            "Shown as the home hero banner. Recommended upload size 1920 x 720 px, maximum file size 10 MB",
+          uploadAboutImageHelper:
+            "Shown in the About Santa section on the home page. Recommended upload size 960 x 720 px, maximum file size 10 MB",
           uploadingImage: "Uploading file...",
           validation: {
             contentMax: "Content must be 500 characters or fewer",
@@ -2578,6 +2594,8 @@ function getLabels(locale: Locale) {
           removeAllImages: "Remove all",
           title: "About Us",
           uploadImage: "Upload image or video",
+          uploadImageHelper:
+            "Shown in the About Us page gallery. Recommended upload size 1280 x 720 px, maximum file size 10 MB",
           uploadingImage: "Uploading file...",
           validation: {
             imageType: "Please select an image or video file only",

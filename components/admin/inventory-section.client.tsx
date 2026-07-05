@@ -621,6 +621,7 @@ function InventoryUploadModal({
                 {file ? file.name : labels.noFileChosen}
               </span>
             </div>
+            <p className="admin-upload-helper">{labels.uploadFileHelper}</p>
             {error ? <p className="admin-product-form-error">{error}</p> : null}
             {summary ? <p className="admin-product-file-note">{summary}</p> : null}
           </div>

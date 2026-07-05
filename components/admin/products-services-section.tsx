@@ -181,8 +181,11 @@ type ProductLabels = {
   inlineEditDirty: string;
   inlineEditImageHelper: string;
   uploadDatasheet: string;
+  uploadDatasheetHelper: string;
   uploadError: string;
+  uploadFileHelper: string;
   uploadImage: string;
+  uploadMediaHelper: string;
   uploadingDatasheet: string;
   uploadingMedia: string;
   upload: string;
@@ -2178,10 +2181,11 @@ function ProductUploadModal({
               </span>
               {labels.chooseFile}
             </button>
-            <span className={file ? "admin-inventory-file-name" : "admin-inventory-file-name admin-inventory-file-name-muted"}>
-              {file ? file.name : labels.noFileChosen}
-            </span>
-          </div>
+              <span className={file ? "admin-inventory-file-name" : "admin-inventory-file-name admin-inventory-file-name-muted"}>
+                {file ? file.name : labels.noFileChosen}
+              </span>
+            </div>
+          <p className="admin-upload-helper">{labels.uploadFileHelper}</p>
           {error ? <p className="admin-product-form-error">{error}</p> : null}
           {summary ? <p className="admin-product-file-note">{summary}</p> : null}
           <div className="admin-product-modal-actions">
@@ -2425,6 +2429,7 @@ function InlineTableMediaEditor({
         </span>
         {isUploading ? labels.uploadingMedia : labels.uploadImage}
       </button>
+      <p className="admin-upload-helper">{labels.uploadMediaHelper}</p>
       {files.length > 0 ? (
         <div className="admin-inline-table-media-grid">
           {files.map((url) => (
@@ -2513,6 +2518,7 @@ function InlineTableDatasheetEditor({
         </span>
         {isUploading ? labels.uploadingDatasheet : labels.uploadDatasheet}
       </button>
+      <p className="admin-upload-helper">{labels.uploadDatasheetHelper}</p>
       {url ? (
         <div className="admin-inline-table-media-card">
           <div className="admin-inline-table-media-frame">
@@ -3545,6 +3551,7 @@ function DatasheetUploader({
           </span>
           {isUploading ? labels.uploadingDatasheet : labels.uploadDatasheet}
         </button>
+        <p className="admin-upload-helper">{labels.uploadDatasheetHelper}</p>
         {url ? (
           <div className="admin-upload-media-grid">
             <div className="admin-upload-preview-card">
@@ -3611,6 +3618,7 @@ function MediaUploader({
           </span>
           {isUploading ? labels.uploadingMedia : labels.uploadImage}
         </button>
+        <p className="admin-upload-helper">{labels.uploadMediaHelper}</p>
         {files.length > 0 ? (
           <div className="admin-upload-media-grid">
             {files.map((url) => (

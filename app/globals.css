@@ -1800,6 +1800,13 @@ strong.admin-inline-table-ellipsis {
   flex-wrap: wrap;
 }
 
+.admin-upload-helper {
+  margin: 0;
+  color: #0f172a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .admin-upload-preview-link {
   display: inline-flex;
   align-items: center;
