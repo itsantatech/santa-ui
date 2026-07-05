@@ -27,6 +27,10 @@ function ChatBubbleIcon() {
   );
 }
 
+function shouldOpenInNewTab(href: string) {
+  return !href.startsWith("mailto:") && !href.startsWith("tel:");
+}
+
 export function FloatingSocialChat({
   locale,
   socialContacts,
@@ -65,8 +69,8 @@ export function FloatingSocialChat({
             className="floating-social-chat-link"
             href={social.href}
             key={social.code}
-            rel="noreferrer"
-            target="_blank"
+            rel={shouldOpenInNewTab(social.href) ? "noreferrer" : undefined}
+            target={shouldOpenInNewTab(social.href) ? "_blank" : undefined}
           >
             <Image
               alt={social.label}

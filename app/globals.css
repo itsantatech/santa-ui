@@ -6037,6 +6037,10 @@ button.admin-table-page-link:disabled {
     box-shadow 0.18s ease;
 }
 
+.floating-social-chat-link img {
+  filter: brightness(0) saturate(100%);
+}
+
 .floating-social-chat-link:hover,
 .floating-social-chat-link:focus-visible {
   transform: translateY(-2px);
@@ -6170,6 +6174,7 @@ button.admin-table-page-link:disabled {
   width: 40px;
   height: 40px;
   object-fit: contain;
+  filter: brightness(0) saturate(100%);
 }
 
 .site-footer-copyright {

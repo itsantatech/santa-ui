@@ -2153,11 +2153,25 @@ function findSocialContact(
 
 const socialFields = [
   {
+    code: "SM-PHONE",
+    key: "phone",
+    labelEn: "PHONE NUMBER",
+    labelTh: "เบอร์โทรศัพท์",
+    name: "PHONE",
+  },
+  {
     code: "SM-LINE",
     key: "line",
     labelEn: "LINE OA URL",
     labelTh: "LINE OA URL",
     name: "LINE",
+  },
+  {
+    code: "SM-EMAIL",
+    key: "email",
+    labelEn: "EMAIL ADDRESS",
+    labelTh: "อีเมล",
+    name: "EMAIL",
   },
   {
     code: "SM-FACEBOOK",
