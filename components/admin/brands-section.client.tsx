@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 import { BrandSearch } from "@/components/brand-search";
+import { getErrorMessage } from "@/lib/api-error";
 import type { BrandListResponse } from "./brands-section";
 import {
   AdminBatchFieldModal,
@@ -17,6 +18,8 @@ import {
 } from "./admin-data-table";
 import { useAdminTableEditRequest } from "./admin-table-events";
 import type { Locale } from "@/lib/i18n";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { getTransactionToastCopy } from "@/lib/transaction-toast";
 
 type BrandRow = NonNullable<BrandListResponse>["items"][number];
 
@@ -55,6 +58,7 @@ export function BrandsSectionClient({
   page: number;
 }) {
   const labels = getLabels(locale);
+  const toastCopy = getTransactionToastCopy(locale);
   const router = useRouter();
   const [selectedBrand, setSelectedBrand] = useState<BrandRow | null>(null);
   const [editingBrand, setEditingBrand] = useState<BrandRow | null>(null);
@@ -224,6 +228,7 @@ export function BrandsSectionClient({
       {isAddOpen ? (
         <BrandModal
           labels={labels}
+          locale={locale}
           onClose={() => setIsAddOpen(false)}
           onSaved={() => {
             setIsAddOpen(false);
@@ -235,6 +240,7 @@ export function BrandsSectionClient({
         <BrandModal
           initialRow={editingBrand}
           labels={labels}
+          locale={locale}
           onClose={() => setEditingBrand(null)}
           onSaved={() => {
             setEditingBrand(null);
@@ -247,11 +253,19 @@ export function BrandsSectionClient({
           body={labels.deleteBody(deletingBrand.nameTh)}
           onClose={() => setDeletingBrand(null)}
           onConfirm={async () => {
-            await fetch(`/api/admin/brands/${encodeURIComponent(deletingBrand.code)}`, {
+            const response = await fetch(`/api/admin/brands/${encodeURIComponent(deletingBrand.code)}`, {
               method: "DELETE",
             });
+
+            if (!response.ok) {
+              const message = await getErrorMessage(response, labels.error);
+              showErrorToast(toastCopy.error, message);
+              throw new Error(message);
+            }
+
             setDeletingBrand(null);
             setSelectedBrand(null);
+            showSuccessToast(toastCopy.deleted);
             router.refresh();
           }}
           title={labels.deleteTitle}
@@ -286,12 +300,17 @@ export function BrandsSectionClient({
               ),
             );
 
-            if (responses.some((response) => !response.ok)) {
-              throw new Error("bulk-edit-failed");
+            const failedResponse = responses.find((response) => !response.ok);
+
+            if (failedResponse) {
+              const message = await getErrorMessage(failedResponse, labels.error);
+              showErrorToast(toastCopy.error, message);
+              throw new Error(message);
             }
 
             setBulkEditingAction(null);
             setBulkEditingBrands([]);
+            showSuccessToast(toastCopy.updated);
             router.refresh();
           }}
           saveLabel={labels.save}
@@ -397,14 +416,17 @@ function getBrandBatchFieldConfig(
 function BrandModal({
   initialRow,
   labels,
+  locale,
   onClose,
   onSaved,
 }: {
   initialRow?: BrandRow;
   labels: ReturnType<typeof getLabels>;
+  locale: Locale;
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const toastCopy = getTransactionToastCopy(locale);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<BrandFormState>(() =>
@@ -466,10 +488,13 @@ function BrandModal({
     setIsSaving(false);
 
     if (!response.ok) {
-      setError(labels.error);
+      const message = await getErrorMessage(response, labels.error);
+      setError(message);
+      showErrorToast(toastCopy.error, message);
       return;
     }
 
+    showSuccessToast(initialRow ? toastCopy.updated : toastCopy.created);
     onSaved();
   }
 
@@ -553,7 +578,11 @@ function DeleteBrandModal({
             disabled={isDeleting}
             onClick={async () => {
               setIsDeleting(true);
-              await onConfirm();
+              try {
+                await onConfirm();
+              } finally {
+                setIsDeleting(false);
+              }
             }}
             type="button"
           >
@@ -580,7 +609,10 @@ function Field({
 }) {
   return (
     <label className="admin-product-field">
-      <span>{label}</span>
+      <span>
+        {label}
+        {required ? <span className="admin-field-required" aria-hidden="true">*</span> : null}
+      </span>
       <input onChange={(event) => onChange(event.target.value)} required={required} type={type} value={value} />
     </label>
   );

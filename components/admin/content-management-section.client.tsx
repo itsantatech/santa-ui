@@ -6,8 +6,11 @@ import { type FormEvent, type RefObject, useMemo, useRef, useState } from "react
 import { ProductSearch, type ProductSearchSuggestion } from "@/components/product-search";
 import { ContentSearch } from "@/components/content-search";
 import { RichTextEditor } from "@/components/rich-text-editor";
+import { getErrorMessage, localizeErrorMessage } from "@/lib/api-error";
 import { formatAdminDateTime } from "@/lib/admin-api";
 import type { Locale } from "@/lib/i18n";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { getTransactionToastCopy } from "@/lib/transaction-toast";
 import {
   AdminBatchFieldModal,
   type AdminBatchFieldModalConfig,
@@ -71,6 +74,7 @@ export function ContentManagementSectionClient({
   section: ContentSection;
 }) {
   const labels = getLabels(locale, section);
+  const toastCopy = getTransactionToastCopy(locale);
   const router = useRouter();
   const [editingRow, setEditingRow] = useState<ContentRow | null>(null);
   const [bulkEditingRows, setBulkEditingRows] = useState<ContentRow[]>([]);
@@ -271,10 +275,18 @@ export function ContentManagementSectionClient({
           deletingLabel={labels.deleting}
           onClose={() => setDeletingRow(null)}
           onConfirm={async () => {
-            await fetch(`/api/admin/${resource}/${encodeURIComponent(deletingRow.id)}`, {
+            const response = await fetch(`/api/admin/${resource}/${encodeURIComponent(deletingRow.id)}`, {
               method: "DELETE",
             });
+
+            if (!response.ok) {
+              const message = await getErrorMessage(response, labels.error);
+              showErrorToast(toastCopy.error, message);
+              throw new Error(message);
+            }
+
             setDeletingRow(null);
+            showSuccessToast(toastCopy.deleted);
             router.refresh();
           }}
           title={labels.deleteTitle}
@@ -309,12 +321,17 @@ export function ContentManagementSectionClient({
               ),
             );
 
-            if (responses.some((response) => !response.ok)) {
-              throw new Error("bulk-edit-failed");
+            const failedResponse = responses.find((response) => !response.ok);
+
+            if (failedResponse) {
+              const message = await getErrorMessage(failedResponse, labels.error);
+              showErrorToast(toastCopy.error, message);
+              throw new Error(message);
             }
 
             setBulkEditingAction(null);
             setBulkEditingRows([]);
+            showSuccessToast(toastCopy.updated);
             router.refresh();
           }}
           saveLabel={labels.save}
@@ -343,6 +360,7 @@ function ContentModal({
   onSaved: () => void;
   resource: ContentResource;
 }) {
+  const toastCopy = getTransactionToastCopy(locale);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -396,7 +414,7 @@ function ContentModal({
         });
 
         if (!response.ok) {
-          throw new Error(labels.uploadError);
+          throw new Error(await getErrorMessage(response, labels.uploadError));
         }
 
         const result = (await response.json()) as UploadedFileResponse;
@@ -413,10 +431,14 @@ function ContentModal({
         ...current,
         imgUrl: [...current.imgUrl, ...uploadedUrls],
       }));
+      showSuccessToast(toastCopy.uploaded);
     } catch (uploadError) {
-      setError(
+      const message = localizeErrorMessage(
         uploadError instanceof Error ? uploadError.message : labels.uploadError,
+        labels.uploadError,
       );
+      setError(message);
+      showErrorToast(toastCopy.error, message);
     } finally {
       setIsUploadingFiles(false);
 
@@ -459,10 +481,13 @@ function ContentModal({
     setIsSaving(false);
 
     if (!response.ok) {
-      setError(labels.error);
+      const message = await getErrorMessage(response, labels.error);
+      setError(message);
+      showErrorToast(toastCopy.error, message);
       return;
     }
 
+    showSuccessToast(initialRow ? toastCopy.updated : toastCopy.created);
     onSaved();
   }
 
@@ -518,12 +543,14 @@ function ContentModal({
             />
             <RichTextEditor
               label={labels.fields.contentTh}
+              required
               onChange={(value) => setForm((current) => ({ ...current, contentTh: value }))}
               placeholder={labels.richTextPlaceholder}
               value={form.contentTh}
             />
             <RichTextEditor
               label={labels.fields.contentEn}
+              required
               onChange={(value) => setForm((current) => ({ ...current, contentEn: value }))}
               placeholder={labels.richTextPlaceholder}
               value={form.contentEn}
@@ -586,6 +613,7 @@ function MediaUploader({
           </span>
           {isUploading ? labels.uploadingMedia : labels.addMedia}
         </button>
+        <p className="admin-upload-helper">{labels.uploadMediaHelper}</p>
         {files.length > 0 ? (
           <div className="admin-upload-media-grid">
             {files.map((url) => (
@@ -727,7 +755,11 @@ function DeleteContentModal({
             disabled={isDeleting}
             onClick={async () => {
               setIsDeleting(true);
-              await onConfirm();
+              try {
+                await onConfirm();
+              } finally {
+                setIsDeleting(false);
+              }
             }}
             type="button"
           >
@@ -754,7 +786,10 @@ function Field({
 }) {
   return (
     <label className="admin-product-field">
-      <span>{label}</span>
+      <span>
+        {label}
+        {required ? <span className="admin-field-required" aria-hidden="true">*</span> : null}
+      </span>
       <input onChange={(event) => onChange(event.target.value)} required={required} type={type} value={value} />
     </label>
   );
@@ -851,13 +886,19 @@ function getContentBatchFieldConfig(
 
   if (
     action === "contentEn" ||
-    action === "contentTh" ||
-    action === "relatedSku"
+    action === "contentTh"
   ) {
     return {
       fieldLabel: labels.fields[action],
-      initialValue:
-        action === "relatedSku" ? row.relatedSku.join(", ") : row[action],
+      initialValue: row[action],
+      type: "richtext",
+    };
+  }
+
+  if (action === "relatedSku") {
+    return {
+      fieldLabel: labels.fields[action],
+      initialValue: row.relatedSku.join(", "),
       type: "textarea",
     };
   }
@@ -921,6 +962,8 @@ function getLabels(locale: Locale, section: ContentSection) {
         addMedia: "อัปโหลดรูปภาพหรือวิดีโอ",
         uploadingMedia: "กำลังอัปโหลด...",
         uploadError: "ไม่สามารถอัปโหลดไฟล์ได้",
+        uploadMediaHelper:
+          "ใช้แสดงในการ์ดข่าวหน้าแรก 647 x 446 px และหน้ารายการ/หน้ารายละเอียดบทความ แนะนำอัปโหลด 1280 x 880 px ขนาดไฟล์ไม่เกิน 10 MB",
         noMedia: "ยังไม่มีไฟล์",
         noRelatedSku: "ยังไม่มีสินค้าเกี่ยวข้อง",
         active: "แสดง",
@@ -997,6 +1040,8 @@ function getLabels(locale: Locale, section: ContentSection) {
         addMedia: "Upload images or videos",
         uploadingMedia: "Uploading...",
         uploadError: "Unable to upload file",
+        uploadMediaHelper:
+          "Shown in the 647 x 446 px home news card and in article/news list and detail pages. Recommended upload size 1280 x 880 px, maximum file size 10 MB",
         noMedia: "No media uploaded",
         noRelatedSku: "No related products selected",
         active: "Visible",

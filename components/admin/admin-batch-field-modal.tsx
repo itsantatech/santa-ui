@@ -1,13 +1,15 @@
 "use client";
 
 import { type FormEvent, useMemo, useState } from "react";
+import { RichTextEditor } from "@/components/rich-text-editor";
+import { localizeErrorMessage } from "@/lib/api-error";
 
 export type AdminBatchFieldModalConfig = {
   fieldLabel: string;
   initialValue?: boolean | number | string;
   options?: { label: string; value: string }[];
   placeholder?: string;
-  type: "boolean" | "number" | "select" | "text" | "textarea";
+  type: "boolean" | "number" | "richtext" | "select" | "text" | "textarea";
 };
 
 export function AdminBatchFieldModal({
@@ -62,8 +64,15 @@ export function AdminBatchFieldModal({
 
     try {
       await onSubmit(selectedValue);
-    } catch {
-      setError(errorMessage);
+    } catch (submitError) {
+      setError(
+        localizeErrorMessage(
+          submitError instanceof Error && submitError.message
+            ? submitError.message
+            : errorMessage,
+          errorMessage,
+        ),
+      );
       setIsSaving(false);
       return;
     }
@@ -92,52 +101,61 @@ export function AdminBatchFieldModal({
             </div>
           </div>
           <div className="admin-product-form-section">
-            <label className="admin-product-field">
-              <span>{config.fieldLabel}</span>
-              {config.type === "textarea" ? (
-                <textarea
-                  onChange={(event) => setTextValue(event.target.value)}
-                  placeholder={config.placeholder}
-                  rows={5}
-                  value={textValue}
-                />
-              ) : null}
-              {config.type === "text" || config.type === "number" ? (
-                <input
-                  onChange={(event) => setTextValue(event.target.value)}
-                  placeholder={config.placeholder}
-                  type={config.type}
-                  value={textValue}
-                />
-              ) : null}
-              {config.type === "select" ? (
-                <select
-                  onChange={(event) => setTextValue(event.target.value)}
-                  value={textValue}
-                >
-                  {(config.options ?? []).map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-              {config.type === "boolean" ? (
-                <select
-                  onChange={(event) => setBooleanValue(event.target.value === "true")}
-                  value={booleanValue ? "true" : "false"}
-                >
-                  {(config.options ?? [
-                    { label: "true", value: "true" },
-                    { label: "false", value: "false" },
-                  ]).map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-            </label>
+            {config.type === "richtext" ? (
+              <RichTextEditor
+                label={config.fieldLabel}
+                onChange={setTextValue}
+                placeholder={config.placeholder}
+                value={textValue}
+              />
+            ) : (
+              <label className="admin-product-field">
+                <span>{config.fieldLabel}</span>
+                {config.type === "textarea" ? (
+                  <textarea
+                    onChange={(event) => setTextValue(event.target.value)}
+                    placeholder={config.placeholder}
+                    rows={5}
+                    value={textValue}
+                  />
+                ) : null}
+                {config.type === "text" || config.type === "number" ? (
+                  <input
+                    onChange={(event) => setTextValue(event.target.value)}
+                    placeholder={config.placeholder}
+                    type={config.type}
+                    value={textValue}
+                  />
+                ) : null}
+                {config.type === "select" ? (
+                  <select
+                    onChange={(event) => setTextValue(event.target.value)}
+                    value={textValue}
+                  >
+                    {(config.options ?? []).map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                {config.type === "boolean" ? (
+                  <select
+                    onChange={(event) => setBooleanValue(event.target.value === "true")}
+                    value={booleanValue ? "true" : "false"}
+                  >
+                    {(config.options ?? [
+                      { label: "true", value: "true" },
+                      { label: "false", value: "false" },
+                    ]).map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+              </label>
+            )}
           </div>
           {error ? <p className="admin-product-error">{error}</p> : null}
           <div className="admin-product-modal-actions">

@@ -356,8 +356,14 @@ function getProductAdminUiLabels(locale: Locale) {
       searchTooShort: "พิมพ์อย่างน้อย 3 ตัวอักษร",
       template: "เทมเพลต",
       uploadDatasheet: "อัปโหลด PDF",
+      uploadDatasheetHelper:
+        "ใช้แสดงเป็นลิงก์ดาวน์โหลดบนหน้ารายละเอียดสินค้า รองรับ PDF ขนาดไฟล์ไม่เกิน 10 MB",
       uploadError: "ไม่สามารถอัปโหลดไฟล์ได้",
+      uploadFileHelper:
+        "ใช้ไฟล์ที่ดาวน์โหลดจากปุ่มดาวน์โหลดเพื่อแก้ไขและอัปโหลดกลับ โดยใช้คอลัมน์เดิม รองรับ CSV และ XLSX ขนาดไฟล์ไม่เกิน 10 MB",
       uploadImage: "อัปโหลดรูปภาพและวิดีโอ",
+      uploadMediaHelper:
+        "ใช้แสดงในการ์ดสินค้า 311 x 280 px และแกลเลอรีหน้ารายละเอียด 640 x 520 px แนะนำอัปโหลด 1200 x 1200 px ขนาดไฟล์ไม่เกิน 10 MB",
       uploadingDatasheet: "กำลังอัปโหลด PDF...",
       uploadingMedia: "กำลังอัปโหลดไฟล์...",
       upload: "อัปโหลด",
@@ -429,8 +435,14 @@ function getProductAdminUiLabels(locale: Locale) {
       searchTooShort: "Enter at least 3 characters",
       template: "Template",
       uploadDatasheet: "Upload PDF",
+      uploadDatasheetHelper:
+        "Shown as a download link on the product detail page. PDF only, maximum file size 10 MB",
       uploadError: "Unable to upload file",
+      uploadFileHelper:
+        "Use the downloaded file structure when editing and uploading products back. CSV and XLSX only, maximum file size 10 MB",
       uploadImage: "Upload images and videos",
+      uploadMediaHelper:
+        "Shown in the 311 x 280 px product card and the 640 x 520 px product detail gallery. Recommended upload size 1200 x 1200 px, maximum file size 10 MB",
       uploadingDatasheet: "Uploading PDF...",
       uploadingMedia: "Uploading files...",
       upload: "Upload",

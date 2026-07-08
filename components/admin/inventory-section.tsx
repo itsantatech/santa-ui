@@ -344,6 +344,7 @@ export type InventoryLabels = {
   };
   template: string;
   upload: string;
+  uploadFileHelper: string;
 };
 
 function getInventoryLabels(locale: Locale): InventoryLabels {
@@ -398,6 +399,8 @@ function getInventoryLabels(locale: Locale): InventoryLabels {
         },
         template: "เทมเพลต",
         upload: "อัปโหลด",
+        uploadFileHelper:
+          "ใช้สำหรับนำเข้าข้อมูลสต๊อก รองรับ CSV, XLSX ขนาดไฟล์ไม่เกิน 10 MB",
       }
     : {
         add: "Add Stock",
@@ -449,6 +452,8 @@ function getInventoryLabels(locale: Locale): InventoryLabels {
         },
         template: "Template",
         upload: "Upload",
+        uploadFileHelper:
+          "Used for inventory import. CSV and XLSX only, maximum file size 10 MB",
       };
 }
 
