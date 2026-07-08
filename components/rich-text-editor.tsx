@@ -2,7 +2,12 @@
 
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+import { Table } from "@tiptap/extension-table";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
+import TableRow from "@tiptap/extension-table-row";
 import Underline from "@tiptap/extension-underline";
+import Youtube from "@tiptap/extension-youtube";
 import { EditorContent, type Editor, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { type MouseEvent, useEffect, useId, useMemo, useRef } from "react";
@@ -59,6 +64,16 @@ export function RichTextEditor({
       Link.configure({
         autolink: true,
         openOnClick: false,
+      }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      Youtube.configure({
+        controls: true,
+        nocookie: true,
       }),
       Placeholder.configure({
         placeholder: placeholderText,
@@ -142,6 +157,20 @@ function RichTextToolbar({
     editor.chain().focus().extendMarkRange("link").setLink({ href: nextUrl }).run();
   }
 
+  function promptForYoutube() {
+    if (!editor) {
+      return;
+    }
+
+    const nextUrl = window.prompt("Enter YouTube URL", "");
+
+    if (nextUrl === null || !nextUrl.trim()) {
+      return;
+    }
+
+    editor.chain().focus().setYoutubeVideo({ src: nextUrl.trim() }).run();
+  }
+
   return (
     <div className="admin-rich-text-toolbar-shell">
       <div className="admin-rich-text-toolbar" role="toolbar" aria-label={label}>
@@ -201,6 +230,20 @@ function RichTextToolbar({
 
         <div className="admin-rich-text-toolbar-group">
           <ToolbarButton
+            active={editor?.isActive("bulletList") ?? false}
+            disabled={!(editor?.can().chain().focus().toggleBulletList().run() ?? false)}
+            icon="format_list_bulleted"
+            label="Bullet"
+            onExecute={() => editor?.chain().focus().toggleBulletList().run()}
+          />
+          <ToolbarButton
+            active={editor?.isActive("orderedList") ?? false}
+            disabled={!(editor?.can().chain().focus().toggleOrderedList().run() ?? false)}
+            icon="format_list_numbered"
+            label="Number"
+            onExecute={() => editor?.chain().focus().toggleOrderedList().run()}
+          />
+          <ToolbarButton
             active={editor?.isActive("blockquote") ?? false}
             disabled={!(editor?.can().chain().focus().toggleBlockquote().run() ?? false)}
             icon="format_quote"
@@ -224,10 +267,58 @@ function RichTextToolbar({
 
         <div className="admin-rich-text-toolbar-group">
           <ToolbarButton
+            active={editor?.isActive("table") ?? false}
+            disabled={!(editor?.can().chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() ?? false)}
+            icon="table_chart"
+            label="Table"
+            onExecute={() =>
+              editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+            }
+          />
+          <ToolbarButton
+            disabled={!editor?.isActive("table")}
+            icon="view_column"
+            label="Col+"
+            onExecute={() => editor?.chain().focus().addColumnAfter().run()}
+          />
+          <ToolbarButton
+            disabled={!editor?.isActive("table")}
+            icon="table_rows"
+            label="Row+"
+            onExecute={() => editor?.chain().focus().addRowAfter().run()}
+          />
+          <ToolbarButton
+            disabled={!editor?.isActive("table")}
+            icon="table_view"
+            label="Header"
+            onExecute={() => editor?.chain().focus().toggleHeaderRow().run()}
+          />
+          <ToolbarButton
+            disabled={!editor?.isActive("table")}
+            icon="delete"
+            label="Drop Table"
+            onExecute={() => editor?.chain().focus().deleteTable().run()}
+          />
+        </div>
+
+        <div className="admin-rich-text-toolbar-group">
+          <ToolbarButton
+            active={editor?.isActive("youtube") ?? false}
+            icon="smart_display"
+            label="YouTube"
+            onExecute={promptForYoutube}
+          />
+          <ToolbarButton
             active={editor?.isActive("link") ?? false}
             icon="link"
             label="Link"
             onExecute={promptForLink}
+          />
+          <ToolbarButton
+            disabled={!editor}
+            icon="format_clear"
+            label="Clear"
+            onExecute={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()}
           />
           <ToolbarButton
             disabled={!(editor?.can().chain().focus().undo().run() ?? false)}
