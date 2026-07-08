@@ -543,12 +543,14 @@ function ContentModal({
             />
             <RichTextEditor
               label={labels.fields.contentTh}
+              required
               onChange={(value) => setForm((current) => ({ ...current, contentTh: value }))}
               placeholder={labels.richTextPlaceholder}
               value={form.contentTh}
             />
             <RichTextEditor
               label={labels.fields.contentEn}
+              required
               onChange={(value) => setForm((current) => ({ ...current, contentEn: value }))}
               placeholder={labels.richTextPlaceholder}
               value={form.contentEn}
@@ -784,7 +786,10 @@ function Field({
 }) {
   return (
     <label className="admin-product-field">
-      <span>{label}</span>
+      <span>
+        {label}
+        {required ? <span className="admin-field-required" aria-hidden="true">*</span> : null}
+      </span>
       <input onChange={(event) => onChange(event.target.value)} required={required} type={type} value={value} />
     </label>
   );
@@ -881,13 +886,19 @@ function getContentBatchFieldConfig(
 
   if (
     action === "contentEn" ||
-    action === "contentTh" ||
-    action === "relatedSku"
+    action === "contentTh"
   ) {
     return {
       fieldLabel: labels.fields[action],
-      initialValue:
-        action === "relatedSku" ? row.relatedSku.join(", ") : row[action],
+      initialValue: row[action],
+      type: "richtext",
+    };
+  }
+
+  if (action === "relatedSku") {
+    return {
+      fieldLabel: labels.fields[action],
+      initialValue: row.relatedSku.join(", "),
       type: "textarea",
     };
   }

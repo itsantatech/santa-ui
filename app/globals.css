@@ -2276,6 +2276,14 @@ strong.admin-inline-table-ellipsis {
   font-weight: 700;
 }
 
+.admin-field-required {
+  margin-left: 4px;
+  color: #dc2626;
+  font-size: 0.82em;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .admin-product-form-field-wide {
   grid-column: span 2;
 }

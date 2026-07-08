@@ -1282,7 +1282,10 @@ function LabeledInput({
 }) {
   return (
     <label className="admin-product-field">
-      <span>{label}</span>
+      <span>
+        {label}
+        {required ? <span className="admin-field-required" aria-hidden="true">*</span> : null}
+      </span>
       <input
         onChange={(event) => onChange(event.target.value)}
         required={required}

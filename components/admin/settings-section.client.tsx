@@ -1196,6 +1196,7 @@ function AboutSettingsCard({
             maxCharacters={5000}
             onChange={(value) => setForm((current) => ({ ...current, contentTh: value }))}
             placeholder={labels.about.placeholders.contentTh}
+            required
             value={form.contentTh}
           />
           <span className="admin-settings-field-hint">
@@ -1208,6 +1209,7 @@ function AboutSettingsCard({
             maxCharacters={5000}
             onChange={(value) => setForm((current) => ({ ...current, contentEn: value }))}
             placeholder={labels.about.placeholders.contentEn}
+            required
             value={form.contentEn}
           />
           <span className="admin-settings-field-hint">
@@ -1598,7 +1600,10 @@ function UserModal({
               value={form.email}
             />
             <label className="admin-product-field">
-              <span>{labels.user.fields.role}</span>
+              <span>
+                {labels.user.fields.role}
+                <span className="admin-field-required" aria-hidden="true">*</span>
+              </span>
               <select
                 disabled={isLoadingRoles}
                 onChange={(event) =>
@@ -1842,6 +1847,7 @@ function FaqModal({
                   label={labels.faq.fields.answerTh}
                   onChange={(value) => setForm((current) => ({ ...current, answerTh: value }))}
                   placeholder={labels.faq.fields.answerPlaceholder}
+                  required
                   showToolbar={false}
                   value={form.answerTh}
                 />
@@ -1849,6 +1855,7 @@ function FaqModal({
                   label={labels.faq.fields.answerEn}
                   onChange={(value) => setForm((current) => ({ ...current, answerEn: value }))}
                   placeholder={labels.faq.fields.answerPlaceholder}
+                  required
                   showToolbar={false}
                   value={form.answerEn}
                 />
@@ -1959,7 +1966,10 @@ function SettingsField({
 }) {
   return (
     <label className={className ? `admin-product-field ${className}` : "admin-product-field"}>
-      <span>{label}</span>
+      <span>
+        {label}
+        {required ? <span className="admin-field-required" aria-hidden="true">*</span> : null}
+      </span>
       <input
         maxLength={maxLength}
         onChange={(event) => onChange(event.target.value)}

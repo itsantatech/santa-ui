@@ -17,6 +17,7 @@ type RichTextEditorProps = {
   maxCharacters?: number;
   onChange: (value: string) => void;
   placeholder?: string;
+  required?: boolean;
   showToolbar?: boolean;
   value: string;
 };
@@ -35,6 +36,7 @@ export function RichTextEditor({
   maxCharacters,
   onChange,
   placeholder,
+  required = false,
   showToolbar = true,
   value,
 }: RichTextEditorProps) {
@@ -111,7 +113,10 @@ export function RichTextEditor({
 
   return (
     <div className="admin-product-field admin-product-field-wide">
-      <span id={labelId}>{label}</span>
+      <span id={labelId}>
+        {label}
+        {required ? <span className="admin-field-required" aria-hidden="true">*</span> : null}
+      </span>
       <div
         className={
           showToolbar

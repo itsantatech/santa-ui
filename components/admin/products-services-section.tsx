@@ -405,21 +405,6 @@ export function ProductToolbarActions({
         {labels.download}
       </button>
       <button
-        className="admin-product-secondary-button"
-        onClick={() =>
-          void handleDownload(
-            "/api/admin/products/template",
-            "products-import-template.xlsx",
-          )
-        }
-        type="button"
-      >
-        <span className="material-symbols-outlined" aria-hidden="true">
-          description
-        </span>
-        {labels.template}
-      </button>
-      <button
         className="admin-product-add-button"
         onClick={() => setIsAddOpen(true)}
         type="button"
@@ -1876,7 +1861,16 @@ function getProductBatchFieldConfig(
 
   if (
     action === "descriptionTh" ||
-    action === "descriptionEn" ||
+    action === "descriptionEn"
+  ) {
+    return {
+      fieldLabel: labels.fields[action],
+      initialValue: row[action] ?? "",
+      type: "richtext",
+    };
+  }
+
+  if (
     action === "seoDescriptionTh" ||
     action === "seoDescriptionEn" ||
     action === "categoryCodes" ||
@@ -2190,11 +2184,20 @@ function ProductUploadModal({
       created: number;
       updated: number;
       failed: number;
+      feedbackFileBase64?: string;
+      feedbackFileName?: string;
     };
 
     const nextSummary = getProductImportSummary(locale, result);
 
     setSummary(nextSummary);
+    if (result.feedbackFileBase64) {
+      downloadBase64File(
+        result.feedbackFileBase64,
+        result.feedbackFileName ?? "products-import-feedback.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+    }
     showSuccessToast(toastCopy.imported, nextSummary);
     router.refresh();
   }
@@ -2254,7 +2257,6 @@ function ProductUploadModal({
                 {file ? file.name : labels.noFileChosen}
               </span>
             </div>
-          <p className="admin-upload-helper">{labels.uploadFileHelper}</p>
           {error ? <p className="admin-product-form-error">{error}</p> : null}
           {summary ? <p className="admin-product-file-note">{summary}</p> : null}
           <div className="admin-product-modal-actions">
@@ -2277,6 +2279,28 @@ function ProductUploadModal({
       </div>
     </div>
   );
+}
+
+function downloadBase64File(
+  base64: string,
+  filename: string,
+  mimeType: string,
+) {
+  const binary = window.atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  const blob = new Blob([bytes], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function ProductTableImage({
@@ -3263,11 +3287,13 @@ function ProductFormFields({
       <ControlledTextArea label={labels.fields.shortDescriptionEn} required value={form.shortDescriptionEn} onChange={(value) => onChange((current) => ({ ...current, shortDescriptionEn: value }))} />
       <RichTextEditor
         label={labels.fields.descriptionTh}
+        required
         onChange={(value) => onChange((current) => ({ ...current, descriptionTh: value }))}
         value={form.descriptionTh}
       />
       <RichTextEditor
         label={labels.fields.descriptionEn}
+        required
         onChange={(value) => onChange((current) => ({ ...current, descriptionEn: value }))}
         value={form.descriptionEn}
       />
@@ -3563,7 +3589,10 @@ function ControlledTextField({
 }) {
   return (
     <label className="admin-product-form-field">
-      <span>{label}</span>
+      <span>
+        {label}
+        {required ? <span className="admin-field-required" aria-hidden="true">*</span> : null}
+      </span>
       <input
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
@@ -3610,7 +3639,10 @@ function ControlledTextArea({
 }) {
   return (
     <label className="admin-product-form-field admin-product-form-field-wide">
-      <span>{label}</span>
+      <span>
+        {label}
+        {required ? <span className="admin-field-required" aria-hidden="true">*</span> : null}
+      </span>
       <textarea
         onChange={(event) => onChange(event.target.value)}
         required={required}
