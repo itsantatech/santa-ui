@@ -6,6 +6,10 @@ const keycloakBaseUrl =
   process.env.KEYCLOAK_BASE_URL ??
   process.env.NEXT_PUBLIC_KEYCLOAK_BASE_URL ??
   "http://localhost:8080";
+const appBaseUrl =
+  process.env.APP_BASE_URL ??
+  process.env.NEXT_PUBLIC_APP_BASE_URL ??
+  "http://localhost:3000";
 const keycloakRealm = process.env.KEYCLOAK_REALM ?? "santa-web";
 const keycloakClientId = process.env.KEYCLOAK_CLIENT_ID ?? "santa-ui";
 
@@ -45,6 +49,10 @@ export type AuthSession = {
 };
 
 export function getBaseUrl(requestUrl: string) {
+  if (appBaseUrl) {
+    return appBaseUrl.replace(/\/$/, "");
+  }
+
   const url = new URL(requestUrl);
   return `${url.protocol}//${url.host}`;
 }
