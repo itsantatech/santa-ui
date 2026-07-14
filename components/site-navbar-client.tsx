@@ -110,6 +110,24 @@ function LocaleFlag({ locale }: { locale: Locale }) {
   );
 }
 
+function AuthLink({
+  children,
+  className,
+  href,
+  ariaLabel,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  href: string;
+  ariaLabel?: string;
+}) {
+  return (
+    <a aria-label={ariaLabel} className={className} href={href}>
+      {children}
+    </a>
+  );
+}
+
 export function SiteNavbarClient({
   alternateLocale,
   categories,
@@ -360,28 +378,28 @@ export function SiteNavbarClient({
         {session ? (
           <div className="nav-session site-navbar-desktop-session">
             <span className="nav-username">{session.username}</span>
-            <Link className="sign-out-link" href="/api/auth/logout">
+            <AuthLink className="sign-out-link" href="/api/auth/logout">
               {content.signOut}
-            </Link>
+            </AuthLink>
           </div>
         ) : (
-          <Link
+          <AuthLink
             className="sign-in-link site-navbar-desktop-session"
             href={`/api/auth/login?locale=${locale}`}
           >
             {content.signIn}
-          </Link>
+          </AuthLink>
         )}
 
         {!isAdminVariant ? (
           <div className="mobile-header-actions" aria-label="Mobile actions">
-            <Link
+            <AuthLink
               className="mobile-header-action"
               href={session ? "/api/auth/logout" : `/api/auth/login?locale=${locale}`}
               aria-label={session ? content.signOut : content.signIn}
             >
               <span className="material-symbols-outlined" aria-hidden="true">person</span>
-            </Link>
+            </AuthLink>
             <Link
               className="mobile-header-action"
               href={`/${locale}/products`}

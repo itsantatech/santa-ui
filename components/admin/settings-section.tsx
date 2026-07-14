@@ -118,6 +118,7 @@ export async function SettingsSection({
       locale={locale}
       socialContacts={socialContacts?.items ?? []}
       userMeta={users?.meta}
+      usersLoadFailed={!users}
       users={users?.items ?? []}
     />
   );
