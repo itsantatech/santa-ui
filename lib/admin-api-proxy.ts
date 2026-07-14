@@ -24,6 +24,19 @@ type RefreshedTokens = {
   idToken?: string;
 };
 
+type RefreshAccessTokenResult =
+  | {
+      status: "success";
+      tokens: RefreshedTokens;
+    }
+  | {
+      message: string;
+      status: "unavailable";
+    }
+  | {
+      status: "unauthorized";
+    };
+
 type KeycloakRefreshResponse = {
   access_token: string;
   refresh_token?: string;
@@ -68,9 +81,12 @@ export async function proxySantaApiRequest(
     });
 
     if (!authState.accessToken) {
-      return Response.json(
-        { message: "Authentication required." },
-        { status: 401 },
+      return (
+        authState.errorResponse ??
+        Response.json(
+          { message: "Authentication required." },
+          { status: 401 },
+        )
       );
     }
 
@@ -92,9 +108,17 @@ export async function proxySantaApiRequest(
     refreshToken &&
     !refreshedTokens
   ) {
-    const retriedTokens = await refreshAccessToken(refreshToken);
+    const refreshResult = await refreshAccessToken(refreshToken);
 
-    if (retriedTokens) {
+    if (refreshResult.status === "unavailable") {
+      return Response.json(
+        { message: refreshResult.message },
+        { status: 503 },
+      );
+    }
+
+    if (refreshResult.status === "success") {
+      const retriedTokens = refreshResult.tokens;
       headers.set("authorization", `Bearer ${retriedTokens.accessToken}`);
       refreshedTokens = retriedTokens;
 
@@ -210,11 +234,23 @@ async function getAuthorizationState({
     return { accessToken: undefined };
   }
 
-  const refreshedTokens = await refreshAccessToken(refreshToken);
+  const refreshResult = await refreshAccessToken(refreshToken);
 
-  if (!refreshedTokens) {
+  if (refreshResult.status === "unauthorized") {
     return { accessToken: undefined };
   }
+
+  if (refreshResult.status === "unavailable") {
+    return {
+      accessToken: undefined,
+      errorResponse: Response.json(
+        { message: refreshResult.message },
+        { status: 503 },
+      ),
+    };
+  }
+
+  const refreshedTokens = refreshResult.tokens;
 
   return {
     accessToken: refreshedTokens.accessToken,
@@ -234,7 +270,7 @@ function isTokenExpired(token: string) {
 
 async function refreshAccessToken(
   refreshToken: string,
-): Promise<RefreshedTokens | undefined> {
+): Promise<RefreshAccessTokenResult> {
   try {
     const response = await fetch(keycloakConfig.tokenEndpoint, {
       method: "POST",
@@ -250,23 +286,29 @@ async function refreshAccessToken(
     });
 
     if (!response.ok) {
-      return undefined;
+      return { status: "unauthorized" };
     }
 
     const tokens = (await response.json()) as KeycloakRefreshResponse;
 
     if (!tokens.access_token) {
-      return undefined;
+      return { status: "unauthorized" };
     }
 
     return {
-      accessToken: tokens.access_token,
-      accessTokenMaxAge: tokens.expires_in ?? 300,
-      refreshToken: tokens.refresh_token,
-      refreshTokenMaxAge: tokens.refresh_expires_in,
-      idToken: tokens.id_token,
+      status: "success",
+      tokens: {
+        accessToken: tokens.access_token,
+        accessTokenMaxAge: tokens.expires_in ?? 300,
+        refreshToken: tokens.refresh_token,
+        refreshTokenMaxAge: tokens.refresh_expires_in,
+        idToken: tokens.id_token,
+      },
     };
   } catch {
-    return undefined;
+    return {
+      status: "unavailable",
+      message: "Keycloak authentication service is unavailable.",
+    };
   }
 }

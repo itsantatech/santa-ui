@@ -136,6 +136,7 @@ export function SettingsSectionClient({
   pageSize,
   socialContacts,
   userMeta,
+  usersLoadFailed = false,
   users,
 }: {
   aboutSettings: AboutSettingRow[];
@@ -150,6 +151,7 @@ export function SettingsSectionClient({
   pageSize: number;
   socialContacts: SocialContactRow[];
   userMeta?: PaginationMeta;
+  usersLoadFailed?: boolean;
   users: AdminUserRow[];
 }) {
   const toastCopy = getTransactionToastCopy(locale);
@@ -462,7 +464,7 @@ export function SettingsSectionClient({
           ) : null}
           <AdminDataTable
             columns={userColumns}
-            emptyLabel={labels.user.empty}
+            emptyLabel={usersLoadFailed ? labels.user.emptyUnavailable : labels.user.empty}
             contextMenuActions={canManageUsers ? userContextMenuActions : undefined}
             getRowId={(row) => row.id}
             pagination={{
@@ -1503,7 +1505,7 @@ function UserModal({
       }
 
       if (!response.ok) {
-        setError(labels.common.error);
+        setError(await getErrorMessage(response, labels.user.roleLoadError));
         setIsLoadingRoles(false);
         return;
       }
@@ -1524,7 +1526,7 @@ function UserModal({
     return () => {
       isMounted = false;
     };
-  }, [initialRole, labels.common.error]);
+  }, [initialRole, labels.user.roleLoadError]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2463,6 +2465,7 @@ function getLabels(locale: Locale) {
           deleting: "กำลังลบ...",
           editTitle: "แก้ไขผู้ใช้งาน",
           empty: "ไม่พบข้อมูลผู้ใช้งาน",
+          emptyUnavailable: "ไม่สามารถโหลดข้อมูลผู้ใช้งานได้",
           error: "ไม่สามารถบันทึกข้อมูลผู้ใช้งานได้",
           fields: {
             displayName: "ชื่อ",
@@ -2473,6 +2476,7 @@ function getLabels(locale: Locale) {
           },
           formSection: "รายละเอียดผู้ใช้งาน",
           passwordHint: "กรอกเมื่อต้องการเปลี่ยนรหัสผ่าน",
+          roleLoadError: "ไม่สามารถโหลดรายการบทบาทได้",
         },
         home: {
           fields: {
@@ -2625,6 +2629,7 @@ function getLabels(locale: Locale) {
           deleting: "Deleting...",
           editTitle: "Edit User",
           empty: "No users found",
+          emptyUnavailable: "Unable to load users",
           error: "Unable to save user data",
           fields: {
             displayName: "Name",
@@ -2635,6 +2640,7 @@ function getLabels(locale: Locale) {
           },
           formSection: "User Details",
           passwordHint: "Leave blank to keep the current password",
+          roleLoadError: "Unable to load roles",
         },
         home: {
           fields: {

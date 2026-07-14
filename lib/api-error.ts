@@ -193,6 +193,8 @@ const directTranslationMap: Record<string, string> = {
   "Inventory stock import file is required.": "จำเป็นต้องอัปโหลดไฟล์นำเข้าสินค้าคงคลัง",
   "Invalid or expired bearer token.": "โทเคนเข้าสู่ระบบไม่ถูกต้องหรือหมดอายุ",
   "Invalid token audience.": "ผู้รับโทเคนไม่ถูกต้อง",
+  "Keycloak authentication service is unavailable.":
+    "บริการยืนยันตัวตนของ Keycloak ไม่พร้อมใช้งาน",
   "Malformed bearer token.": "รูปแบบ bearer token ไม่ถูกต้อง",
   "Missing bearer token.": "ไม่พบ bearer token",
   "Missing required quotation request fields.": "กรุณากรอกข้อมูลที่จำเป็นสำหรับคำขอใบเสนอราคาให้ครบถ้วน",
@@ -202,6 +204,8 @@ const directTranslationMap: Record<string, string> = {
   "Superadmin role is required.": "ต้องใช้สิทธิ์ Superadmin",
   "Unexpected database error.": "เกิดข้อผิดพลาดกับฐานข้อมูล",
   "Unable to authenticate with Keycloak admin API.": "ไม่สามารถยืนยันตัวตนกับ Keycloak admin API ได้",
+  "Unable to load Keycloak users.": "ไม่สามารถโหลดข้อมูลผู้ใช้งานจาก Keycloak ได้",
+  "Unable to load Keycloak roles.": "ไม่สามารถโหลดบทบาทจาก Keycloak ได้",
   "Unable to read product import file.": "ไม่สามารถอ่านไฟล์นำเข้าสินค้าได้",
   "User already exists.": "ผู้ใช้นี้มีอยู่ในระบบแล้ว",
   "User not found.": "ไม่พบผู้ใช้",
