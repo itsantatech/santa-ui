@@ -71,16 +71,15 @@ export async function SettingsSection({
   pageSize?: number;
   tab?: string;
 }) {
-  const activeTab =
-    tab === "home-content" || tab === "about" || tab === "social-media" || tab === "faq"
-      ? tab
-      : "users";
+  const activeTab = getActiveSettingsTab(tab, canManageUsers);
   const [users, homeSettings, aboutSettings, socialContacts, faqs, categories] = await Promise.all([
-    fetchAdminList<AdminUserRow>("/admin-users", {
-      isActive: true,
-      page: activeTab === "users" ? page : 1,
-      pageSize: activeTab === "users" ? pageSize : 50,
-    }),
+    canManageUsers
+      ? fetchAdminList<AdminUserRow>("/admin-users", {
+          isActive: true,
+          page: activeTab === "users" ? page : 1,
+          pageSize: activeTab === "users" ? pageSize : 50,
+        })
+      : Promise.resolve(null),
     fetchAdminList<HomeSettingRow>("/home-section-settings", {
       page: 1,
       pageSize: 20,
@@ -122,4 +121,16 @@ export async function SettingsSection({
       users={users?.items ?? []}
     />
   );
+}
+
+function getActiveSettingsTab(tab: string | undefined, canManageUsers: boolean) {
+  if (tab === "users") {
+    return canManageUsers ? "users" : "home-content";
+  }
+
+  if (tab === "home-content" || tab === "about" || tab === "social-media" || tab === "faq") {
+    return tab;
+  }
+
+  return canManageUsers ? "users" : "home-content";
 }
