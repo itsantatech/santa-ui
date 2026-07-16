@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { randomBytes, createHash } from "node:crypto";
@@ -69,7 +70,7 @@ export function getCallbackUrl(requestUrl: string) {
   return `${getBaseUrl(requestUrl)}/api/auth/callback`;
 }
 
-export async function getSession(): Promise<AuthSession | null> {
+export const getSession = cache(async function getSession(): Promise<AuthSession | null> {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(authCookies.accessToken)?.value;
 
@@ -92,7 +93,7 @@ export async function getSession(): Promise<AuthSession | null> {
     roles,
     isAdmin: hasAdminRole(roles),
   };
-}
+});
 
 export async function requireAdminSession({
   returnTo = "/th/admin",
