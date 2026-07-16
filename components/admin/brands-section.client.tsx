@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 import { BrandSearch } from "@/components/brand-search";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { getErrorMessage } from "@/lib/api-error";
 import type { BrandListResponse } from "./brands-section";
 import {
@@ -402,7 +403,7 @@ function getBrandBatchFieldConfig(
       return {
         fieldLabel: labels.fields[action],
         initialValue: row[action] ?? "",
-        type: "textarea",
+        type: "richtext",
       };
     default:
       return {
@@ -518,8 +519,8 @@ function BrandModal({
             <Field label={labels.fields.rank} type="number" value={form.rank} onChange={(value) => setForm((current) => ({ ...current, rank: value }))} />
             <Field label={labels.fields.imgUrl} required value={form.imgUrl} onChange={(value) => setForm((current) => ({ ...current, imgUrl: value }))} />
             <div />
-            <TextField label={labels.fields.descriptionTh} value={form.descriptionTh} onChange={(value) => setForm((current) => ({ ...current, descriptionTh: value }))} />
-            <TextField label={labels.fields.descriptionEn} value={form.descriptionEn} onChange={(value) => setForm((current) => ({ ...current, descriptionEn: value }))} />
+            <RichTextField label={labels.fields.descriptionTh} value={form.descriptionTh} onChange={(value) => setForm((current) => ({ ...current, descriptionTh: value }))} />
+            <RichTextField label={labels.fields.descriptionEn} value={form.descriptionEn} onChange={(value) => setForm((current) => ({ ...current, descriptionEn: value }))} />
             <label className="admin-product-toggle">
               <input checked={form.isActive} onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))} type="checkbox" />
               <span>{labels.activeToggle}</span>
@@ -618,7 +619,7 @@ function Field({
   );
 }
 
-function TextField({
+function RichTextField({
   label,
   onChange,
   value,
@@ -627,12 +628,7 @@ function TextField({
   onChange: (value: string) => void;
   value: string;
 }) {
-  return (
-    <label className="admin-product-field admin-product-field-wide">
-      <span>{label}</span>
-      <textarea onChange={(event) => onChange(event.target.value)} value={value} />
-    </label>
-  );
+  return <RichTextEditor label={label} onChange={onChange} value={value} />;
 }
 
 function BrandLogoPreview({ src, title }: { src: string | null; title: string }) {

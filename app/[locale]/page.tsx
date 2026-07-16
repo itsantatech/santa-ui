@@ -508,7 +508,7 @@ export default async function Home({ params }: HomeProps) {
           <div className="home-business-unit-grid">
             {businessUnitCategories.map((category, index) => {
               const cardCopy = getCategoryCardCopy(category, locale);
-              const categoryHref = `/${locale}/products-services?categoryCode=${encodeURIComponent(category.code)}`;
+              const categoryHref = `/${locale}/products/categories/${category.slug.trim()}`;
 
               return (
                 <Link

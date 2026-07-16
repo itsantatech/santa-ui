@@ -11,6 +11,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
 import { fetchAdminList } from "@/lib/admin-api";
 import { isLocale, locales, type Locale } from "@/lib/i18n";
+import { normalizeRichTextHtml } from "@/lib/public-content";
 
 type CategoryDetailPageProps = {
   params: Promise<{ "category-slug": string; locale: string }>;
@@ -238,7 +239,10 @@ export default async function CategoryDetailPage({
           ) : null}
 
           {categoryDescription ? (
-            <p className="category-page-description">{categoryDescription}</p>
+            <div
+              className="category-page-description"
+              dangerouslySetInnerHTML={{ __html: normalizeRichTextHtml(categoryDescription) }}
+            />
           ) : null}
 
           <ProductFilter

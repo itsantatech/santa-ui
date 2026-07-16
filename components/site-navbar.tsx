@@ -2,7 +2,7 @@ import {
   getAlternateLocale,
   type Locale,
 } from "@/lib/i18n";
-import { getSession, type AuthSession } from "@/lib/auth/keycloak";
+import { getSession } from "@/lib/auth/keycloak";
 import { fetchAdminList } from "@/lib/admin-api";
 import type { AdminSection } from "./admin/admin-sections";
 import { SiteNavbarClient } from "./site-navbar-client";
@@ -27,7 +27,7 @@ export async function SiteNavbar({
   variant = "default",
 }: SiteNavbarProps) {
   const [session, categoriesResponse] = await Promise.all([
-    getNavbarSession(variant),
+    getSession(),
     fetchAdminList<NavbarCategory>("/categories", {
       isActive: true,
       page: 1,
@@ -48,14 +48,4 @@ export async function SiteNavbar({
       variant={variant}
     />
   );
-}
-
-async function getNavbarSession(
-  variant: SiteNavbarProps["variant"],
-): Promise<AuthSession | null> {
-  if (variant !== "admin") {
-    return null;
-  }
-
-  return getSession();
 }

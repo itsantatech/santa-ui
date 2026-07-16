@@ -211,9 +211,14 @@ export function SiteNavbarClient({
 
   const mobileBottomLinks = [
     {
-      href: session ? "/api/auth/logout" : `/api/auth/login?locale=${locale}`,
+      href: session ? `/${locale}/admin` : `/api/auth/login?locale=${locale}`,
       icon: "person",
-      label: session ? content.signOut : content.signIn,
+      label: session ? session.username : content.signIn,
+    },
+    {
+      href: "/api/auth/logout",
+      icon: "logout",
+      label: content.signOut,
     },
     {
       href: `/${locale}/products`,
@@ -377,7 +382,9 @@ export function SiteNavbarClient({
 
         {session ? (
           <div className="nav-session site-navbar-desktop-session">
-            <span className="nav-username">{session.username}</span>
+            <Link className="nav-username" href={`/${locale}/admin`}>
+              {session.username}
+            </Link>
             <AuthLink className="sign-out-link" href="/api/auth/logout">
               {content.signOut}
             </AuthLink>
@@ -393,13 +400,13 @@ export function SiteNavbarClient({
 
         {!isAdminVariant ? (
           <div className="mobile-header-actions" aria-label="Mobile actions">
-            <AuthLink
+            <Link
               className="mobile-header-action"
-              href={session ? "/api/auth/logout" : `/api/auth/login?locale=${locale}`}
-              aria-label={session ? content.signOut : content.signIn}
+              href={session ? `/${locale}/admin` : `/api/auth/login?locale=${locale}`}
+              aria-label={session ? session.username : content.signIn}
             >
               <span className="material-symbols-outlined" aria-hidden="true">person</span>
-            </AuthLink>
+            </Link>
             <Link
               className="mobile-header-action"
               href={`/${locale}/products`}
@@ -544,7 +551,9 @@ export function SiteNavbarClient({
             </nav>
 
             <div className="mobile-nav-bottom">
-              {mobileBottomLinks.map((item) => (
+              {mobileBottomLinks
+                .filter((item) => (session ? true : item.href !== "/api/auth/logout"))
+                .map((item) => (
                 <Link
                   className="mobile-nav-bottom-link"
                   href={item.href}
