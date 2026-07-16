@@ -5883,8 +5883,9 @@ button.admin-table-page-link:disabled {
 
 .home-brand-grid {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 20px 30px;
+  grid-template-columns: repeat(12, minmax(0, 87px));
+  justify-content: center;
+  gap: clamp(8px, 1.6vw, 24px) clamp(8px, 2vw, 32px);
   width: 100%;
 }
 

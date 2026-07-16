@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useMemo, useRef, useState } from "react";
 import { BrandSearch } from "@/components/brand-search";
 import { RichTextEditor } from "@/components/rich-text-editor";
 import { getErrorMessage } from "@/lib/api-error";
@@ -38,12 +38,16 @@ type BrandFormState = {
 type BrandBatchAction =
   | "descriptionEn"
   | "descriptionTh"
-  | "imgUrl"
   | "isActive"
   | "nameEn"
   | "nameTh"
   | "rank"
   | "slug";
+
+type UploadedFileResponse = {
+  signedUrl?: string;
+  url?: string;
+};
 
 export function BrandsSectionClient({
   initialResponse,
@@ -75,7 +79,6 @@ export function BrandsSectionClient({
       { id: "nameEn", label: labels.fields.nameEn },
       { id: "slug", label: labels.fields.slug },
       { id: "rank", label: labels.fields.rank },
-      { id: "imgUrl", label: labels.fields.imgUrl },
       { id: "descriptionTh", label: labels.fields.descriptionTh },
       { id: "descriptionEn", label: labels.fields.descriptionEn },
       { id: "isActive", label: labels.activeToggle },
@@ -348,7 +351,6 @@ function buildBrandPayload(
       break;
     case "descriptionEn":
     case "descriptionTh":
-    case "imgUrl":
     case "nameEn":
     case "nameTh":
     case "slug":
@@ -409,7 +411,7 @@ function getBrandBatchFieldConfig(
       return {
         fieldLabel: getBrandBatchFieldLabel(labels, action),
         initialValue: row[action] ?? "",
-        type: action === "imgUrl" ? "text" : "text",
+        type: "text",
       };
   }
 }
@@ -428,8 +430,10 @@ function BrandModal({
   onSaved: () => void;
 }) {
   const toastCopy = getTransactionToastCopy(locale);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [form, setForm] = useState<BrandFormState>(() =>
     initialRow
       ? {
@@ -453,6 +457,58 @@ function BrandModal({
           slug: "",
         },
   );
+
+  async function handleLogoSelected(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      const message = labels.validation.logoType;
+      setError(message);
+      showErrorToast(toastCopy.error, message);
+      return;
+    }
+
+    setError("");
+    setIsUploadingLogo(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("visibility", "public");
+      formData.append("folder", "brands/logos");
+
+      const response = await fetch("/api/admin/files/upload", {
+        body: formData,
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error(await getErrorMessage(response, labels.error));
+      }
+
+      const result = (await response.json()) as UploadedFileResponse;
+      const nextUrl = result.url ?? result.signedUrl;
+
+      if (!nextUrl) {
+        throw new Error(labels.error);
+      }
+
+      setForm((current) => ({ ...current, imgUrl: nextUrl }));
+      showSuccessToast(toastCopy.uploaded);
+    } catch (uploadError) {
+      const message = uploadError instanceof Error ? uploadError.message : labels.error;
+      setError(message);
+      showErrorToast(toastCopy.error, message);
+    } finally {
+      setIsUploadingLogo(false);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -517,7 +573,18 @@ function BrandModal({
             <Field label={labels.fields.nameEn} required value={form.nameEn} onChange={(value) => setForm((current) => ({ ...current, nameEn: value }))} />
             <Field label={labels.fields.slug} required value={form.slug} onChange={(value) => setForm((current) => ({ ...current, slug: value }))} />
             <Field label={labels.fields.rank} type="number" value={form.rank} onChange={(value) => setForm((current) => ({ ...current, rank: value }))} />
-            <Field label={labels.fields.imgUrl} required value={form.imgUrl} onChange={(value) => setForm((current) => ({ ...current, imgUrl: value }))} />
+            <LogoUploadField
+              fileInputRef={fileInputRef}
+              isUploading={isUploadingLogo}
+              label={labels.fields.imgUrl}
+              previewUrl={form.imgUrl}
+              selectLabel={labels.logo.upload}
+              uploadingLabel={labels.logo.uploading}
+              onFileSelected={handleLogoSelected}
+              previewAlt={form.nameTh || form.nameEn || labels.logo.previewAlt}
+              removeLabel={labels.logo.remove}
+              onRemove={() => setForm((current) => ({ ...current, imgUrl: "" }))}
+            />
             <div />
             <RichTextField label={labels.fields.descriptionTh} value={form.descriptionTh} onChange={(value) => setForm((current) => ({ ...current, descriptionTh: value }))} />
             <RichTextField label={labels.fields.descriptionEn} value={form.descriptionEn} onChange={(value) => setForm((current) => ({ ...current, descriptionEn: value }))} />
@@ -631,6 +698,85 @@ function RichTextField({
   return <RichTextEditor label={label} onChange={onChange} value={value} />;
 }
 
+function LogoUploadField({
+  fileInputRef,
+  isUploading,
+  label,
+  onFileSelected,
+  onRemove,
+  previewAlt,
+  previewUrl,
+  removeLabel,
+  selectLabel,
+  uploadingLabel,
+}: {
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  isUploading: boolean;
+  label: string;
+  onFileSelected: (file: File | null) => void;
+  onRemove: () => void;
+  previewAlt: string;
+  previewUrl: string;
+  removeLabel: string;
+  selectLabel: string;
+  uploadingLabel: string;
+}) {
+  return (
+    <div className="admin-product-field admin-product-field-wide">
+      <span>{label}</span>
+      <div className="admin-settings-about-image-card">
+        <div className="admin-settings-about-image-copy">
+          <strong>{label}</strong>
+        </div>
+        <div className="admin-upload-actions">
+          <input
+            accept="image/*"
+            className="admin-settings-hidden-file-input"
+            onChange={(event) => onFileSelected(event.target.files?.[0] ?? null)}
+            ref={fileInputRef}
+            type="file"
+          />
+          <button
+            className="admin-product-secondary-button"
+            disabled={isUploading}
+            onClick={() => fileInputRef.current?.click()}
+            type="button"
+          >
+            {isUploading ? uploadingLabel : selectLabel}
+          </button>
+          {previewUrl ? (
+            <button className="admin-product-secondary-button" onClick={onRemove} type="button">
+              {removeLabel}
+            </button>
+          ) : null}
+        </div>
+        <p className="admin-upload-helper">
+          {previewUrl ? previewAlt : `${previewAlt} - ${selectLabel}`}
+        </p>
+        {previewUrl ? (
+          <div className="admin-upload-media-grid">
+            <div className="admin-upload-preview-card">
+              <div className="admin-upload-preview-frame">
+                <Image
+                  alt={previewAlt}
+                  className="admin-upload-preview-image"
+                  height={180}
+                  sizes="(max-width: 768px) 100vw, 320px"
+                  src={previewUrl}
+                  unoptimized
+                  width={320}
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="admin-upload-empty">{previewAlt}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function BrandLogoPreview({ src, title }: { src: string | null; title: string }) {
   const [hasError, setHasError] = useState(false);
 
@@ -693,9 +839,15 @@ function getLabels(locale: Locale) {
           nameEn: "ชื่อภาษาอังกฤษ",
           slug: "Slug",
           rank: "ลำดับ",
-          imgUrl: "Logo URL",
+          imgUrl: "โลโก้",
           descriptionTh: "คำอธิบายภาษาไทย",
           descriptionEn: "คำอธิบายภาษาอังกฤษ",
+        },
+        logo: {
+          previewAlt: "ตัวอย่างโลโก้แบรนด์",
+          remove: "ลบรูป",
+          upload: "อัปโหลดโลโก้",
+          uploading: "กำลังอัปโหลดโลโก้...",
         },
         columns: {
           logo: "โลโก้",
@@ -729,6 +881,9 @@ function getLabels(locale: Locale) {
         saving: "กำลังบันทึก...",
         selectAll: "เลือกรายการทั้งหมด",
         selectRow: "เลือกรายการ",
+        validation: {
+          logoType: "รองรับเฉพาะไฟล์รูปภาพสำหรับโลโก้",
+        },
         bulkEditTitle: (fieldLabel: string) => `แก้ไขหลายแบรนด์: ${fieldLabel}`,
         bulkEditDescription: (count: number, fieldLabel: string) =>
           `อัปเดตฟิลด์ ${fieldLabel} พร้อมกัน ${count} รายการ`,
@@ -746,9 +901,15 @@ function getLabels(locale: Locale) {
           nameEn: "English Name",
           slug: "Slug",
           rank: "Rank",
-          imgUrl: "Logo URL",
+          imgUrl: "Logo",
           descriptionTh: "Thai Description",
           descriptionEn: "English Description",
+        },
+        logo: {
+          previewAlt: "Brand logo preview",
+          remove: "Remove image",
+          upload: "Upload logo",
+          uploading: "Uploading logo...",
         },
         columns: {
           logo: "Logo",
@@ -782,6 +943,9 @@ function getLabels(locale: Locale) {
         saving: "Saving...",
         selectAll: "Select all rows",
         selectRow: "Select row",
+        validation: {
+          logoType: "Only image files are supported for brand logos",
+        },
         bulkEditTitle: (fieldLabel: string) => `Bulk edit brands: ${fieldLabel}`,
         bulkEditDescription: (count: number, fieldLabel: string) =>
           `Update ${fieldLabel} for ${count} brands at once.`,
