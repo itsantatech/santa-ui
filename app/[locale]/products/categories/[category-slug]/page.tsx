@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { ProductCard, type ProductCardData } from "@/components/product-card";
 import { ProductFilter, type ProductFilterOption } from "@/components/product-filter";
 import { ProductListPagination } from "@/components/product-list-pagination";
@@ -101,6 +102,8 @@ export default async function CategoryDetailPage({
   params,
   searchParams,
 }: CategoryDetailPageProps) {
+  await connection();
+
   const { locale, "category-slug": categorySlug } = await params;
 
   if (!isLocale(locale)) {

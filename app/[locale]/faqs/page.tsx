@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { ProductListPagination } from "@/components/product-list-pagination";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
@@ -62,6 +63,8 @@ export async function generateMetadata({
 }
 
 export default async function FaqsPage({ params, searchParams }: LocalePageProps) {
+  await connection();
+
   const { locale } = await params;
 
   if (!isLocale(locale)) {

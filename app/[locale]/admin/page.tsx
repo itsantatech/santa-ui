@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { AdminContent } from "@/components/admin/admin-content";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import {
@@ -65,6 +66,8 @@ export async function generateMetadata({
 }
 
 export default async function Home({ params, searchParams }: HomeProps) {
+  await connection();
+
   const { locale } = await params;
   const query = await searchParams;
 
