@@ -395,16 +395,18 @@ export function SettingsSectionClient({
     <div className="admin-section-panel">
       <h1 id="admin-heading">{labels.title}</h1>
       <nav className="admin-section-tabs" aria-label="settings tabs">
-        <Link
-          className={
-            activeTab === "users"
-              ? "admin-section-tab admin-section-tab-active"
-              : "admin-section-tab"
-          }
-          href={`/${locale}/admin?section=settings&tab=users`}
-        >
-          {labels.tabs.users}
-        </Link>
+        {canManageUsers ? (
+          <Link
+            className={
+              activeTab === "users"
+                ? "admin-section-tab admin-section-tab-active"
+                : "admin-section-tab"
+            }
+            href={`/${locale}/admin?section=settings&tab=users`}
+          >
+            {labels.tabs.users}
+          </Link>
+        ) : null}
         <Link
           className={
             activeTab === "home-content"

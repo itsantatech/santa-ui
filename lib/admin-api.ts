@@ -21,6 +21,11 @@ type AdminListOptions = {
   subCategoryCode?: string;
 };
 
+type FetchBehavior = {
+  cache?: RequestCache;
+  next?: NextFetchRequestConfig;
+};
+
 const defaultPageSize = 50;
 export const santaApiBaseUrl =
   process.env.SANTA_API_BASE_URL ??
@@ -45,6 +50,7 @@ export async function fetchAdminList<Row>(
     sortOrder,
     subCategoryCode,
   }: AdminListOptions,
+  fetchBehavior: FetchBehavior = { cache: "no-store" },
 ): Promise<AdminListResponse<Row> | null> {
   const url = createSantaApiUrl(resourcePath);
   url.searchParams.set("page", String(page));
@@ -75,15 +81,32 @@ export async function fetchAdminList<Row>(
   }
 
   try {
-    const response = await fetch(url, {
-      cache: "no-store",
-    });
+    const response = await fetch(url, fetchBehavior);
 
     if (!response.ok) {
       return null;
     }
 
     return (await response.json()) as AdminListResponse<Row>;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchSantaApiResource<Row>(
+  resourcePath: string,
+  fetchBehavior: FetchBehavior = { cache: "no-store" },
+): Promise<Row | null> {
+  const url = createSantaApiUrl(resourcePath);
+
+  try {
+    const response = await fetch(url, fetchBehavior);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as Row;
   } catch {
     return null;
   }

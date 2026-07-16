@@ -1,4 +1,5 @@
-import { createSantaApiUrl, fetchAdminList } from "@/lib/admin-api";
+import { cache } from "react";
+import { fetchAdminList, fetchSantaApiResource } from "@/lib/admin-api";
 import type { Locale } from "@/lib/i18n";
 
 export type FooterCategory = {
@@ -52,50 +53,82 @@ type FetchListOptions = {
   sortOrder?: "asc" | "desc";
 };
 
-export async function fetchPublicChrome() {
-  const [categoriesResponse, socialContactsResponse] = await Promise.all([
-    fetchAdminList<FooterCategory>("/categories", {
+const publicFetchBehavior = {
+  next: { revalidate: 300 },
+};
+
+export const fetchPublicCategories = cache(async () => {
+  const categoriesResponse = await fetchAdminList<FooterCategory>(
+    "/categories",
+    {
       isActive: true,
       page: 1,
       pageSize: 100,
-    }),
-    fetchAdminList<FooterSocialContact>("/social-media-contacts", {
+    },
+    publicFetchBehavior,
+  );
+
+  return sortFooterCategories(categoriesResponse?.items ?? []);
+});
+
+export const fetchPublicSocialContacts = cache(async () => {
+  const socialContactsResponse = await fetchAdminList<FooterSocialContact>(
+    "/social-media-contacts",
+    {
       isActive: true,
       page: 1,
       pageSize: 20,
-    }),
+    },
+    publicFetchBehavior,
+  );
+
+  return socialContactsResponse?.items ?? [];
+});
+
+export async function fetchPublicChrome() {
+  const [categories, socialContacts] = await Promise.all([
+    fetchPublicCategories(),
+    fetchPublicSocialContacts(),
   ]);
 
   return {
-    categories: sortFooterCategories(categoriesResponse?.items ?? []),
-    socialContacts: socialContactsResponse?.items ?? [],
+    categories,
+    socialContacts,
   };
 }
 
-export async function fetchAboutPageSetting() {
-  const response = await fetchAdminList<AboutPageSetting>("/about-page-settings", {
-    page: 1,
-    pageSize: 20,
-  });
+export const fetchAboutPageSetting = cache(async () => {
+  const response = await fetchAdminList<AboutPageSetting>(
+    "/about-page-settings",
+    {
+      page: 1,
+      pageSize: 20,
+    },
+    publicFetchBehavior,
+  );
 
   return response?.items[0] ?? null;
-}
+});
 
 export async function fetchPublicContentList(
   resource: PublicContentResource,
   options: FetchListOptions = {},
 ) {
-  return fetchAdminList<PublicContentItem>(`/${resource}`, {
-    isActive: options.isActive ?? true,
-    page: options.page ?? 1,
-    pageSize: options.pageSize ?? 6,
-    search: options.search,
-    sortBy: options.sortBy,
-    sortOrder: options.sortOrder,
-  });
+  return fetchAdminList<PublicContentItem>(
+    `/${resource}`,
+    {
+      isActive: options.isActive ?? true,
+      page: options.page ?? 1,
+      pageSize: options.pageSize ?? 6,
+      search: options.search,
+      sortBy: options.sortBy,
+      sortOrder: options.sortOrder,
+    },
+    publicFetchBehavior,
+  );
 }
 
-export async function fetchPublicContentBySlug(
+export const fetchPublicContentBySlug = cache(async function fetchPublicContentBySlug(
   resource: PublicContentResource,
   slug: string,
 ) {
@@ -123,7 +156,7 @@ export async function fetchPublicContentBySlug(
   const detail = await fetchPublicContentById(resource, item.id);
 
   return detail ?? item;
-}
+});
 
 export function getLocalizedAboutContent(setting: AboutPageSetting, locale: Locale) {
   return {
@@ -272,21 +305,7 @@ async function fetchPublicContentById(
   resource: PublicContentResource,
   id: string,
 ) {
-  const url = createSantaApiUrl(`/${resource}/${id}`);
-
-  try {
-    const response = await fetch(url, {
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    return (await response.json()) as PublicContentItem;
-  } catch {
-    return null;
-  }
+  return fetchSantaApiResource<PublicContentItem>(`/${resource}/${id}`, publicFetchBehavior);
 }
 
 function escapeHtml(value: string) {

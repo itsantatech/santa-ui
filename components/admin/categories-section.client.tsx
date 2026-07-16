@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { getErrorMessage } from "@/lib/api-error";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { getTransactionToastCopy } from "@/lib/transaction-toast";
@@ -747,7 +748,7 @@ function getCategoryBatchFieldConfig(
     return {
       fieldLabel: labels.category.fields[action],
       initialValue: row[action] ?? "",
-      type: "textarea",
+      type: "richtext",
     };
   }
 
@@ -787,7 +788,7 @@ function getSubCategoryBatchFieldConfig(
     return {
       fieldLabel: labels.subCategory.fields[action],
       initialValue: row[action] ?? "",
-      type: "textarea",
+      type: "richtext",
     };
   }
 
@@ -968,14 +969,14 @@ function CategoryModal({
               }
               selectedIconName={form.googleIconName}
             />
-            <LabeledTextarea
+            <LabeledRichText
               label={labels.category.fields.descriptionTh}
               onChange={(value) =>
                 setForm((current) => ({ ...current, descriptionTh: value }))
               }
               value={form.descriptionTh}
             />
-            <LabeledTextarea
+            <LabeledRichText
               label={labels.category.fields.descriptionEn}
               onChange={(value) =>
                 setForm((current) => ({ ...current, descriptionEn: value }))
@@ -1144,14 +1145,14 @@ function SubCategoryModal({
               value={form.slug}
             />
             <div />
-            <LabeledTextarea
+            <LabeledRichText
               label={labels.subCategory.fields.descriptionTh}
               onChange={(value) =>
                 setForm((current) => ({ ...current, descriptionTh: value }))
               }
               value={form.descriptionTh}
             />
-            <LabeledTextarea
+            <LabeledRichText
               label={labels.subCategory.fields.descriptionEn}
               onChange={(value) =>
                 setForm((current) => ({ ...current, descriptionEn: value }))
@@ -1296,7 +1297,7 @@ function LabeledInput({
   );
 }
 
-function LabeledTextarea({
+function LabeledRichText({
   label,
   onChange,
   value,
@@ -1305,12 +1306,7 @@ function LabeledTextarea({
   onChange: (value: string) => void;
   value: string;
 }) {
-  return (
-    <label className="admin-product-field admin-product-field-wide">
-      <span>{label}</span>
-      <textarea onChange={(event) => onChange(event.target.value)} value={value} />
-    </label>
-  );
+  return <RichTextEditor label={label} onChange={onChange} value={value} />;
 }
 
 function GoogleIconPicker({

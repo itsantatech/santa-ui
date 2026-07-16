@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { randomBytes, createHash } from "node:crypto";
@@ -69,7 +70,7 @@ export function getCallbackUrl(requestUrl: string) {
   return `${getBaseUrl(requestUrl)}/api/auth/callback`;
 }
 
-export async function getSession(): Promise<AuthSession | null> {
+export const getSession = cache(async function getSession(): Promise<AuthSession | null> {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(authCookies.accessToken)?.value;
 
@@ -92,7 +93,7 @@ export async function getSession(): Promise<AuthSession | null> {
     roles,
     isAdmin: hasAdminRole(roles),
   };
-}
+});
 
 export async function requireAdminSession({
   returnTo = "/th/admin",
@@ -124,9 +125,13 @@ export function getUserRoles(payload: KeycloakTokenPayload) {
 
 export function hasAdminRole(roles: string[]) {
   return roles.some((role) => {
-    const normalized = role.toLowerCase().replace(/[\s-]+/g, "_");
+    const normalized = normalizeRole(role);
     return (
       normalized === "admin" ||
+      normalized === "sales" ||
+      normalized === "engineer" ||
+      normalized === "accounting" ||
+      normalized === "store" ||
       normalized === "super_admin" ||
       normalized === "superadmin"
     );
@@ -153,4 +158,8 @@ function base64UrlEncode(value: Buffer) {
     .replaceAll("+", "-")
     .replaceAll("/", "_")
     .replaceAll("=", "");
+}
+
+function normalizeRole(role: string) {
+  return role.toLowerCase().replace(/[\s-]+/g, "_");
 }

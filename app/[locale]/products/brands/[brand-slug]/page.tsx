@@ -11,6 +11,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
 import { fetchAdminList } from "@/lib/admin-api";
 import { isLocale, locales, type Locale } from "@/lib/i18n";
+import { normalizeRichTextHtml } from "@/lib/public-content";
 
 type BrandDetailPageProps = {
   params: Promise<{ "brand-slug": string; locale: string }>;
@@ -230,7 +231,10 @@ export default async function BrandDetailPage({
             ) : null}
 
             {brandDescription ? (
-              <p className="brand-detail-description">{brandDescription}</p>
+              <div
+                className="brand-detail-description"
+                dangerouslySetInnerHTML={{ __html: normalizeRichTextHtml(brandDescription) }}
+              />
             ) : null}
           </div>
 
