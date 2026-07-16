@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { PublicContentList } from "@/components/public-content";
 import { SiteFooter } from "@/components/site-footer";
@@ -42,6 +43,8 @@ export default async function NewsAndActivitiesPage({
   params,
   searchParams,
 }: LocalePageProps) {
+  await connection();
+
   const { locale } = await params;
 
   if (!isLocale(locale)) {

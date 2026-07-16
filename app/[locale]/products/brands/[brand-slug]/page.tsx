@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { ProductCard, type ProductCardData } from "@/components/product-card";
 import { ProductFilter, type ProductFilterOption } from "@/components/product-filter";
 import { ProductListPagination } from "@/components/product-list-pagination";
@@ -103,6 +104,8 @@ export default async function BrandDetailPage({
   params,
   searchParams,
 }: BrandDetailPageProps) {
+  await connection();
+
   const { locale, "brand-slug": brandSlug } = await params;
 
   if (!isLocale(locale)) {
