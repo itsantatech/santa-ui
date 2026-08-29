@@ -140,8 +140,10 @@ export function SiteNavbarClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const navRef = useRef<HTMLElement | null>(null);
+  const sessionMenuRef = useRef<HTMLDivElement | null>(null);
   const isAdminVariant = variant === "admin";
   const [openMenu, setOpenMenu] = useState<"categories" | "news" | null>(null);
+  const [isSessionMenuOpen, setIsSessionMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [openMobileSubmenu, setOpenMobileSubmenu] = useState<"categories" | "news" | null>(null);
@@ -168,6 +170,14 @@ export function SiteNavbarClient({
     pathname,
     searchParams: searchParams.toString(),
   });
+  const isCustomer = session?.roles.some(
+    (role) => role.trim().toLowerCase() === "customer",
+  );
+  const customerMenuItems = [
+    { href: `/${locale}/profile`, label: locale === "th" ? "ข้อมูลโปรไฟล์" : "Profile" },
+    { href: `/${locale}/orders`, label: locale === "th" ? "คำสั่งซื้อของฉัน" : "My orders" },
+    { href: `/${locale}/deliveries`, label: locale === "th" ? "ที่อยู่ในการจัดส่ง" : "Delivery addresses" },
+  ];
 
   function goToProductSearch(query: string) {
     const trimmedQuery = query.trim();
@@ -186,6 +196,10 @@ export function SiteNavbarClient({
     function handlePointerDown(event: MouseEvent) {
       if (!navRef.current?.contains(event.target as Node)) {
         setOpenMenu(null);
+      }
+
+      if (!sessionMenuRef.current?.contains(event.target as Node)) {
+        setIsSessionMenuOpen(false);
       }
     }
 
@@ -382,12 +396,48 @@ export function SiteNavbarClient({
 
         {session ? (
           <div className="nav-session site-navbar-desktop-session">
-            <Link className="nav-username" href={`/${locale}/admin`}>
-              {session.username}
-            </Link>
-            <AuthLink className="sign-out-link" href="/api/auth/logout">
-              {content.signOut}
-            </AuthLink>
+            {isCustomer ? (
+              <div className="nav-session-dropdown" ref={sessionMenuRef}>
+                <button
+                  aria-expanded={isSessionMenuOpen}
+                  aria-haspopup="menu"
+                  className="nav-username nav-username-button"
+                  onClick={() => setIsSessionMenuOpen((current) => !current)}
+                  type="button"
+                >
+                  {session.username}
+                </button>
+                {isSessionMenuOpen ? (
+                  <ul className="primary-nav-menu nav-session-menu" role="menu">
+                    {customerMenuItems.map((item, index) => (
+                      <li key={item.href}>
+                        <Link
+                          className={index === 1 ? "primary-nav-menu-item active" : "primary-nav-menu-item"}
+                          href={item.href}
+                          onClick={() => setIsSessionMenuOpen(false)}
+                        >
+                          {item.label}
+                        </Link>
+                      </li>
+                    ))}
+                    <li>
+                      <AuthLink className="primary-nav-menu-item" href="/api/auth/logout">
+                        {content.signOut}
+                      </AuthLink>
+                    </li>
+                  </ul>
+                ) : null}
+              </div>
+            ) : (
+              <Link className="nav-username" href={`/${locale}/admin`}>
+                {session.username}
+              </Link>
+            )}
+            {!isCustomer ? (
+              <AuthLink className="sign-out-link" href="/api/auth/logout">
+                {content.signOut}
+              </AuthLink>
+            ) : null}
           </div>
         ) : (
           <AuthLink

@@ -656,6 +656,31 @@ input {
   white-space: nowrap;
 }
 
+.nav-session-dropdown {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: fit-content;
+}
+
+.nav-username-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.nav-session-menu {
+  position: fixed;
+  top: 73px;
+  right: 16px;
+  left: auto;
+  transform: none;
+}
+
 .sign-out-link {
   display: inline-flex;
   align-items: center;
