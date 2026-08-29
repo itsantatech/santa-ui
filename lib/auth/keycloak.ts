@@ -115,6 +115,26 @@ export async function requireAdminSession({
   return session;
 }
 
+export async function requireCustomerSession({
+  returnTo = "/th/profile",
+  forbiddenRedirectTo = "/th",
+}: {
+  returnTo?: string;
+  forbiddenRedirectTo?: string;
+} = {}) {
+  const session = await getSession();
+
+  if (!session) {
+    redirect(`/api/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
+  }
+
+  if (!hasCustomerRole(session.roles)) {
+    redirect(forbiddenRedirectTo);
+  }
+
+  return session;
+}
+
 export function getUserRoles(payload: KeycloakTokenPayload) {
   const realmRoles = payload.realm_access?.roles ?? [];
   const clientRoles =
@@ -136,6 +156,10 @@ export function hasAdminRole(roles: string[]) {
       normalized === "superadmin"
     );
   });
+}
+
+export function hasCustomerRole(roles: string[]) {
+  return roles.some((role) => normalizeRole(role) === "customer");
 }
 
 export function decodeJwtPayload<T>(token: string): T | null {

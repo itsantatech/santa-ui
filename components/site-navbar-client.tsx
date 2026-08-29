@@ -175,8 +175,8 @@ export function SiteNavbarClient({
   );
   const customerMenuItems = [
     { href: `/${locale}/profile`, label: locale === "th" ? "ข้อมูลโปรไฟล์" : "Profile" },
-    { href: `/${locale}/orders`, label: locale === "th" ? "คำสั่งซื้อของฉัน" : "My orders" },
-    { href: `/${locale}/deliveries`, label: locale === "th" ? "ที่อยู่ในการจัดส่ง" : "Delivery addresses" },
+    { href: `/${locale}/profile#orders`, label: locale === "th" ? "คำสั่งซื้อของฉัน" : "My orders" },
+    { href: `/${locale}/profile#deliveries`, label: locale === "th" ? "ที่อยู่ในการจัดส่ง" : "Delivery addresses" },
   ];
 
   function goToProductSearch(query: string) {
@@ -409,10 +409,10 @@ export function SiteNavbarClient({
                 </button>
                 {isSessionMenuOpen ? (
                   <ul className="primary-nav-menu nav-session-menu" role="menu">
-                    {customerMenuItems.map((item, index) => (
+                    {customerMenuItems.map((item) => (
                       <li key={item.href}>
                         <Link
-                          className={index === 1 ? "primary-nav-menu-item active" : "primary-nav-menu-item"}
+                          className={pathname === item.href ? "primary-nav-menu-item active" : "primary-nav-menu-item"}
                           href={item.href}
                           onClick={() => setIsSessionMenuOpen(false)}
                         >
