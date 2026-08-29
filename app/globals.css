@@ -663,7 +663,7 @@ input {
 .site-header {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 200;
   min-height: 64px;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border-strong);
@@ -1043,7 +1043,14 @@ input {
   top: 73px;
   right: 16px;
   left: auto;
+  z-index: 300;
+  pointer-events: auto;
   transform: none;
+}
+
+.nav-session-sign-out {
+  width: 100%;
+  cursor: pointer;
 }
 
 .sign-out-link {

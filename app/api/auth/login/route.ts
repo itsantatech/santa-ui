@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
   authUrl.searchParams.set("redirect_uri", getCallbackUrl(request.url));
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("scope", "openid profile email");
+  authUrl.searchParams.set("prompt", "login");
   authUrl.searchParams.set("state", state);
   authUrl.searchParams.set("code_challenge", createCodeChallenge(verifier));
   authUrl.searchParams.set("code_challenge_method", "S256");

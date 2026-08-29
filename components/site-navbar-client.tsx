@@ -230,7 +230,7 @@ export function SiteNavbarClient({
       label: session ? session.username : content.signIn,
     },
     {
-      href: "/api/auth/logout",
+      href: `/api/auth/logout?locale=${locale}`,
       icon: "logout",
       label: content.signOut,
     },
@@ -411,17 +411,16 @@ export function SiteNavbarClient({
                   <ul className="primary-nav-menu nav-session-menu" role="menu">
                     {customerMenuItems.map((item) => (
                       <li key={item.href}>
-                        <Link
+                        <a
                           className={pathname === item.href ? "primary-nav-menu-item active" : "primary-nav-menu-item"}
                           href={item.href}
-                          onClick={() => setIsSessionMenuOpen(false)}
                         >
                           {item.label}
-                        </Link>
+                        </a>
                       </li>
                     ))}
                     <li>
-                      <AuthLink className="primary-nav-menu-item" href="/api/auth/logout">
+                      <AuthLink className="primary-nav-menu-item nav-session-sign-out" href={`/api/auth/logout?locale=${locale}`}>
                         {content.signOut}
                       </AuthLink>
                     </li>
@@ -434,7 +433,7 @@ export function SiteNavbarClient({
               </Link>
             )}
             {!isCustomer ? (
-              <AuthLink className="sign-out-link" href="/api/auth/logout">
+              <AuthLink className="sign-out-link" href={`/api/auth/logout?locale=${locale}`}>
                 {content.signOut}
               </AuthLink>
             ) : null}
