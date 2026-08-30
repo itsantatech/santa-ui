@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { showErrorToast, showInfoToast } from "@/lib/toast";
+import { showErrorToast } from "@/lib/toast";
 
 type Locale = "th" | "en";
 type Cart = {
@@ -28,6 +29,8 @@ export function CartContent({ locale }: { locale: Locale }) {
   const [cart, setCart] = useState<Cart | null>(null);
   const [pendingSku, setPendingSku] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const router = useRouter();
   const [confirmation, setConfirmation] = useState<CartConfirmation | null>(null);
 
   const loadCart = useCallback(async () => {
@@ -86,6 +89,21 @@ export function CartContent({ locale }: { locale: Locale }) {
     } finally { setIsClearing(false); }
   }
 
+  async function checkout() {
+    setIsCheckingOut(true);
+    try {
+      const idempotencyKey = crypto.randomUUID();
+      const response = await fetch("/api/orders/checkout", { body: JSON.stringify({ idempotencyKey }), headers: { "content-type": "application/json" }, method: "POST" });
+      const order = await response.json() as { orderCode?: string; message?: string };
+      if (!response.ok || !order.orderCode) throw new Error(order.message ?? "Unable to place your order.");
+      publishCount(0);
+      router.push(`/${locale}/orders/${order.orderCode}`);
+    } catch (error) {
+      showErrorToast(locale === "th" ? "สั่งซื้อไม่สำเร็จ" : "Unable to place order", error instanceof Error ? error.message : undefined);
+      setIsCheckingOut(false);
+    }
+  }
+
   async function confirmCartAction() {
     if (!confirmation) return;
 
@@ -120,7 +138,7 @@ export function CartContent({ locale }: { locale: Locale }) {
       </article>;
     })}
     <div className="cart-actions"><Link href={`/${locale}/products`}>← {locale === "th" ? "เลือกซื้อสินค้าต่อ" : "Continue shopping"}</Link><button disabled={isClearing} onClick={() => setConfirmation({ type: "clear" })} type="button">{isClearing ? "…" : locale === "th" ? "ล้างตะกร้าทั้งหมด" : "Clear cart"}</button></div>
-  </section><aside className="cart-summary"><h2>{locale === "th" ? "สรุปคำสั่งซื้อ" : "Order summary"}</h2><SummaryRow label={locale === "th" ? `สินค้าทั้งหมด (${cart.summary.itemCount})` : `Items (${cart.summary.itemCount})`} value={formatMoney(cart.summary.subtotal, locale)} /><SummaryRow label={locale === "th" ? "ค่าจัดส่ง" : "Delivery"} value={formatMoney(cart.summary.deliveryFee, locale)} />{cart.summary.discount > 0 ? <SummaryRow emphasis label={locale === "th" ? "ส่วนลด" : "Discount"} value={`- ${formatMoney(cart.summary.discount, locale)}`} /> : null}<div className="cart-summary-total"><span>{locale === "th" ? "รวมทั้งสิ้น" : "Grand total"}</span><strong>{formatMoney(cart.summary.grandTotal, locale)}</strong></div><button onClick={() => showInfoToast(locale === "th" ? "ระบบสั่งซื้อกำลังพัฒนา" : "Checkout is coming soon")} type="button">{locale === "th" ? "สั่งซื้อ" : "Checkout"}</button></aside></div>;
+  </section><aside className="cart-summary"><h2>{locale === "th" ? "สรุปคำสั่งซื้อ" : "Order summary"}</h2><SummaryRow label={locale === "th" ? `สินค้าทั้งหมด (${cart.summary.itemCount})` : `Items (${cart.summary.itemCount})`} value={formatMoney(cart.summary.subtotal, locale)} /><SummaryRow label={locale === "th" ? "ค่าจัดส่ง" : "Delivery"} value={formatMoney(cart.summary.deliveryFee, locale)} />{cart.summary.discount > 0 ? <SummaryRow emphasis label={locale === "th" ? "ส่วนลด" : "Discount"} value={`- ${formatMoney(cart.summary.discount, locale)}`} /> : null}<div className="cart-summary-total"><span>{locale === "th" ? "รวมทั้งสิ้น" : "Grand total"}</span><strong>{formatMoney(cart.summary.grandTotal, locale)}</strong></div><p className="cart-summary-vat">{locale === "th" ? "รวมภาษีมูลค่าเพิ่ม (7%)" : "VAT included (7%)"}</p><button className="cart-order-button" disabled={isCheckingOut} onClick={() => void checkout()} type="button">{isCheckingOut ? (locale === "th" ? "กำลังสร้างคำสั่งซื้อ..." : "Placing order...") : locale === "th" ? "สั่งซื้อ" : "Place order"}</button></aside></div>;
   {confirmation ? <CartConfirmationModal confirmation={confirmation} isPending={isClearing || pendingSku !== null} locale={locale} onCancel={() => setConfirmation(null)} onConfirm={() => void confirmCartAction()} /> : null}</>;
 }
 

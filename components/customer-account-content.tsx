@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
 import type { AuthSession } from "@/lib/auth/keycloak";
 import type { Locale } from "@/lib/i18n";
 
@@ -22,11 +23,6 @@ type Order = {
   tracking?: string;
 };
 
-const orders: Order[] = [
-  { id: "ST-100234", date: "OCT 24, 2024", itemCount: 1, status: "completed", total: "฿12,450.00" },
-  { id: "ST-100256", date: "OCT 24, 2024", itemCount: 1, status: "shipping", total: "฿4,200.00", tracking: "ติดตามพัสดุ KERRY เลขพัสดุ: KT987654321TH" },
-  { id: "ST-100212", date: "OCT 24, 2024", itemCount: 1, status: "cancelled", total: "฿8,900.00" },
-];
 
 const copy = {
   th: {
@@ -91,6 +87,7 @@ export function CustomerAccountContent({ locale, session }: { locale: Locale; se
   const [orderStatus, setOrderStatus] = useState<OrderStatus>("all");
   const [orderSearch, setOrderSearch] = useState("");
   const [saved, setSaved] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [profile, setProfile] = useState<ProfileForm>({
     email: "",
     fullName: session.username,
@@ -141,6 +138,25 @@ export function CustomerAccountContent({ locale, session }: { locale: Locale; se
     }
   }, [session.username, storageKey]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void fetch("/api/orders?page=1&pageSize=100", { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : null)
+        .then((payload: { items?: Array<{ orderCode: string; placedAt: string; fulfillmentStatus: string; paymentStatus: string; trackingNumber: string | null; items: unknown[]; summary: { grandTotal: number } }> } | null) => {
+          if (!payload?.items) return;
+          setOrders(payload.items.map((order) => ({
+            id: order.orderCode,
+            date: new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en-US", { dateStyle: "medium" }).format(new Date(order.placedAt)),
+            itemCount: order.items.length,
+            status: toCustomerOrderStatus(order.fulfillmentStatus, order.paymentStatus),
+            total: new Intl.NumberFormat(locale === "th" ? "th-TH" : "en-US", { style: "currency", currency: "THB" }).format(order.summary.grandTotal),
+            tracking: order.trackingNumber ?? undefined,
+          })));
+        });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [locale]);
+
   const visibleOrders = useMemo(() => {
     const normalizedSearch = orderSearch.trim().toLowerCase();
     return orders.filter((order) => {
@@ -148,7 +164,7 @@ export function CustomerAccountContent({ locale, session }: { locale: Locale; se
       const matchesSearch = !normalizedSearch || order.id.toLowerCase().includes(normalizedSearch);
       return matchesStatus && matchesSearch;
     });
-  }, [orderSearch, orderStatus]);
+  }, [orderSearch, orderStatus, orders]);
 
   function selectSection(nextSection: CustomerAccountSection) {
     setSection(nextSection);
@@ -230,7 +246,7 @@ export function CustomerAccountContent({ locale, session }: { locale: Locale; se
               ))}
             </div>
             <div className="customer-order-list">
-              {visibleOrders.map((order) => <OrderCard key={order.id} order={order} text={text} />)}
+              {visibleOrders.map((order) => <OrderCard key={order.id} locale={locale} order={order} text={text} />)}
               {visibleOrders.length === 0 ? <p className="customer-orders-empty">{locale === "th" ? "ไม่พบคำสั่งซื้อ" : "No orders found."}</p> : null}
             </div>
           </article>
@@ -251,7 +267,7 @@ export function CustomerAccountContent({ locale, session }: { locale: Locale; se
   );
 }
 
-function OrderCard({ order, text }: { order: Order; text: typeof copy.th | typeof copy.en }) {
+function OrderCard({ locale, order, text }: { locale: Locale; order: Order; text: typeof copy.th | typeof copy.en }) {
   const status = {
     cancelled: text.cancelled,
     completed: text.completed,
@@ -271,8 +287,15 @@ function OrderCard({ order, text }: { order: Order; text: typeof copy.th | typeo
       <div className="customer-order-card-bottom">
         <span className="customer-order-item"><span className="material-symbols-outlined" aria-hidden="true">inventory_2</span><span>+{order.itemCount}</span></span>
         {order.tracking ? <span className="customer-order-tracking">{order.tracking}</span> : null}
-        <button type="button">{text.orderDetails}<span aria-hidden="true">→</span></button>
+        <Link href={`/${locale}/orders/${order.id}`}>{text.orderDetails}<span aria-hidden="true">→</span></Link>
       </div>
     </article>
   );
+}
+
+function toCustomerOrderStatus(fulfillmentStatus: string, paymentStatus: string): Exclude<OrderStatus, "all"> {
+  if (fulfillmentStatus === "CANCELLED") return "cancelled";
+  if (fulfillmentStatus === "COMPLETED") return "completed";
+  if (fulfillmentStatus === "SHIPPING") return "shipping";
+  return paymentStatus === "PAID" ? "paid" : "pending";
 }
