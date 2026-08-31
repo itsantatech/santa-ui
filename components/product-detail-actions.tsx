@@ -36,7 +36,7 @@ export function ProductDetailActions({
         method: "POST",
       });
       if (response.status === 401) {
-        router.push(`/api/auth/login?returnTo=${encodeURIComponent(`/${locale}/products/${productSlug}`)}`);
+        router.push(`/${locale}/login?returnTo=${encodeURIComponent(`/${locale}/products/${productSlug}`)}`);
         return;
       }
       const payload = (await response.json().catch(() => null)) as { message?: string; summary?: { itemCount: number } } | null;

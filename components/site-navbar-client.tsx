@@ -239,7 +239,7 @@ export function SiteNavbarClient({
 
   const mobileBottomLinks = [
     {
-      href: session ? `/${locale}/admin` : `/api/auth/login?locale=${locale}`,
+      href: session ? `/${locale}/admin` : `/${locale}/login`,
       icon: "person",
       label: session ? session.username : content.signIn,
     },
@@ -461,7 +461,7 @@ export function SiteNavbarClient({
         ) : (
           <AuthLink
             className="sign-in-link site-navbar-desktop-session"
-            href={`/api/auth/login?locale=${locale}`}
+            href={`/${locale}/login`}
           >
             {content.signIn}
           </AuthLink>
@@ -471,7 +471,7 @@ export function SiteNavbarClient({
           <div className="mobile-header-actions" aria-label="Mobile actions">
             <Link
               className="mobile-header-action"
-              href={session ? `/${locale}/admin` : `/api/auth/login?locale=${locale}`}
+              href={session ? `/${locale}/admin` : `/${locale}/login`}
               aria-label={session ? session.username : content.signIn}
             >
               <span className="material-symbols-outlined" aria-hidden="true">person</span>

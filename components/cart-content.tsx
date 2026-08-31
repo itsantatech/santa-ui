@@ -92,6 +92,16 @@ export function CartContent({ locale }: { locale: Locale }) {
   async function checkout() {
     setIsCheckingOut(true);
     try {
+      const addressResponse = await fetch("/api/customer/delivery-addresses", { cache: "no-store" });
+      if (!addressResponse.ok) throw new Error("Unable to verify delivery address.");
+      const address = await addressResponse.json() as { id?: string } | null;
+      if (!address?.id) {
+        showErrorToast(
+          locale === "th" ? "กรุณาเพิ่มที่อยู่จัดส่งก่อนสั่งซื้อ" : "Please add a delivery address before checkout",
+        );
+        router.push(`/${locale}/profile#deliveries`);
+        return;
+      }
       const idempotencyKey = crypto.randomUUID();
       const response = await fetch("/api/orders/checkout", { body: JSON.stringify({ idempotencyKey }), headers: { "content-type": "application/json" }, method: "POST" });
       const order = await response.json() as { orderCode?: string; message?: string };
@@ -100,6 +110,7 @@ export function CartContent({ locale }: { locale: Locale }) {
       router.push(`/${locale}/orders/${order.orderCode}`);
     } catch (error) {
       showErrorToast(locale === "th" ? "สั่งซื้อไม่สำเร็จ" : "Unable to place order", error instanceof Error ? error.message : undefined);
+    } finally {
       setIsCheckingOut(false);
     }
   }

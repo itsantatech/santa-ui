@@ -105,7 +105,7 @@ export async function requireAdminSession({
   const session = await getSession();
 
   if (!session) {
-    redirect(`/api/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
+    redirect(`${getCustomerLoginPath(returnTo)}?returnTo=${encodeURIComponent(returnTo)}`);
   }
 
   if (!session.isAdmin) {
@@ -125,7 +125,7 @@ export async function requireCustomerSession({
   const session = await getSession();
 
   if (!session) {
-    redirect(`/api/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
+    redirect(`${getCustomerLoginPath(returnTo)}?returnTo=${encodeURIComponent(returnTo)}`);
   }
 
   if (!hasCustomerRole(session.roles)) {
@@ -186,4 +186,9 @@ function base64UrlEncode(value: Buffer) {
 
 function normalizeRole(role: string) {
   return role.toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+function getCustomerLoginPath(returnTo: string) {
+  const locale = returnTo.split("/")[1];
+  return locale === "en" ? "/en/login" : "/th/login";
 }
