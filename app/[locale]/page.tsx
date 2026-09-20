@@ -12,6 +12,7 @@ import { SiteNavbar } from "@/components/site-navbar";
 import type { ProductCardData } from "@/components/product-card";
 import { fetchAdminList } from "@/lib/admin-api";
 import { getDictionary, isLocale, locales, type Locale } from "@/lib/i18n";
+import { pageMetadata } from "@/lib/seo";
 import {
   createContentExcerpt,
   fetchPublicContentList,
@@ -338,16 +339,7 @@ export async function generateMetadata({
 
   const dictionary = getDictionary(locale);
 
-  return {
-    title: dictionary.metadataTitle,
-    description: dictionary.metadataDescription,
-    alternates: {
-      languages: {
-        th: "/th",
-        en: "/en",
-      },
-    },
-  };
+  return pageMetadata({ title: dictionary.metadataTitle, description: dictionary.metadataDescription, locale, path: "/" });
 }
 
 export default async function Home({ params }: HomeProps) {

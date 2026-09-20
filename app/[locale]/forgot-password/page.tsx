@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
 import { isLocale } from "@/lib/i18n";
 import { fetchPublicChrome } from "@/lib/public-content";
+
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function ForgotPasswordPage({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams: Promise<{ reset?: string }> }) { const { locale } = await params; if (!isLocale(locale)) notFound(); const { reset } = await searchParams; const { categories, socialContacts } = await fetchPublicChrome(); const thai = locale === "th"; return <main className="site-shell"><SiteNavbar locale={locale} /><section className="customer-auth-page"><form action="/api/auth/forgot-password" className="customer-auth-card" method="post"><h1>{thai ? "ลืมรหัสผ่าน" : "Forgot password"}</h1><p>{thai ? "กรอกอีเมลที่ใช้สมัคร ระบบจะส่งลิงก์ตั้งรหัสผ่านใหม่ให้หากพบบัญชี" : "Enter your registered email. We will send a reset link if an account exists."}</p>{reset === "sent" ? <p className="customer-auth-help" role="status">{thai ? "หากพบบัญชี ระบบได้ส่งลิงก์ให้แล้ว" : "If an account exists, a reset link has been sent."}</p> : null}{reset === "error" ? <p className="customer-auth-help" role="alert">{thai ? "ไม่สามารถส่งคำขอได้ กรุณาลองใหม่" : "Unable to submit the request. Please try again."}</p> : null}<input name="locale" type="hidden" value={locale} /><label><span>{thai ? "อีเมล" : "Email"}</span><input autoComplete="email" name="email" required type="email" /></label><button className="customer-auth-primary" type="submit">{thai ? "ส่งลิงก์ตั้งรหัสผ่านใหม่" : "Send reset link"}</button></form></section><SiteFooter categories={categories} locale={locale} socialContacts={socialContacts} /></main>; }

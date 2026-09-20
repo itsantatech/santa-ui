@@ -14,6 +14,7 @@ import {
   type PublicContentItem,
 } from "@/lib/public-content";
 import { isLocale, locales } from "@/lib/i18n";
+import { pageMetadata } from "@/lib/seo";
 
 type LocalePageProps = {
   params: Promise<{ locale: string }>;
@@ -33,10 +34,7 @@ export async function generateMetadata({
     return {};
   }
 
-  return {
-    title: locale === "th" ? "ข่าวสารและกิจกรรม" : "News & Activities",
-    description: locale === "th" ? "ข่าวสารและกิจกรรม" : "News & Activities",
-  };
+  return pageMetadata({ title: locale === "th" ? "ข่าวสารและกิจกรรม" : "News & Activities", description: locale === "th" ? "ข่าวสาร กิจกรรม และความเคลื่อนไหวจาก SantaTech" : "News, events, and updates from SantaTech.", locale, path: "/news-and-activities" });
 }
 
 export default async function NewsAndActivitiesPage({

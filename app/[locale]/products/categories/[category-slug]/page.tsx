@@ -11,6 +11,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
 import { fetchAdminList } from "@/lib/admin-api";
 import { isLocale, locales, type Locale } from "@/lib/i18n";
+import { pageMetadata } from "@/lib/seo";
 import { normalizeRichTextHtml } from "@/lib/public-content";
 
 type CategoryDetailPageProps = {
@@ -96,7 +97,7 @@ export async function generateMetadata({
       title
     : title;
 
-  return { title, description };
+  return pageMetadata({ title, description, locale, path: `/products/categories/${categorySlug}`, image: category?.coverImgUrl });
 }
 
 export default async function CategoryDetailPage({
