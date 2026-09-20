@@ -118,6 +118,8 @@
 .customer-password-input button { position: absolute; top: 8px; right: 8px; display: grid; width: 34px; height: 34px; padding: 0; color: #526176; font-size: 20px; line-height: 1; cursor: pointer; background: transparent; border: 0; place-items: center; }
 .customer-auth-primary, .customer-auth-social { display: block; box-sizing: border-box; width: 100%; border: 0; border-radius: 8px; margin-top: 18px; padding: 12px; background: #f26a21; color: #fff; font: inherit; font-weight: 700; text-align: center; text-decoration: none; cursor: pointer; }
 .customer-auth-social { margin-top: 10px; background: #fff; border: 1px solid #d3d9e2; color: #293243; }
+.customer-auth-google { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.customer-auth-google-icon { width: 18px; height: 18px; }
 .customer-auth-divider { display: flex; align-items: center; gap: 12px; margin: 22px 0 4px; color: #8b95a7; font-size: 13px; }
 .customer-auth-divider::before, .customer-auth-divider::after { content: ""; flex: 1; height: 1px; background: #e6e9ee; }
 .customer-auth-link, .customer-auth-switch { display: block; margin-top: 20px; color: #526176; font-size: 14px; text-align: center; }
