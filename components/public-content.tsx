@@ -192,28 +192,23 @@ export function AboutPageContent({
   setting: AboutPageSetting | null;
   socialContacts: FooterSocialContact[];
 }) {
-  const headline = setting
-    ? (
-        locale === "th"
-          ? setting.headlineTh
-          : setting.headlineEn.trim() || setting.headlineTh
-      ).trim() || (locale === "th" ? "เกี่ยวกับเรา" : "About Us")
-    : locale === "th"
-      ? "เกี่ยวกับเรา"
-      : "About Us";
-  const richText = setting
-    ? locale === "th"
-      ? setting.contentTh
-      : setting.contentEn
-    : "";
-  const media = setting?.imgUrl ?? [];
+  const fallbackHeadline = locale === "th" ? "เกี่ยวกับเรา" : "About Us";
+  const localizedHeadline = locale === "th"
+    ? setting?.headlineTh
+    : setting?.headlineEn || setting?.headlineTh;
+  const headline = typeof localizedHeadline === "string" && localizedHeadline.trim()
+    ? localizedHeadline.trim()
+    : fallbackHeadline;
+  const localizedContent = locale === "th" ? setting?.contentTh : setting?.contentEn;
+  const richText = typeof localizedContent === "string" ? localizedContent : "";
+  const media = Array.isArray(setting?.imgUrl) ? setting.imgUrl : [];
   const lineUrl =
     socialContacts.find(
       (item) =>
         item.isActive &&
         item.code === "SM-LINE" &&
-        item.contactUrl.trim().length > 0,
-    )?.contactUrl.trim() ?? null;
+        typeof item.contactUrl === "string" && item.contactUrl.trim().length > 0,
+    )?.contactUrl?.trim() ?? null;
   const mapEmbedUrl =
     "https://maps.google.com/maps?q=Santa%20Technology%20Company%20Limited%2014.0504953,100.6783732&z=17&output=embed";
 

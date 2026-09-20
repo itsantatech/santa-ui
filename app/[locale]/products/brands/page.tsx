@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
 import { fetchAdminList } from "@/lib/admin-api";
 import { isLocale, locales, type Locale } from "@/lib/i18n";
+import { pageMetadata } from "@/lib/seo";
 
 type BrandsPageProps = {
   params: Promise<{ locale: string }>;
@@ -54,10 +55,7 @@ export async function generateMetadata({
     return {};
   }
 
-  return {
-    title: locale === "th" ? "แบรนด์" : "Brands",
-    description: locale === "th" ? "รวมแบรนด์สินค้าอุตสาหกรรม" : "Industrial product brands",
-  };
+  return pageMetadata({ title: locale === "th" ? "แบรนด์" : "Brands", description: locale === "th" ? "รวมแบรนด์สินค้าอุตสาหกรรม" : "Industrial product brands", locale, path: "/products/brands" });
 }
 
 export default async function ProductBrandsPage({

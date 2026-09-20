@@ -7,6 +7,8 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
 import { fetchAdminList } from "@/lib/admin-api";
 import { isLocale, locales, type Locale } from "@/lib/i18n";
+import { SeoJsonLd } from "@/components/seo-json-ld";
+import { pageMetadata } from "@/lib/seo";
 
 type LocalePageProps = {
   params: Promise<{ locale: string }>;
@@ -56,10 +58,7 @@ export async function generateMetadata({
     return {};
   }
 
-  return {
-    title: locale === "th" ? "คำถามที่พบบ่อย" : "FAQs",
-    description: locale === "th" ? "คำถามที่พบบ่อย" : "FAQs",
-  };
+  return pageMetadata({ title: locale === "th" ? "คำถามที่พบบ่อย" : "FAQs", description: locale === "th" ? "คำถามที่พบบ่อยเกี่ยวกับสินค้าและบริการ SantaTech" : "Frequently asked questions about SantaTech products and services.", locale, path: "/faqs" });
 }
 
 export default async function FaqsPage({ params, searchParams }: LocalePageProps) {
@@ -110,6 +109,7 @@ export default async function FaqsPage({ params, searchParams }: LocalePageProps
 
   return (
     <main className="site-shell">
+      <SeoJsonLd data={{ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: activeFaqs.map((item) => ({ "@type": "Question", name: locale === "th" ? item.questionTh : item.questionEn, acceptedAnswer: { "@type": "Answer", text: locale === "th" ? item.answerTh : item.answerEn } })).filter((item) => item.name && item.acceptedAnswer.text) }} />
       <SiteNavbar locale={locale} />
 
       <section className="products-page-section">

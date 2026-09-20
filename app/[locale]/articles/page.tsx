@@ -14,6 +14,7 @@ import {
   type PublicContentItem,
 } from "@/lib/public-content";
 import { isLocale, locales } from "@/lib/i18n";
+import { pageMetadata } from "@/lib/seo";
 
 type LocalePageProps = {
   params: Promise<{ locale: string }>;
@@ -33,10 +34,7 @@ export async function generateMetadata({
     return {};
   }
 
-  return {
-    title: locale === "th" ? "บทความและสาระน่ารู้" : "Articles",
-    description: locale === "th" ? "บทความและสาระน่ารู้" : "Articles",
-  };
+  return pageMetadata({ title: locale === "th" ? "บทความและสาระน่ารู้" : "Articles", description: locale === "th" ? "บทความความรู้ด้านอุตสาหกรรมจาก SantaTech" : "Industrial knowledge and insights from SantaTech.", locale, path: "/articles" });
 }
 
 export default async function ArticlesPage({

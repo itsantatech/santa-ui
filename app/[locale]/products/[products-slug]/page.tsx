@@ -7,8 +7,10 @@ import { ProductDetailActions } from "@/components/product-detail-actions";
 import { ProductDetailGallery } from "@/components/product-detail-gallery";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
+import { SeoJsonLd } from "@/components/seo-json-ld";
 import { fetchAdminList, santaApiBaseUrl } from "@/lib/admin-api";
 import { isLocale, locales, type Locale } from "@/lib/i18n";
+import { pageMetadata, siteUrl } from "@/lib/seo";
 
 type ProductDetailPageProps = {
   params: Promise<{ locale: string; "products-slug": string }>;
@@ -78,13 +80,8 @@ export async function generateMetadata({
       : product.nameEn
     : formatSlugLabel(productSlug);
 
-  return {
-    title,
-    description:
-      locale === "th"
-        ? stripHtml(product?.shortDescriptionTh) || title
-        : stripHtml(product?.shortDescriptionEn) || title,
-  };
+  const description = locale === "th" ? stripHtml(product?.shortDescriptionTh) || title : stripHtml(product?.shortDescriptionEn) || title;
+  return pageMetadata({ title, description, locale, path: `/products/${productSlug}`, image: product?.imgUrl?.[0] });
 }
 
 export default async function ProductDetailPage({
@@ -169,6 +166,7 @@ export default async function ProductDetailPage({
 
   return (
     <main className="site-shell">
+      <SeoJsonLd data={{ "@context": "https://schema.org", "@type": "Product", name: productName, description: productShortDescription, sku: product.sku, image: product.imgUrl, url: new URL(`/${locale}/products/${productSlug}`, siteUrl).toString(), brand: brand ? { "@type": "Brand", name: brand.nameEn } : undefined, offers: currentPrice ? { "@type": "Offer", price: currentPrice, priceCurrency: "THB", availability: stockQuantity > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock" } : undefined }} />
       <SiteNavbar locale={locale} />
 
       <section className="product-detail-page">

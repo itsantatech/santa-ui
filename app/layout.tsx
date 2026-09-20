@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { AppToastHost } from "@/components/app-toast-host";
+import { siteUrl } from "@/lib/seo";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SantaTech",
+  metadataBase: siteUrl,
+  title: { default: "SantaTech | Industrial products and services", template: "%s | SantaTech" },
   description: "Industrial products and services from SantaTech.",
+  robots: { index: true, follow: true },
+  openGraph: { type: "website", siteName: "SantaTech" },
   alternates: {
     languages: {
       th: "/th",

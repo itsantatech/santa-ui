@@ -12,6 +12,7 @@ import { SiteNavbar } from "@/components/site-navbar";
 import { fetchAdminList } from "@/lib/admin-api";
 import { isLocale, locales, type Locale } from "@/lib/i18n";
 import { normalizeRichTextHtml } from "@/lib/public-content";
+import { pageMetadata } from "@/lib/seo";
 
 type BrandDetailPageProps = {
   params: Promise<{ "brand-slug": string; locale: string }>;
@@ -98,7 +99,7 @@ export async function generateMetadata({
       title
     : title;
 
-  return { title, description };
+  return pageMetadata({ title, description, locale, path: `/products/brands/${brandSlug}`, image: brand?.imgUrl });
 }
 
 export default async function BrandDetailPage({

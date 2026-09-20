@@ -16,7 +16,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale } = await params;
-  return isLocale(locale) ? { title: locale === "th" ? "ข้อมูลโปรไฟล์" : "Profile" } : {};
+  return isLocale(locale) ? { title: locale === "th" ? "ข้อมูลโปรไฟล์" : "Profile", robots: { index: false, follow: false } } : {};
 }
 
 export default async function ProfilePage({ params }: PageProps) {
