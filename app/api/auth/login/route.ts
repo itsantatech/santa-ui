@@ -13,19 +13,29 @@ export async function GET(request: NextRequest) {
   const verifier = createRandomValue();
   const locale = request.nextUrl.searchParams.get("locale");
   const requestedReturnTo = request.nextUrl.searchParams.get("returnTo");
+  const flow = request.nextUrl.searchParams.get("flow");
+  const identityProvider = request.nextUrl.searchParams.get("idp");
   const returnTo = getSafeReturnTo(
     requestedReturnTo,
     isLocale(locale ?? "") ? `/${locale}` : `/${defaultLocale}`,
   );
 
-  const authUrl = new URL(keycloakConfig.authorizationEndpoint);
+  const authUrl = new URL(
+    flow === "register"
+      ? keycloakConfig.authorizationEndpoint.replace(/\/auth$/, "/registrations")
+      : keycloakConfig.authorizationEndpoint,
+  );
   authUrl.searchParams.set("client_id", keycloakConfig.clientId);
   authUrl.searchParams.set("redirect_uri", getCallbackUrl(request.url));
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("scope", "openid profile email");
+  authUrl.searchParams.set("prompt", "login");
   authUrl.searchParams.set("state", state);
   authUrl.searchParams.set("code_challenge", createCodeChallenge(verifier));
   authUrl.searchParams.set("code_challenge_method", "S256");
+  if (identityProvider && /^(google|facebook)$/.test(identityProvider)) {
+    authUrl.searchParams.set("kc_idp_hint", identityProvider);
+  }
 
   const response = NextResponse.redirect(authUrl);
   const secure = request.nextUrl.protocol === "https:";

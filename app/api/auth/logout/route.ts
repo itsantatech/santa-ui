@@ -4,12 +4,14 @@ import {
   getBaseUrl,
   keycloakConfig,
 } from "@/lib/auth/keycloak";
-import { defaultLocale } from "@/lib/i18n";
+import { defaultLocale, isLocale } from "@/lib/i18n";
 
-export async function GET(request: NextRequest) {
-  const idToken = request.cookies.get(authCookies.idToken)?.value;
-  const postLogoutRedirectUri = `${getBaseUrl(request.url)}/${defaultLocale}`;
+function signOutResponse(request: NextRequest) {
+  const requestedLocale = request.nextUrl.searchParams.get("locale");
+  const locale = isLocale(requestedLocale ?? "") ? requestedLocale : defaultLocale;
+  const postLogoutRedirectUri = `${getBaseUrl(request.url)}/${locale}`;
   const logoutUrl = new URL(keycloakConfig.logoutEndpoint);
+  const idToken = request.cookies.get(authCookies.idToken)?.value;
 
   logoutUrl.searchParams.set("client_id", keycloakConfig.clientId);
   logoutUrl.searchParams.set("post_logout_redirect_uri", postLogoutRedirectUri);
@@ -28,4 +30,12 @@ export async function GET(request: NextRequest) {
   response.cookies.set(authCookies.returnTo, "", { maxAge: 0, path: "/" });
 
   return response;
+}
+
+export async function GET(request: NextRequest) {
+  return signOutResponse(request);
+}
+
+export async function POST(request: NextRequest) {
+  return signOutResponse(request);
 }

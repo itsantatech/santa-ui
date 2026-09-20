@@ -1,7 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { QuotationRequestModal } from "./quotation-request-modal";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 
 export function ProductDetailActions({
   canAddToCart,
@@ -22,6 +24,39 @@ export function ProductDetailActions({
 }) {
   const [quantity, setQuantity] = useState(1);
   const [isQuotationModalOpen, setIsQuotationModalOpen] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const router = useRouter();
+
+  async function addToCart() {
+    setIsAddingToCart(true);
+    try {
+      const response = await fetch("/api/cart/items", {
+        body: JSON.stringify({ productSku, quantity }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      if (response.status === 401) {
+        router.push(`/${locale}/login?returnTo=${encodeURIComponent(`/${locale}/products/${productSlug}`)}`);
+        return;
+      }
+      const payload = (await response.json().catch(() => null)) as { message?: string; summary?: { itemCount: number } } | null;
+      if (!response.ok) {
+        throw new Error(payload?.message ?? "Unable to add this product to the cart.");
+      }
+      window.dispatchEvent(new CustomEvent("santa-ui:cart-updated", { detail: payload?.summary?.itemCount ?? 0 }));
+      showSuccessToast(
+        locale === "th" ? "เพิ่มสินค้าลงตะกร้าแล้ว" : "Added to cart",
+        locale === "th" ? "คุณสามารถตรวจสอบรายการได้จากตะกร้าสินค้า" : "Review your items in the cart.",
+      );
+    } catch (error) {
+      showErrorToast(
+        locale === "th" ? "เพิ่มสินค้าลงตะกร้าไม่สำเร็จ" : "Unable to add to cart",
+        error instanceof Error ? error.message : undefined,
+      );
+    } finally {
+      setIsAddingToCart(false);
+    }
+  }
 
   return (
     <>
@@ -44,8 +79,10 @@ export function ProductDetailActions({
               </div>
             </div>
 
-            <button className="product-detail-cart-button" type="button">
-              {locale === "th" ? "เพิ่มลงตะกร้า" : "Add to cart"}
+            <button className="product-detail-cart-button" disabled={isAddingToCart} onClick={addToCart} type="button">
+              {isAddingToCart
+                ? locale === "th" ? "กำลังเพิ่ม..." : "Adding..."
+                : locale === "th" ? "เพิ่มลงตะกร้า" : "Add to cart"}
             </button>
           </div>
         ) : null}

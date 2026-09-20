@@ -147,6 +147,7 @@ export function SiteNavbarClient({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [openMobileSubmenu, setOpenMobileSubmenu] = useState<"categories" | "news" | null>(null);
+  const [cartItemCount, setCartItemCount] = useState(0);
   const categoriesNavLabel = content.nav[2];
   const newsNavLabel = content.nav[4];
   const navItems = content.nav.map((label, index) => ({
@@ -223,14 +224,27 @@ export function SiteNavbarClient({
     };
   }, [isMobileMenuOpen]);
 
+  useEffect(() => {
+    if (!isCustomer || isAdminVariant) return;
+    const handleCartUpdated = (event: Event) => {
+      setCartItemCount((event as CustomEvent<number>).detail ?? 0);
+    };
+    window.addEventListener("santa-ui:cart-updated", handleCartUpdated);
+    void fetch("/api/cart", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((cart: { summary?: { itemCount?: number } } | null) => setCartItemCount(cart?.summary?.itemCount ?? 0))
+      .catch(() => undefined);
+    return () => window.removeEventListener("santa-ui:cart-updated", handleCartUpdated);
+  }, [isAdminVariant, isCustomer]);
+
   const mobileBottomLinks = [
     {
-      href: session ? `/${locale}/admin` : `/api/auth/login?locale=${locale}`,
+      href: session ? `/${locale}/admin` : `/${locale}/login`,
       icon: "person",
       label: session ? session.username : content.signIn,
     },
     {
-      href: "/api/auth/logout",
+      href: `/api/auth/logout?locale=${locale}`,
       icon: "logout",
       label: content.signOut,
     },
@@ -397,6 +411,12 @@ export function SiteNavbarClient({
         {session ? (
           <div className="nav-session site-navbar-desktop-session">
             {isCustomer ? (
+              <Link className="nav-cart-link" href={`/${locale}/cart`} aria-label={locale === "th" ? "ตะกร้าสินค้า" : "Shopping cart"}>
+                <span className="material-symbols-outlined" aria-hidden="true">shopping_cart</span>
+                {cartItemCount > 0 ? <span className="nav-cart-count">{cartItemCount}</span> : null}
+              </Link>
+            ) : null}
+            {isCustomer ? (
               <div className="nav-session-dropdown" ref={sessionMenuRef}>
                 <button
                   aria-expanded={isSessionMenuOpen}
@@ -411,17 +431,16 @@ export function SiteNavbarClient({
                   <ul className="primary-nav-menu nav-session-menu" role="menu">
                     {customerMenuItems.map((item) => (
                       <li key={item.href}>
-                        <Link
+                        <a
                           className={pathname === item.href ? "primary-nav-menu-item active" : "primary-nav-menu-item"}
                           href={item.href}
-                          onClick={() => setIsSessionMenuOpen(false)}
                         >
                           {item.label}
-                        </Link>
+                        </a>
                       </li>
                     ))}
                     <li>
-                      <AuthLink className="primary-nav-menu-item" href="/api/auth/logout">
+                      <AuthLink className="primary-nav-menu-item nav-session-sign-out" href={`/api/auth/logout?locale=${locale}`}>
                         {content.signOut}
                       </AuthLink>
                     </li>
@@ -434,7 +453,7 @@ export function SiteNavbarClient({
               </Link>
             )}
             {!isCustomer ? (
-              <AuthLink className="sign-out-link" href="/api/auth/logout">
+              <AuthLink className="sign-out-link" href={`/api/auth/logout?locale=${locale}`}>
                 {content.signOut}
               </AuthLink>
             ) : null}
@@ -442,7 +461,7 @@ export function SiteNavbarClient({
         ) : (
           <AuthLink
             className="sign-in-link site-navbar-desktop-session"
-            href={`/api/auth/login?locale=${locale}`}
+            href={`/${locale}/login`}
           >
             {content.signIn}
           </AuthLink>
@@ -452,17 +471,18 @@ export function SiteNavbarClient({
           <div className="mobile-header-actions" aria-label="Mobile actions">
             <Link
               className="mobile-header-action"
-              href={session ? `/${locale}/admin` : `/api/auth/login?locale=${locale}`}
+              href={session ? `/${locale}/admin` : `/${locale}/login`}
               aria-label={session ? session.username : content.signIn}
             >
               <span className="material-symbols-outlined" aria-hidden="true">person</span>
             </Link>
             <Link
               className="mobile-header-action"
-              href={`/${locale}/products`}
-              aria-label={locale === "th" ? "สินค้าและบริการ" : "Products & Services"}
+              href={isCustomer ? `/${locale}/cart` : `/${locale}/products`}
+              aria-label={isCustomer ? (locale === "th" ? "ตะกร้าสินค้า" : "Shopping cart") : (locale === "th" ? "สินค้าและบริการ" : "Products & Services")}
             >
-              <span className="material-symbols-outlined" aria-hidden="true">shopping_bag</span>
+              <span className="material-symbols-outlined" aria-hidden="true">{isCustomer ? "shopping_cart" : "shopping_bag"}</span>
+              {isCustomer && cartItemCount > 0 ? <span className="nav-cart-count mobile-nav-cart-count">{cartItemCount}</span> : null}
             </Link>
             <button
               type="button"

@@ -41,7 +41,9 @@ export async function POST(request: NextRequest, props: ResourceRouteProps) {
     return Response.json({ message: "Not found." }, { status: 404 });
   }
 
-  return proxySantaApiRequest(request, `/${resource}`);
+  return proxySantaApiRequest(request, `/${resource}`, {
+    requireAuth: resource !== "quotation-requests",
+  });
 }
 
 async function getAllowedResource({ params }: ResourceRouteProps) {
