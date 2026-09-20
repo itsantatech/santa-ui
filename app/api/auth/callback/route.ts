@@ -9,6 +9,7 @@ import {
   keycloakConfig,
 } from "@/lib/auth/keycloak";
 import { defaultLocale, isLocale } from "@/lib/i18n";
+import { createSantaApiUrl } from "@/lib/admin-api";
 
 type TokenResponse = {
   access_token: string;
@@ -49,7 +50,34 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(`/${defaultLocale}`, request.url));
   }
 
-  const tokens = (await tokenResponse.json()) as TokenResponse;
+  let tokens = (await tokenResponse.json()) as TokenResponse;
+  const socialLoginResponse = await fetch(createSantaApiUrl("/customer-auth/social-login"), {
+    headers: { authorization: `Bearer ${tokens.access_token}` },
+    method: "POST",
+    cache: "no-store",
+  }).catch(() => null);
+
+  if (!socialLoginResponse?.ok) {
+    return NextResponse.redirect(new URL(`/${defaultLocale}/login?error=unavailable`, request.url));
+  }
+
+  if (tokens.refresh_token) {
+    const refreshBody = new URLSearchParams({
+      client_id: keycloakConfig.clientId,
+      grant_type: "refresh_token",
+      refresh_token: tokens.refresh_token,
+    });
+    const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET;
+    if (clientSecret) refreshBody.set("client_secret", clientSecret);
+    const refreshResponse = await fetch(keycloakConfig.tokenEndpoint, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: refreshBody,
+      cache: "no-store",
+    }).catch(() => null);
+    if (refreshResponse?.ok) tokens = (await refreshResponse.json()) as TokenResponse;
+  }
+
   const payload = decodeJwtPayload(tokens.access_token);
   const roles = payload ? getUserRoles(payload) : [];
   const redirectTo = hasAdminRole(roles)
