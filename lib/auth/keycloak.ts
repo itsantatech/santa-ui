@@ -85,8 +85,11 @@ export const getSession = cache(async function getSession(): Promise<AuthSession
   }
 
   const roles = getUserRoles(payload);
+  const preferredUsername = payload.preferred_username;
   const username =
-    payload.preferred_username ?? payload.name ?? payload.email ?? "User";
+    preferredUsername && !preferredUsername.includes("@")
+      ? preferredUsername
+      : payload.name ?? preferredUsername ?? payload.email ?? "User";
 
   return {
     username,

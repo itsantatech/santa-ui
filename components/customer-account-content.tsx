@@ -13,8 +13,8 @@ type OrderStatus = "all" | "pending" | "paid" | "shipping" | "cancelled";
 
 type ProfileForm = {
   email: string;
-  fullName: string;
-  phone: string;
+  firstName: string;
+  lastName: string;
 };
 
 type Order = {
@@ -39,13 +39,13 @@ const copy = {
     deliveryHint: "ที่อยู่จัดส่งจะแสดงที่นี่เมื่อคุณเพิ่มข้อมูลในขั้นตอนสั่งซื้อ",
     editProfile: "แก้ไขข้อมูลส่วนตัวของคุณสำหรับการติดต่อและจัดส่งสินค้า",
     email: "อีเมล",
-    fullName: "ชื่อ-นามสกุล",
+    firstName: "ชื่อ",
+    lastName: "นามสกุล",
     orderDetails: "รายละเอียดคำสั่งซื้อ",
     orders: "คำสั่งซื้อของฉัน",
     paid: "ชำระเงินแล้ว",
     paymentStatus: "สถานะการชำระเงิน",
     pending: "รอชำระ",
-    phone: "เบอร์โทรศัพท์",
     profile: "ข้อมูลโปรไฟล์",
     saved: "บันทึกข้อมูลแล้ว",
     save: "บันทึกข้อมูล",
@@ -66,13 +66,13 @@ const copy = {
     deliveryHint: "Your delivery addresses will appear here after you add them during checkout.",
     editProfile: "Update the personal information used to contact you and deliver your orders.",
     email: "Email",
-    fullName: "Full name",
+    firstName: "First name",
+    lastName: "Last name",
     orderDetails: "Order details",
     orders: "My Order",
     paid: "Paid",
     paymentStatus: "Payment status",
     pending: "Pending payment",
-    phone: "Phone number",
     profile: "Profile",
     saved: "Your information has been saved.",
     save: "Save changes",
@@ -95,8 +95,8 @@ export function CustomerAccountContent({ locale, session }: { locale: Locale; se
   const [orders, setOrders] = useState<Order[]>([]);
   const [profile, setProfile] = useState<ProfileForm>({
     email: "",
-    fullName: session.username,
-    phone: "",
+    firstName: "",
+    lastName: "",
   });
   const sectionItems: Array<{ id: CustomerAccountSection; label: string }> = [
     { id: "profile", label: text.profile },
@@ -220,16 +220,16 @@ export function CustomerAccountContent({ locale, session }: { locale: Locale; se
                 <input disabled value={session.username} />
               </label>
               <label>
-                <span>{text.fullName}</span>
-                <input onChange={(event) => setProfile((current) => ({ ...current, fullName: event.target.value }))} required value={profile.fullName} />
+                <span>{text.firstName}</span>
+                <input autoComplete="given-name" onChange={(event) => setProfile((current) => ({ ...current, firstName: event.target.value }))} required value={profile.firstName} />
+              </label>
+              <label>
+                <span>{text.lastName}</span>
+                <input autoComplete="family-name" onChange={(event) => setProfile((current) => ({ ...current, lastName: event.target.value }))} required value={profile.lastName} />
               </label>
               <label>
                 <span>{text.email}</span>
                 <input onChange={(event) => setProfile((current) => ({ ...current, email: event.target.value }))} type="email" value={profile.email} />
-              </label>
-              <label>
-                <span>{text.phone}</span>
-                <input onChange={(event) => setProfile((current) => ({ ...current, phone: event.target.value }))} type="tel" value={profile.phone} />
               </label>
               <div className="customer-profile-actions">
                 <button disabled={isSavingProfile} type="submit">{isSavingProfile ? "…" : text.save}</button>

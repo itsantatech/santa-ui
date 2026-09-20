@@ -112,6 +112,10 @@
 .customer-auth-card > p { color: #68748a; line-height: 1.6; }
 .customer-auth-card form label { display: block; margin-top: 16px; color: #344054; font-weight: 600; }
 .customer-auth-card input { box-sizing: border-box; width: 100%; margin-top: 7px; border: 1px solid #cfd6df; border-radius: 8px; padding: 11px 12px; font: inherit; }
+.customer-auth-name-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.customer-password-input { position: relative; display: block; }
+.customer-password-input input { padding-right: 48px; }
+.customer-password-input button { position: absolute; top: 8px; right: 8px; display: grid; width: 34px; height: 34px; padding: 0; color: #526176; font-size: 20px; line-height: 1; cursor: pointer; background: transparent; border: 0; place-items: center; }
 .customer-auth-primary, .customer-auth-social { display: block; box-sizing: border-box; width: 100%; border: 0; border-radius: 8px; margin-top: 18px; padding: 12px; background: #f26a21; color: #fff; font: inherit; font-weight: 700; text-align: center; text-decoration: none; cursor: pointer; }
 .customer-auth-social { margin-top: 10px; background: #fff; border: 1px solid #d3d9e2; color: #293243; }
 .customer-auth-divider { display: flex; align-items: center; gap: 12px; margin: 22px 0 4px; color: #8b95a7; font-size: 13px; }
@@ -1263,6 +1267,8 @@ input {
 .cart-confirm-icon { display: grid; width: 42px; height: 42px; margin: 0 auto 14px; color: #dc2626; font-size: 22px; font-weight: 800; place-items: center; background: #fee2e2; border-radius: 50%; }
 .cart-confirm-modal h2 { margin: 0; color: #111827; font-size: 21px; font-weight: 800; }.cart-confirm-modal p { margin: 10px 0 0; color: #64748b; font-size: 15px; line-height: 1.6; }
 .cart-confirm-actions { display: flex; justify-content: center; gap: 12px; margin-top: 26px; }.cart-confirm-actions button { min-width: 112px; height: 40px; color: #334155; font-size: 14px; font-weight: 700; cursor: pointer; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 999px; }.cart-confirm-actions button.danger { color: #ffffff; background: #dc2626; border-color: #dc2626; }.cart-confirm-actions button:disabled { cursor: not-allowed; opacity: .55; }
+.cart-confirm-actions button.primary { color: #ffffff; background: var(--color-brand); border-color: var(--color-brand); }
+.cart-address-modal .cart-confirm-icon { color: #c2410c; background: #ffedd5; }
 .cart-summary { display: grid; gap: 17px; padding: 31px 30px; }
 .cart-summary h2 { margin: 0 0 5px; color: #111111; font-size: 24px; font-weight: 800; }
 .cart-summary-row { display: flex; justify-content: space-between; gap: 16px; color: #55708d; font-size: 14px; }.cart-summary-row strong { color: #1f2937; }.cart-summary-row.emphasis, .cart-summary-row.emphasis strong { color: #c2410c; }

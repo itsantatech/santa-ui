@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { showErrorToast } from "@/lib/toast";
 
@@ -30,8 +29,8 @@ export function CartContent({ locale }: { locale: Locale }) {
   const [pendingSku, setPendingSku] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const router = useRouter();
   const [confirmation, setConfirmation] = useState<CartConfirmation | null>(null);
+  const [missingAddress, setMissingAddress] = useState(false);
 
   const loadCart = useCallback(async () => {
     try {
@@ -96,10 +95,7 @@ export function CartContent({ locale }: { locale: Locale }) {
       if (!addressResponse.ok) throw new Error("Unable to verify delivery address.");
       const address = await addressResponse.json() as { id?: string } | null;
       if (!address?.id) {
-        showErrorToast(
-          locale === "th" ? "กรุณาเพิ่มที่อยู่จัดส่งก่อนสั่งซื้อ" : "Please add a delivery address before checkout",
-        );
-        router.push(`/${locale}/profile#deliveries`);
+        setMissingAddress(true);
         return;
       }
       const idempotencyKey = crypto.randomUUID();
@@ -107,7 +103,7 @@ export function CartContent({ locale }: { locale: Locale }) {
       const order = await response.json() as { orderCode?: string; message?: string };
       if (!response.ok || !order.orderCode) throw new Error(order.message ?? "Unable to place your order.");
       publishCount(0);
-      router.push(`/${locale}/orders/${order.orderCode}`);
+      window.location.assign(`/${locale}/orders/${order.orderCode}`);
     } catch (error) {
       showErrorToast(locale === "th" ? "สั่งซื้อไม่สำเร็จ" : "Unable to place order", error instanceof Error ? error.message : undefined);
     } finally {
@@ -150,7 +146,12 @@ export function CartContent({ locale }: { locale: Locale }) {
     })}
     <div className="cart-actions"><Link href={`/${locale}/products`}>← {locale === "th" ? "เลือกซื้อสินค้าต่อ" : "Continue shopping"}</Link><button disabled={isClearing} onClick={() => setConfirmation({ type: "clear" })} type="button">{isClearing ? "…" : locale === "th" ? "ล้างตะกร้าทั้งหมด" : "Clear cart"}</button></div>
   </section><aside className="cart-summary"><h2>{locale === "th" ? "สรุปคำสั่งซื้อ" : "Order summary"}</h2><SummaryRow label={locale === "th" ? `สินค้าทั้งหมด (${cart.summary.itemCount})` : `Items (${cart.summary.itemCount})`} value={formatMoney(cart.summary.subtotal, locale)} /><SummaryRow label={locale === "th" ? "ค่าจัดส่ง" : "Delivery"} value={formatMoney(cart.summary.deliveryFee, locale)} />{cart.summary.discount > 0 ? <SummaryRow emphasis label={locale === "th" ? "ส่วนลด" : "Discount"} value={`- ${formatMoney(cart.summary.discount, locale)}`} /> : null}<div className="cart-summary-total"><span>{locale === "th" ? "รวมทั้งสิ้น" : "Grand total"}</span><strong>{formatMoney(cart.summary.grandTotal, locale)}</strong></div><p className="cart-summary-vat">{locale === "th" ? "รวมภาษีมูลค่าเพิ่ม (7%)" : "VAT included (7%)"}</p><button className="cart-order-button" disabled={isCheckingOut} onClick={() => void checkout()} type="button">{isCheckingOut ? (locale === "th" ? "กำลังสร้างคำสั่งซื้อ..." : "Placing order...") : locale === "th" ? "สั่งซื้อ" : "Place order"}</button></aside></div>;
-  {confirmation ? <CartConfirmationModal confirmation={confirmation} isPending={isClearing || pendingSku !== null} locale={locale} onCancel={() => setConfirmation(null)} onConfirm={() => void confirmCartAction()} /> : null}</>;
+  {confirmation ? <CartConfirmationModal confirmation={confirmation} isPending={isClearing || pendingSku !== null} locale={locale} onCancel={() => setConfirmation(null)} onConfirm={() => void confirmCartAction()} /> : null}{missingAddress ? <MissingAddressModal locale={locale} onCancel={() => setMissingAddress(false)} onOpenAddress={() => { window.open(`/${locale}/profile#deliveries`, "_blank", "noopener,noreferrer"); setMissingAddress(false); }} /> : null}</>;
+}
+
+function MissingAddressModal({ locale, onCancel, onOpenAddress }: { locale: Locale; onCancel: () => void; onOpenAddress: () => void }) {
+  const thai = locale === "th";
+  return <div className="cart-confirm-backdrop" onClick={onCancel} role="presentation"><section aria-labelledby="missing-address-title" aria-modal="true" className="cart-confirm-modal cart-address-modal" onClick={(event) => event.stopPropagation()} role="dialog"><div className="cart-confirm-icon" aria-hidden="true">⌂</div><h2 id="missing-address-title">{thai ? "ยังไม่มีที่อยู่จัดส่ง" : "Delivery address required"}</h2><p>{thai ? "กรุณาเพิ่มที่อยู่จัดส่งก่อนดำเนินการชำระเงิน" : "Add a delivery address before proceeding to payment."}</p><div className="cart-confirm-actions"><button onClick={onCancel} type="button">{thai ? "ยกเลิก" : "Cancel"}</button><button className="primary" onClick={onOpenAddress} type="button">{thai ? "เพิ่มที่อยู่จัดส่ง" : "Add delivery address"}</button></div></section></div>;
 }
 
 function CartConfirmationModal({ confirmation, isPending, locale, onCancel, onConfirm }: { confirmation: CartConfirmation; isPending: boolean; locale: Locale; onCancel: () => void; onConfirm: () => void }) {
