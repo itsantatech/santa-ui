@@ -22,7 +22,7 @@ export function AdminTablePageSizeControl({
     if (
       !Number.isInteger(normalizedPageSize) ||
       normalizedPageSize < 1 ||
-      normalizedPageSize > 100
+      normalizedPageSize > 10_000
     ) {
       return;
     }
@@ -39,7 +39,7 @@ export function AdminTablePageSizeControl({
         <span>{rowsPerPageLabel ?? "Rows per page"}</span>
         <input
           inputMode="numeric"
-          max={100}
+          max={10_000}
           min={1}
           onChange={(event) => setPageSize(event.target.value)}
           type="number"
