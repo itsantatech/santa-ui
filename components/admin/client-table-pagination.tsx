@@ -33,7 +33,7 @@ export function ClientTablePagination({
   function submitPageSize(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextPageSize = Number(pageSize);
-    if (!Number.isInteger(nextPageSize) || nextPageSize < 1 || nextPageSize > 100) return;
+    if (!Number.isInteger(nextPageSize) || nextPageSize < 1 || nextPageSize > 10_000) return;
     onPageSizeChange(nextPageSize);
   }
 
@@ -42,7 +42,7 @@ export function ClientTablePagination({
       <form className="admin-table-page-size" onSubmit={submitPageSize}>
         <label className="admin-table-page-size-label">
           <span>{locale === "th" ? "จำนวนต่อหน้า" : "Rows per page"}</span>
-          <input disabled={disabled} inputMode="numeric" max={100} min={1} onChange={(event) => setPageSize(event.target.value)} type="number" value={pageSize} />
+          <input disabled={disabled} inputMode="numeric" max={10_000} min={1} onChange={(event) => setPageSize(event.target.value)} type="number" value={pageSize} />
         </label>
         <button className="admin-table-page-size-submit" disabled={disabled} type="submit">OK</button>
       </form>
