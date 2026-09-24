@@ -612,11 +612,22 @@ function InventoryUploadModal({
       created: number;
       failed: number;
       updated: number;
+      feedbackFileBase64?: string;
+      feedbackFileName?: string;
     };
 
     setSummary(
       `Created ${result.created}, updated ${result.updated}, failed ${result.failed}`,
     );
+    if (result.feedbackFileBase64) {
+      const bytes = Uint8Array.from(atob(result.feedbackFileBase64), (value) => value.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = result.feedbackFileName ?? "inventory-stocks-import-feedback.xlsx";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
     showSuccessToast(toastCopy.imported, summaryDescription(locale, result));
     router.refresh();
   }
