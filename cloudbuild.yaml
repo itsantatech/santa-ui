@@ -1,0 +1,44 @@
+steps:
+    - name: gcr.io/cloud-builders/docker
+      args:
+        - build
+        - --file
+        - santa-ui/Dockerfile
+        - --tag
+        - ${_REGION}-docker.pkg.dev/$PROJECT_ID/
+        ${_ARTIFACT_REPOSITORY}/santa-ui:$SHORT_SHA
+        - .
+
+    - name: gcr.io/cloud-builders/docker
+      args:
+        - push
+        - ${_REGION}-docker.pkg.dev/$PROJECT_ID/
+        ${_ARTIFACT_REPOSITORY}/santa-ui:$SHORT_SHA
+
+    - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+      entrypoint: gcloud
+      args:
+        - run
+        - deploy
+        - santa-ui
+        - --image
+        - ${_REGION}-docker.pkg.dev/$PROJECT_ID/
+        ${_ARTIFACT_REPOSITORY}/santa-ui:$SHORT_SHA
+        - --region
+        - ${_REGION}
+        - --platform
+        - managed
+        - --service-account
+        - santa-ui-runtime@santa-web-509114.iam.gserviceaccount.com
+        - --quiet
+
+  images:
+    - ${_REGION}-docker.pkg.dev/$PROJECT_ID/
+    ${_ARTIFACT_REPOSITORY}/santa-ui:$SHORT_SHA
+
+  options:
+    logging: CLOUD_LOGGING_ONLY
+
+  substitutions:
+    _REGION: asia-southeast1
+    _ARTIFACT_REPOSITORY: santa
