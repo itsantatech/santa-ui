@@ -15,7 +15,6 @@ COPY santa-ui/package*.json ./
 COPY santa-ui/next.config.ts ./
 COPY santa-ui/postcss.config.mjs ./
 COPY santa-ui/tsconfig.json ./
-COPY santa-ui/next-env.d.ts ./
 COPY santa-ui/proxy.ts ./
 COPY santa-ui/app ./app
 COPY santa-ui/components ./components
