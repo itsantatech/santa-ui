@@ -3,7 +3,7 @@ steps:
     args:
       - "build"
       - "--file"
-      - "santa-ui/Dockerfile"
+      - "Dockerfile"
       - "--tag"
       - "asia-southeast1-docker.pkg.dev/santa-web-509114/santa/santa-ui:$SHORT_SHA"
       - "."

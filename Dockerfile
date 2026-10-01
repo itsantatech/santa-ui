@@ -2,7 +2,7 @@ FROM node:20-bookworm-slim AS deps
 
 WORKDIR /app
 
-COPY santa-ui/package*.json ./
+COPY package*.json ./
 
 RUN npm ci
 
@@ -11,15 +11,15 @@ FROM node:20-bookworm-slim AS build
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY santa-ui/package*.json ./
-COPY santa-ui/next.config.ts ./
-COPY santa-ui/postcss.config.mjs ./
-COPY santa-ui/tsconfig.json ./
-COPY santa-ui/proxy.ts ./
-COPY santa-ui/app ./app
-COPY santa-ui/components ./components
-COPY santa-ui/lib ./lib
-COPY santa-ui/public ./public
+COPY package*.json ./
+COPY next.config.ts ./
+COPY postcss.config.mjs ./
+COPY tsconfig.json ./
+COPY proxy.ts ./
+COPY app ./app
+COPY components ./components
+COPY lib ./lib
+COPY public ./public
 
 RUN npm run build \
   && npm prune --omit=dev
@@ -35,9 +35,9 @@ WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
-COPY santa-ui/package*.json ./
-COPY santa-ui/next.config.ts ./
-COPY santa-ui/proxy.ts ./
+COPY package*.json ./
+COPY next.config.ts ./
+COPY proxy.ts ./
 
 EXPOSE 3000
 
