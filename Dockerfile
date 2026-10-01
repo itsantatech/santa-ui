@@ -32,7 +32,6 @@ ENV PORT=3000
 
 WORKDIR /app
 
-
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
