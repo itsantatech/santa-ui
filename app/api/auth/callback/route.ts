@@ -31,18 +31,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(`/${defaultLocale}`, request.url));
   }
 
+  const tokenBody = new URLSearchParams({
+    client_id: keycloakConfig.clientId,
+    code,
+    code_verifier: verifier,
+    grant_type: "authorization_code",
+    redirect_uri: getCallbackUrl(request.url),
+  });
+  const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET;
+  if (clientSecret) tokenBody.set("client_secret", clientSecret);
+
   const tokenResponse = await fetch(keycloakConfig.tokenEndpoint, {
     method: "POST",
     headers: {
       "content-type": "application/x-www-form-urlencoded",
     },
-    body: new URLSearchParams({
-      client_id: keycloakConfig.clientId,
-      code,
-      code_verifier: verifier,
-      grant_type: "authorization_code",
-      redirect_uri: getCallbackUrl(request.url),
-    }),
+    body: tokenBody,
     cache: "no-store",
   });
 
@@ -67,7 +71,6 @@ export async function GET(request: NextRequest) {
       grant_type: "refresh_token",
       refresh_token: tokens.refresh_token,
     });
-    const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET;
     if (clientSecret) refreshBody.set("client_secret", clientSecret);
     const refreshResponse = await fetch(keycloakConfig.tokenEndpoint, {
       method: "POST",
