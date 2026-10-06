@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { AuthSession } from "@/lib/auth/keycloak";
+import type { AuthSession } from "@/lib/auth/session";
 import { ProductSearch } from "@/components/product-search";
 import {
   type Locale,
@@ -16,7 +16,6 @@ type SiteNavbarClientProps = {
   alternateLocale: Locale;
   categories: NavbarCategory[];
   locale: Locale;
-  session: AuthSession | null;
   variant?: "default" | "admin";
 };
 
@@ -132,7 +131,6 @@ export function SiteNavbarClient({
   alternateLocale,
   categories,
   locale,
-  session,
   variant = "default",
 }: SiteNavbarClientProps) {
   const content = getDictionary(locale);
@@ -148,6 +146,7 @@ export function SiteNavbarClient({
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [openMobileSubmenu, setOpenMobileSubmenu] = useState<"categories" | "news" | null>(null);
   const [cartItemCount, setCartItemCount] = useState(0);
+  const [session, setSession] = useState<AuthSession | null>(null);
   const categoriesNavLabel = content.nav[2];
   const newsNavLabel = content.nav[4];
   const navItems = content.nav.map((label, index) => ({
@@ -192,6 +191,28 @@ export function SiteNavbarClient({
         : `/${locale}/products`,
     );
   }
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void fetch("/api/auth/session", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload: { session?: AuthSession | null } | null) => {
+        setSession(payload?.session ?? null);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        setSession(null);
+      });
+
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { CartContent } from "@/components/cart-content";
 import { SiteNavbar } from "@/components/site-navbar";
 import { requireCustomerSession } from "@/lib/auth/keycloak";
@@ -13,6 +14,7 @@ export async function generateMetadata({ params }: CartPageProps): Promise<Metad
 }
 
 export default async function CartPage({ params }: CartPageProps) {
+  await connection();
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   await requireCustomerSession({ returnTo: `/${locale}/cart` });
