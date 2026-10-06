@@ -19,6 +19,11 @@ type CategoryDetailPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
+// This route reads request search parameters and resolves a dynamic category slug.
+// Keep the whole segment request-rendered so metadata and the page follow the same
+// rendering mode instead of attempting an ISR prerender first.
+export const dynamic = "force-dynamic";
+
 type FooterCategory = {
   code: string;
   isActive: boolean;
