@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { OrderDetailContent } from "@/components/order-detail-content";
 import { SiteNavbar } from "@/components/site-navbar";
 import { requireCustomerSession } from "@/lib/auth/keycloak";
 import { isLocale } from "@/lib/i18n";
 
 export default async function OrderPage({ params }: { params: Promise<{ locale: string; orderCode: string }> }) {
+  await connection();
   const { locale, orderCode } = await params;
   if (!isLocale(locale)) notFound();
   await requireCustomerSession({ returnTo: `/${locale}/orders/${orderCode}` });

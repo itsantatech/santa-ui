@@ -2,6 +2,9 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { randomBytes, createHash } from "node:crypto";
+import type { AuthSession } from "@/lib/auth/session";
+
+export type { AuthSession } from "@/lib/auth/session";
 
 const keycloakBaseUrl =
   process.env.KEYCLOAK_BASE_URL ??
@@ -41,12 +44,6 @@ type KeycloakTokenPayload = {
     roles?: string[];
   };
   resource_access?: Record<string, { roles?: string[] } | undefined>;
-};
-
-export type AuthSession = {
-  username: string;
-  roles: string[];
-  isAdmin: boolean;
 };
 
 export function getBaseUrl(requestUrl: string) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
-import type { AuthSession } from "@/lib/auth/keycloak";
+import type { AuthSession } from "@/lib/auth/session";
 import type { Locale } from "@/lib/i18n";
 import { CustomerDeliveryAddresses } from "@/components/customer-delivery-addresses";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
