@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { ProductCard, type ProductCardData } from "@/components/product-card";
 import { ProductDetailActions } from "@/components/product-detail-actions";
 import { ProductDetailGallery } from "@/components/product-detail-gallery";
@@ -15,6 +16,10 @@ import { pageMetadata, siteUrl } from "@/lib/seo";
 type ProductDetailPageProps = {
   params: Promise<{ locale: string; "products-slug": string }>;
 };
+
+// The product detail is resolved from a runtime slug and live API data.
+// Render it per request rather than attempting to prerender it during the build.
+export const dynamic = "force-dynamic";
 
 type FooterCategory = {
   code: string;
@@ -87,6 +92,8 @@ export async function generateMetadata({
 export default async function ProductDetailPage({
   params,
 }: ProductDetailPageProps) {
+  await connection();
+
   const { locale, "products-slug": productSlug } = await params;
 
   if (!isLocale(locale)) {
