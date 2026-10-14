@@ -12,6 +12,7 @@ import { SeoJsonLd } from "@/components/seo-json-ld";
 import { fetchAdminList, santaApiBaseUrl } from "@/lib/admin-api";
 import { isLocale, locales, type Locale } from "@/lib/i18n";
 import { pageMetadata, siteUrl } from "@/lib/seo";
+import { encodePathSegment } from "@/lib/paths";
 
 type ProductDetailPageProps = {
   params: Promise<{ locale: string; "products-slug": string }>;
@@ -86,7 +87,7 @@ export async function generateMetadata({
     : formatSlugLabel(productSlug);
 
   const description = locale === "th" ? stripHtml(product?.shortDescriptionTh) || title : stripHtml(product?.shortDescriptionEn) || title;
-  return pageMetadata({ title, description, locale, path: `/products/${productSlug}`, image: product?.imgUrl?.[0] });
+  return pageMetadata({ title, description, locale, path: `/products/${encodePathSegment(productSlug)}`, image: product?.imgUrl?.[0] });
 }
 
 export default async function ProductDetailPage({
@@ -173,7 +174,7 @@ export default async function ProductDetailPage({
 
   return (
     <main className="site-shell">
-      <SeoJsonLd data={{ "@context": "https://schema.org", "@type": "Product", name: productName, description: productShortDescription, sku: product.sku, image: product.imgUrl, url: new URL(`/${locale}/products/${productSlug}`, siteUrl).toString(), brand: brand ? { "@type": "Brand", name: brand.nameEn } : undefined, offers: currentPrice ? { "@type": "Offer", price: currentPrice, priceCurrency: "THB", availability: stockQuantity > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock" } : undefined }} />
+      <SeoJsonLd data={{ "@context": "https://schema.org", "@type": "Product", name: productName, description: productShortDescription, sku: product.sku, image: product.imgUrl, url: new URL(`/${locale}/products/${encodePathSegment(productSlug)}`, siteUrl).toString(), brand: brand ? { "@type": "Brand", name: brand.nameEn } : undefined, offers: currentPrice ? { "@type": "Offer", price: currentPrice, priceCurrency: "THB", availability: stockQuantity > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock" } : undefined }} />
       <SiteNavbar locale={locale} />
 
       <section className="product-detail-page">
@@ -292,9 +293,12 @@ export default async function ProductDetailPage({
 }
 
 async function getProductDetail(slug: string) {
-  const normalizedSlug = slug.trim();
+  // Dynamic route params can retain percent-encoding depending on the incoming
+  // request. Decode once before making the API request, then encode exactly once
+  // for the URL. This prevents `%3A` and `%28` from becoming `%253A` / `%2528`.
+  const normalizedSlug = decodeRouteSlug(slug).trim();
   const response = await fetch(
-    `${santaApiBaseUrl}/products/${encodeURIComponent(normalizedSlug)}`,
+    `${santaApiBaseUrl}/products/${encodePathSegment(normalizedSlug)}`,
     { cache: "no-store" },
   );
 
@@ -314,6 +318,14 @@ async function getProductDetail(slug: string) {
       (item) => item.slug.trim().toLowerCase() === normalizedSlug.toLowerCase(),
     ) ?? null
   );
+}
+
+function decodeRouteSlug(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 function formatSlugLabel(slug: string) {

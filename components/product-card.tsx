@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Locale } from "@/lib/i18n";
+import { productPath } from "@/lib/paths";
 
 type ProductRelation = {
   code: string;
@@ -32,7 +33,7 @@ export function ProductCard({
   const name = locale === "th" ? product.nameTh : product.nameEn;
   const description =
     locale === "th" ? product.shortDescriptionTh : product.shortDescriptionEn;
-  const href = `/${locale}/products/${product.slug.trim()}`;
+  const href = productPath(locale, product.slug);
   const imageSrc = product.imgUrl[0] || null;
   const currentPrice = product.discountedPrice ?? product.price;
   const discountPercent =

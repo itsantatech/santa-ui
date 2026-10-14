@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { showErrorToast } from "@/lib/toast";
+import { productPath } from "@/lib/paths";
 
 type Locale = "th" | "en";
 type Cart = {
@@ -134,10 +135,10 @@ export function CartContent({ locale }: { locale: Locale }) {
       const name = locale === "th" ? item.product.nameTh : item.product.nameEn;
       const description = locale === "th" ? item.product.shortDescriptionTh : item.product.shortDescriptionEn;
       return <article className="cart-item" key={item.productSku}>
-        <Link className="cart-item-image" href={`/${locale}/products/${item.product.slug}`}>
+        <Link className="cart-item-image" href={productPath(locale, item.product.slug)}>
           {item.product.imgUrl[0] ? <Image alt={name} fill sizes="112px" src={item.product.imgUrl[0]} unoptimized /> : null}
         </Link>
-        <div className="cart-item-copy"><span>SKU: {item.productSku}</span><Link href={`/${locale}/products/${item.product.slug}`}><h2>{name}</h2></Link><p>{description}</p></div>
+        <div className="cart-item-copy"><span>SKU: {item.productSku}</span><Link href={productPath(locale, item.product.slug)}><h2>{name}</h2></Link><p>{description}</p></div>
         <div className="cart-item-price"><span>{locale === "th" ? "ราคา" : "Price"}</span><strong>{formatMoney(item.unitPrice, locale)}</strong></div>
         <div className="cart-item-quantity"><span>{locale === "th" ? "จำนวน" : "Quantity"}</span><div><button aria-label="Decrease quantity" disabled={isPending || item.quantity === 1} onClick={() => void updateQuantity(item.productSku, item.quantity - 1)} type="button">−</button><strong>{item.quantity}</strong><button aria-label="Increase quantity" disabled={isPending} onClick={() => void updateQuantity(item.productSku, item.quantity + 1)} type="button">+</button></div></div>
         <div className="cart-item-total"><span>{locale === "th" ? "รวม" : "Total"}</span><strong>{formatMoney(item.lineTotal, locale)}</strong></div>
