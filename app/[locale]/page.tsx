@@ -13,6 +13,7 @@ import type { ProductCardData } from "@/components/product-card";
 import { fetchAdminList } from "@/lib/admin-api";
 import { getDictionary, isLocale, locales, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
+import { localizedSlugPath } from "@/lib/paths";
 import {
   createContentExcerpt,
   fetchPublicContentList,
@@ -297,7 +298,7 @@ function getNewsActivityHref(locale: Locale, item: Pick<PublicContentItem, "slug
     return `/${locale}/news-and-activities`;
   }
 
-  return `/${locale}/news-and-activities/${encodeURIComponent(slug)}`;
+  return localizedSlugPath(locale, "/news-and-activities", slug);
 }
 
 function compareContentByLatest(
@@ -500,7 +501,7 @@ export default async function Home({ params }: HomeProps) {
           <div className="home-business-unit-grid">
             {businessUnitCategories.map((category, index) => {
               const cardCopy = getCategoryCardCopy(category, locale);
-              const categoryHref = `/${locale}/products/categories/${category.slug.trim()}`;
+              const categoryHref = localizedSlugPath(locale, "/products/categories", category.slug);
 
               return (
                 <Link
@@ -576,7 +577,7 @@ export default async function Home({ params }: HomeProps) {
               <Link
                 aria-label={getLocalizedText(locale, brand.nameTh, brand.nameEn)}
                 className="home-brand-card"
-                href={`/${locale}/products/brands/${brand.slug.trim()}`}
+                href={localizedSlugPath(locale, "/products/brands", brand.slug)}
                 key={brand.code}
               >
                 <div className="home-brand-card-media">

@@ -13,6 +13,7 @@ import {
   type PublicContentItem,
 } from "@/lib/public-content";
 import type { Locale } from "@/lib/i18n";
+import { localizedSlugPath } from "@/lib/paths";
 
 export function PublicContentList({
   currentPage,
@@ -76,7 +77,7 @@ export function PublicContentList({
               <article className="public-content-card" key={item.id}>
                 <Link
                   className="public-content-card-media"
-                  href={`/${locale}/${type}/${encodeURIComponent(item.slug)}`}
+                  href={localizedSlugPath(locale, `/${type}`, item.slug)}
                 >
                   {item.imgUrl[0]?.trim() ? (
                     <Image
@@ -101,7 +102,7 @@ export function PublicContentList({
                     <span>{estimateReadingTime(locale === "th" ? item.contentTh : item.contentEn, locale)}</span>
                   </div>
                   <h2>
-                    <Link href={`/${locale}/${type}/${encodeURIComponent(item.slug)}`}>
+                    <Link href={localizedSlugPath(locale, `/${type}`, item.slug)}>
                       {getLocalizedContent(item, locale).topic}
                     </Link>
                   </h2>
