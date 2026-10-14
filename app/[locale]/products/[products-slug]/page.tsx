@@ -293,7 +293,10 @@ export default async function ProductDetailPage({
 }
 
 async function getProductDetail(slug: string) {
-  const normalizedSlug = slug.trim();
+  // Dynamic route params can retain percent-encoding depending on the incoming
+  // request. Decode once before making the API request, then encode exactly once
+  // for the URL. This prevents `%3A` and `%28` from becoming `%253A` / `%2528`.
+  const normalizedSlug = decodeRouteSlug(slug).trim();
   const response = await fetch(
     `${santaApiBaseUrl}/products/${encodePathSegment(normalizedSlug)}`,
     { cache: "no-store" },
@@ -315,6 +318,14 @@ async function getProductDetail(slug: string) {
       (item) => item.slug.trim().toLowerCase() === normalizedSlug.toLowerCase(),
     ) ?? null
   );
+}
+
+function decodeRouteSlug(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 function formatSlugLabel(slug: string) {
