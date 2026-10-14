@@ -174,6 +174,11 @@ export function SiteNavbarClient({
   const isCustomer = session?.roles.some(
     (role) => role.trim().toLowerCase() === "customer",
   );
+  const mobileAccountHref = session
+    ? isCustomer
+      ? `/${locale}/profile`
+      : `/${locale}/admin`
+    : `/${locale}/login`;
   const customerMenuItems = [
     { href: `/${locale}/profile`, label: locale === "th" ? "ข้อมูลโปรไฟล์" : "Profile" },
     { href: `/${locale}/profile#orders`, label: locale === "th" ? "คำสั่งซื้อของฉัน" : "My orders" },
@@ -261,19 +266,19 @@ export function SiteNavbarClient({
 
   const mobileBottomLinks = [
     {
-      href: session ? `/${locale}/admin` : `/${locale}/login`,
+      href: mobileAccountHref,
       icon: "person",
       label: session ? session.username : content.signIn,
     },
+    ...(session
+      ? [{ href: `/api/auth/logout?locale=${locale}`, icon: "logout", label: content.signOut }]
+      : []),
     {
-      href: `/api/auth/logout?locale=${locale}`,
-      icon: "logout",
-      label: content.signOut,
-    },
-    {
-      href: `/${locale}/products`,
-      icon: "shopping_bag",
-      label: locale === "th" ? "ตะกร้าสินค้า" : "Products",
+      href: isCustomer ? `/${locale}/cart` : `/${locale}/products`,
+      icon: isCustomer ? "shopping_cart" : "shopping_bag",
+      label: isCustomer
+        ? locale === "th" ? "ตะกร้าสินค้า" : "Shopping cart"
+        : locale === "th" ? "สินค้าและบริการ" : "Products & Services",
     },
     {
       href: `/${locale}/faqs`,
@@ -493,7 +498,7 @@ export function SiteNavbarClient({
           <div className="mobile-header-actions" aria-label="Mobile actions">
             <Link
               className="mobile-header-action"
-              href={session ? `/${locale}/admin` : `/${locale}/login`}
+              href={mobileAccountHref}
               aria-label={session ? session.username : content.signIn}
             >
               <span className="material-symbols-outlined" aria-hidden="true">person</span>
