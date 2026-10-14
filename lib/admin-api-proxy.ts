@@ -272,16 +272,23 @@ async function refreshAccessToken(
   refreshToken: string,
 ): Promise<RefreshAccessTokenResult> {
   try {
+    const body = new URLSearchParams({
+      client_id: keycloakConfig.clientId,
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    });
+    const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET;
+
+    if (clientSecret) {
+      body.set("client_secret", clientSecret);
+    }
+
     const response = await fetch(keycloakConfig.tokenEndpoint, {
       method: "POST",
       headers: {
         "content-type": "application/x-www-form-urlencoded",
       },
-      body: new URLSearchParams({
-        client_id: keycloakConfig.clientId,
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-      }),
+      body,
       cache: "no-store",
     });
 
