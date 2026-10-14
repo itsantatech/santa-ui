@@ -145,7 +145,7 @@ export default async function ProductBrandsPage({
                         alt={getLocalizedBrandName(locale, brand)}
                         className="brand-directory-card-image"
                         fill
-                        sizes="(max-width: 900px) 33vw, 16vw"
+                        sizes="(max-width: 760px) 50vw, (max-width: 1180px) 20vw, 14vw"
                         src={brand.imgUrl}
                         unoptimized
                       />
