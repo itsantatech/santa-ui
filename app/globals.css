@@ -6453,10 +6453,10 @@ button.admin-table-page-link:disabled {
 .home-business-unit-card {
   display: flex;
   align-items: center;
-  gap: 16px;
-  min-height: 96px;
-  min-width: 310px;
-  padding: 20px 22px;
+  gap: 14px;
+  min-width: 0;
+  min-height: 84px;
+  padding: 16px 18px;
   color: #ffffff;
   background: #F67C26;
   border-radius: 16px;
@@ -6478,17 +6478,17 @@ button.admin-table-page-link:disabled {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
   background: rgb(255 255 255 / 16%);
   overflow: hidden;
 }
 
 .home-business-unit-card-image {
   display: block;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   background-position: center;
   background-repeat: no-repeat;
   background-size: contain;
@@ -6496,7 +6496,7 @@ button.admin-table-page-link:disabled {
 
 .home-business-unit-card-symbol {
   color: #ffffff;
-  font-size: 32px;
+  font-size: 28px;
   line-height: 1;
 }
 
@@ -6509,7 +6509,7 @@ button.admin-table-page-link:disabled {
 
 .home-business-unit-card-title {
   color: inherit;
-  font-size: clamp(17px, 1.15vw, 20px);
+  font-size: clamp(16px, 1.1vw, 18px);
   font-weight: 800;
   line-height: 1.25;
   text-wrap: balance;
