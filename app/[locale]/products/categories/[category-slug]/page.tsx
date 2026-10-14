@@ -12,6 +12,7 @@ import { SiteNavbar } from "@/components/site-navbar";
 import { fetchAdminList } from "@/lib/admin-api";
 import { isLocale, locales, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
+import { encodePathSegment } from "@/lib/paths";
 import { normalizeRichTextHtml } from "@/lib/public-content";
 
 type CategoryDetailPageProps = {
@@ -102,7 +103,7 @@ export async function generateMetadata({
       title
     : title;
 
-  return pageMetadata({ title, description, locale, path: `/products/categories/${categorySlug}`, image: category?.coverImgUrl });
+  return pageMetadata({ title, description, locale, path: `/products/categories/${encodePathSegment(categorySlug)}`, image: category?.coverImgUrl });
 }
 
 export default async function CategoryDetailPage({
@@ -386,7 +387,7 @@ function createCategoryPageHref(
 
   nextSearchParams.set("page", String(page));
 
-  return `/${locale}/products/categories/${encodeURIComponent(categorySlug)}?${nextSearchParams.toString()}`;
+  return `/${locale}/products/categories/${encodePathSegment(categorySlug)}?${nextSearchParams.toString()}`;
 }
 
 function getLocalizedCategoryName(locale: Locale, category: CategoryRow) {

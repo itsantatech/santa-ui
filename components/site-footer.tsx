@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Locale } from "@/lib/i18n";
+import { localizedSlugPath } from "@/lib/paths";
 import {
   getAvailableSocialLinks,
   type SocialContact as FooterSocialContact,
@@ -98,7 +99,7 @@ export function SiteFooter({
           <ul className="site-footer-list">
             {sortedCategories.map((category) => (
               <li key={category.code}>
-                <Link href={`/${locale}/products/categories/${category.slug.trim()}`}>
+                <Link href={localizedSlugPath(locale, "/products/categories", category.slug)}>
                   {getLocalizedCategoryName(locale, category)}
                 </Link>
               </li>

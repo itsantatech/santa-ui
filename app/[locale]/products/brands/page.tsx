@@ -9,6 +9,7 @@ import { SiteNavbar } from "@/components/site-navbar";
 import { fetchAdminList } from "@/lib/admin-api";
 import { isLocale, locales, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
+import { localizedSlugPath } from "@/lib/paths";
 
 type BrandsPageProps = {
   params: Promise<{ locale: string }>;
@@ -136,7 +137,7 @@ export default async function ProductBrandsPage({
               {brands.map((brand) => (
                 <Link
                   className="brand-directory-card"
-                  href={`/${locale}/products/brands/${brand.slug.trim()}`}
+                  href={localizedSlugPath(locale, "/products/brands", brand.slug)}
                   key={brand.code}
                 >
                   <div className="brand-directory-card-media">

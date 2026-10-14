@@ -11,6 +11,7 @@ import {
   dictionaries,
   getDictionary,
 } from "@/lib/i18n";
+import { localizedSlugPath } from "@/lib/paths";
 
 type SiteNavbarClientProps = {
   alternateLocale: Locale;
@@ -314,7 +315,7 @@ export function SiteNavbarClient({
                   {openMenu === "categories" ? (
                     <ul className="primary-nav-menu primary-nav-menu-categories" role="menu">
                       {categories.map((category) => {
-                        const href = `/${locale}/products/categories/${category.slug.trim()}`;
+                        const href = localizedSlugPath(locale, "/products/categories", category.slug);
                         const isActive = pathname === href;
 
                         return (
@@ -601,7 +602,7 @@ export function SiteNavbarClient({
                 <div className="mobile-nav-submenu">
                   {categories.map((category) => (
                     <Link
-                      href={`/${locale}/products/categories/${category.slug.trim()}`}
+                      href={localizedSlugPath(locale, "/products/categories", category.slug)}
                       key={category.code}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >

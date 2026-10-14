@@ -13,6 +13,7 @@ import { fetchAdminList } from "@/lib/admin-api";
 import { isLocale, locales, type Locale } from "@/lib/i18n";
 import { normalizeRichTextHtml } from "@/lib/public-content";
 import { pageMetadata } from "@/lib/seo";
+import { encodePathSegment } from "@/lib/paths";
 
 type BrandDetailPageProps = {
   params: Promise<{ "brand-slug": string; locale: string }>;
@@ -104,7 +105,7 @@ export async function generateMetadata({
       title
     : title;
 
-  return pageMetadata({ title, description, locale, path: `/products/brands/${brandSlug}`, image: brand?.imgUrl });
+  return pageMetadata({ title, description, locale, path: `/products/brands/${encodePathSegment(brandSlug)}`, image: brand?.imgUrl });
 }
 
 export default async function BrandDetailPage({
@@ -408,7 +409,7 @@ function createBrandPageHref(
 
   nextSearchParams.set("page", String(page));
 
-  return `/${locale}/products/brands/${encodeURIComponent(brandSlug)}?${nextSearchParams.toString()}`;
+  return `/${locale}/products/brands/${encodePathSegment(brandSlug)}?${nextSearchParams.toString()}`;
 }
 
 function getLocalizedBrandName(locale: Locale, brand: BrandRow) {

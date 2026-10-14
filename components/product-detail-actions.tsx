@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { QuotationRequestModal } from "./quotation-request-modal";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { productPath } from "@/lib/paths";
 
 export function ProductDetailActions({
   canAddToCart,
@@ -36,7 +37,7 @@ export function ProductDetailActions({
         method: "POST",
       });
       if (response.status === 401) {
-        router.push(`/${locale}/login?returnTo=${encodeURIComponent(`/${locale}/products/${productSlug}`)}`);
+        router.push(`/${locale}/login?returnTo=${encodeURIComponent(productPath(locale, productSlug))}`);
         return;
       }
       const payload = (await response.json().catch(() => null)) as { message?: string; summary?: { itemCount: number } } | null;
