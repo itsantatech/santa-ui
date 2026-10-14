@@ -113,9 +113,11 @@
 .customer-auth-card form label { display: block; margin-top: 16px; color: #344054; font-weight: 600; }
 .customer-auth-card input { box-sizing: border-box; width: 100%; margin-top: 7px; border: 1px solid #cfd6df; border-radius: 8px; padding: 11px 12px; font: inherit; }
 .customer-auth-name-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.customer-password-input { position: relative; display: block; }
-.customer-password-input input { padding-right: 48px; }
-.customer-password-input button { position: absolute; top: 8px; right: 8px; display: grid; width: 34px; height: 34px; padding: 0; color: #526176; font-size: 20px; line-height: 1; cursor: pointer; background: transparent; border: 0; place-items: center; }
+.customer-password-input { position: relative; display: block; margin-top: 7px; }
+.customer-password-input input { margin-top: 0; padding-right: 56px; }
+.customer-password-input button { position: absolute; top: 50%; right: 6px; display: grid; width: 40px; height: 40px; padding: 0; transform: translateY(-50%); color: #526176; font-size: 20px; line-height: 1; cursor: pointer; background: transparent; border: 0; border-radius: 6px; place-items: center; }
+.customer-password-input button:hover { background: #f2f5f8; color: #293243; }
+.customer-password-input button:focus-visible { outline: 2px solid #246fc5; outline-offset: -2px; }
 .customer-auth-primary, .customer-auth-social { display: block; box-sizing: border-box; width: 100%; border: 0; border-radius: 8px; margin-top: 18px; padding: 12px; background: #f26a21; color: #fff; font: inherit; font-weight: 700; text-align: center; text-decoration: none; cursor: pointer; }
 .customer-auth-social { margin-top: 10px; background: #fff; border: 1px solid #d3d9e2; color: #293243; }
 .customer-auth-google { display: flex; align-items: center; justify-content: center; gap: 10px; }
