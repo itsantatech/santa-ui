@@ -37,6 +37,7 @@ export const authCookies = {
 } as const;
 
 type KeycloakTokenPayload = {
+  exp?: number;
   preferred_username?: string;
   name?: string;
   email?: string;
@@ -77,7 +78,7 @@ export const getSession = cache(async function getSession(): Promise<AuthSession
 
   const payload = decodeJwtPayload<KeycloakTokenPayload>(accessToken);
 
-  if (!payload) {
+  if (!payload || isTokenExpired(payload)) {
     return null;
   }
 
@@ -113,6 +114,10 @@ export async function requireAdminSession({
   }
 
   return session;
+}
+
+function isTokenExpired(payload: KeycloakTokenPayload) {
+  return !payload.exp || payload.exp * 1000 <= Date.now() + 15_000;
 }
 
 export async function requireCustomerSession({
