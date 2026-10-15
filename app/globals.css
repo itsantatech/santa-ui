@@ -122,6 +122,8 @@
 .customer-auth-social { margin-top: 10px; background: #fff; border: 1px solid #d3d9e2; color: #293243; }
 .customer-auth-google { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .customer-auth-google-icon { width: 18px; height: 18px; }
+.customer-auth-facebook { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.customer-auth-facebook-icon { width: 18px; height: 18px; color: #1877f2; }
 .customer-auth-divider { display: flex; align-items: center; gap: 12px; margin: 22px 0 4px; color: #8b95a7; font-size: 13px; }
 .customer-auth-divider::before, .customer-auth-divider::after { content: ""; flex: 1; height: 1px; background: #e6e9ee; }
 .customer-auth-link, .customer-auth-switch { display: block; margin-top: 20px; color: #526176; font-size: 14px; text-align: center; }
