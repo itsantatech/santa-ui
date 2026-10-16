@@ -94,7 +94,9 @@ export function CartContent({ locale }: { locale: Locale }) {
     try {
       const addressResponse = await fetch("/api/customer/delivery-addresses", { cache: "no-store" });
       if (!addressResponse.ok) throw new Error("Unable to verify delivery address.");
-      const address = await addressResponse.json() as { id?: string } | null;
+      const address = await addressResponse
+        .json()
+        .catch(() => null) as { id?: string } | null;
       if (!address?.id) {
         setMissingAddress(true);
         return;
@@ -147,7 +149,7 @@ export function CartContent({ locale }: { locale: Locale }) {
     })}
     <div className="cart-actions"><Link href={`/${locale}/products`}>← {locale === "th" ? "เลือกซื้อสินค้าต่อ" : "Continue shopping"}</Link><button disabled={isClearing} onClick={() => setConfirmation({ type: "clear" })} type="button">{isClearing ? "…" : locale === "th" ? "ล้างตะกร้าทั้งหมด" : "Clear cart"}</button></div>
   </section><aside className="cart-summary"><h2>{locale === "th" ? "สรุปคำสั่งซื้อ" : "Order summary"}</h2><SummaryRow label={locale === "th" ? `สินค้าทั้งหมด (${cart.summary.itemCount})` : `Items (${cart.summary.itemCount})`} value={formatMoney(cart.summary.subtotal, locale)} /><SummaryRow label={locale === "th" ? "ค่าจัดส่ง" : "Delivery"} value={formatMoney(cart.summary.deliveryFee, locale)} />{cart.summary.discount > 0 ? <SummaryRow emphasis label={locale === "th" ? "ส่วนลด" : "Discount"} value={`- ${formatMoney(cart.summary.discount, locale)}`} /> : null}<div className="cart-summary-total"><span>{locale === "th" ? "รวมทั้งสิ้น" : "Grand total"}</span><strong>{formatMoney(cart.summary.grandTotal, locale)}</strong></div><p className="cart-summary-vat">{locale === "th" ? "รวมภาษีมูลค่าเพิ่ม (7%)" : "VAT included (7%)"}</p><button className="cart-order-button" disabled={isCheckingOut} onClick={() => void checkout()} type="button">{isCheckingOut ? (locale === "th" ? "กำลังสร้างคำสั่งซื้อ..." : "Placing order...") : locale === "th" ? "สั่งซื้อ" : "Place order"}</button></aside></div>;
-  {confirmation ? <CartConfirmationModal confirmation={confirmation} isPending={isClearing || pendingSku !== null} locale={locale} onCancel={() => setConfirmation(null)} onConfirm={() => void confirmCartAction()} /> : null}{missingAddress ? <MissingAddressModal locale={locale} onCancel={() => setMissingAddress(false)} onOpenAddress={() => { window.open(`/${locale}/profile#deliveries`, "_blank", "noopener,noreferrer"); setMissingAddress(false); }} /> : null}</>;
+  {confirmation ? <CartConfirmationModal confirmation={confirmation} isPending={isClearing || pendingSku !== null} locale={locale} onCancel={() => setConfirmation(null)} onConfirm={() => void confirmCartAction()} /> : null}{missingAddress ? <MissingAddressModal locale={locale} onCancel={() => setMissingAddress(false)} onOpenAddress={() => { window.location.assign(`/${locale}/profile#deliveries`); }} /> : null}</>;
 }
 
 function MissingAddressModal({ locale, onCancel, onOpenAddress }: { locale: Locale; onCancel: () => void; onOpenAddress: () => void }) {
