@@ -41,6 +41,7 @@ function getFooterContent(locale: Locale) {
           home: "หน้าแรก",
           news: "ข่าวสารและกิจกรรม",
           products: "สินค้าและบริการ",
+          privacyPolicy: "นโยบายความเป็นส่วนตัว",
         },
         menuTitle: "เมนู",
       }
@@ -65,6 +66,7 @@ function getFooterContent(locale: Locale) {
           home: "Home",
           news: "News & Activities",
           products: "Products & Services",
+          privacyPolicy: "Privacy Policy",
         },
         menuTitle: "Menu",
       };
@@ -117,6 +119,7 @@ export function SiteFooter({
             <li><Link href={`/${locale}/articles`}>{content.menu.articles}</Link></li>
             <li><Link href={`/${locale}/about-us`}>{content.menu.about}</Link></li>
             <li><Link href={`/${locale}/faqs`}>{content.menu.faq}</Link></li>
+            <li><Link href={`/${locale}/privacy-policy`}>{content.menu.privacyPolicy}</Link></li>
           </ul>
         </nav>
 
