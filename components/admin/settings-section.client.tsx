@@ -8,6 +8,7 @@ import { RichTextEditor } from "@/components/rich-text-editor";
 import { getErrorMessage, localizeErrorMessage } from "@/lib/api-error";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { getTransactionToastCopy } from "@/lib/transaction-toast";
+import { legalPageDefaults } from "@/lib/legal-page-defaults";
 import {
   AdminBatchFieldModal,
   type AdminBatchFieldModalConfig,
@@ -103,7 +104,7 @@ type AdminUserRow = {
 
 type UserRoleOption = string;
 
-type TabValue = "users" | "home-content" | "about" | "social-media" | "faq";
+type TabValue = "users" | "home-content" | "about" | "privacy-policy" | "social-media" | "faq";
 type PaginationMeta = {
   page: number;
   pageSize: number;
@@ -390,6 +391,8 @@ export function SettingsSectionClient({
 
   const sections = buildHomeSectionCards(homeSettings, labels);
   const aboutCard = buildAboutCard(aboutSettings, labels);
+  const privacyPolicyCard = buildPrivacyPolicyCard(homeSettings, labels);
+  const dataDeletionCard = buildDataDeletionCard(homeSettings, labels);
 
   return (
     <div className="admin-section-panel">
@@ -426,6 +429,16 @@ export function SettingsSectionClient({
           href={`/${locale}/admin?section=settings&tab=about`}
         >
           {labels.tabs.about}
+        </Link>
+        <Link
+          className={
+            activeTab === "privacy-policy"
+              ? "admin-section-tab admin-section-tab-active"
+              : "admin-section-tab"
+          }
+          href={`/${locale}/admin?section=settings&tab=privacy-policy`}
+        >
+          {labels.tabs.privacyPolicy}
         </Link>
         <Link
           className={
@@ -600,6 +613,13 @@ export function SettingsSectionClient({
       {activeTab === "about" ? (
         <div className="admin-settings-card-stack">
           <AboutSettingsCard aboutSetting={aboutCard} labels={labels} locale={locale} />
+        </div>
+      ) : null}
+
+      {activeTab === "privacy-policy" ? (
+        <div className="admin-settings-card-stack">
+          <LegalPageSettingsCard card={privacyPolicyCard} labels={labels} locale={locale} />
+          <LegalPageSettingsCard card={dataDeletionCard} labels={labels} locale={locale} />
         </div>
       ) : null}
 
@@ -1329,6 +1349,84 @@ function AboutSettingsCard({
           </button>
         </div>
       </div>
+      {error ? <p className="admin-product-form-error">{error}</p> : null}
+    </form>
+  );
+}
+
+function LegalPageSettingsCard({
+  card,
+  labels,
+  locale,
+}: {
+  card: ReturnType<typeof buildPrivacyPolicyCard>;
+  labels: ReturnType<typeof getLabels>;
+  locale: Locale;
+}) {
+  const router = useRouter();
+  const toastCopy = getTransactionToastCopy(locale);
+  const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [form, setForm] = useState(() => ({
+    contentEn: card.contentEn,
+    contentTh: card.contentTh,
+    headlineEn: card.headlineEn,
+    headlineTh: card.headlineTh,
+  }));
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setIsSaving(true);
+
+    const response = await fetch(
+      card.id
+        ? `/api/admin/home-section-settings/${card.id}`
+        : "/api/admin/home-section-settings",
+      {
+        body: JSON.stringify({
+          name: card.name,
+          headlineTh: form.headlineTh.trim(),
+          headlineEn: form.headlineEn.trim(),
+          contentTh: form.contentTh,
+          contentEn: form.contentEn,
+          imgUrl: [],
+          isActive: true,
+        }),
+        headers: { "content-type": "application/json" },
+        method: card.id ? "PATCH" : "POST",
+      },
+    );
+
+    setIsSaving(false);
+
+    if (!response.ok) {
+      const message = await getErrorMessage(response, labels.common.error);
+      setError(message);
+      showErrorToast(toastCopy.error, message);
+      return;
+    }
+
+    showSuccessToast(toastCopy.updated);
+    router.refresh();
+  }
+
+  return (
+    <form className="admin-settings-card" onSubmit={handleSubmit}>
+      <div className="admin-settings-card-header"><h2>{card.title}</h2></div>
+      <div className="admin-settings-card-grid">
+        <SettingsTextarea label={labels.legalPage.fields.headlineTh} maxLength={200} onChange={(value) => setForm((current) => ({ ...current, headlineTh: value.slice(0, 200) }))} value={form.headlineTh} />
+        <SettingsTextarea label={labels.legalPage.fields.headlineEn} maxLength={200} onChange={(value) => setForm((current) => ({ ...current, headlineEn: value.slice(0, 200) }))} value={form.headlineEn} />
+        <div className="admin-settings-richtext-field admin-settings-about-content-row">
+          <RichTextEditor label={labels.legalPage.fields.contentTh} maxCharacters={20000} onChange={(value) => setForm((current) => ({ ...current, contentTh: value }))} required value={form.contentTh} />
+          <span className="admin-settings-field-hint">{countRichTextCharacters(form.contentTh)}/20000</span>
+        </div>
+        <div className="admin-settings-richtext-field admin-settings-about-content-row">
+          <RichTextEditor label={labels.legalPage.fields.contentEn} maxCharacters={20000} onChange={(value) => setForm((current) => ({ ...current, contentEn: value }))} required value={form.contentEn} />
+          <span className="admin-settings-field-hint">{countRichTextCharacters(form.contentEn)}/20000</span>
+        </div>
+      </div>
+      <div className="admin-settings-card-footer"><span /><div className="admin-settings-card-actions"><button className="admin-product-secondary-button" onClick={() => setForm({ contentEn: card.contentEn, contentTh: card.contentTh, headlineEn: card.headlineEn, headlineTh: card.headlineTh })} type="button">{labels.common.cancel}</button><button className="admin-product-add-button" disabled={isSaving} type="submit">{isSaving ? labels.common.saving : labels.common.save}</button></div></div>
       {error ? <p className="admin-product-form-error">{error}</p> : null}
     </form>
   );
@@ -2089,6 +2187,42 @@ function buildAboutCard(
   };
 }
 
+function buildPrivacyPolicyCard(
+  homeSettings: HomeSettingRow[],
+  labels: ReturnType<typeof getLabels>,
+) {
+  const current = homeSettings.find((item) => item.name === "privacy-policy");
+  const fallback = legalPageDefaults["privacy-policy"];
+
+  return {
+    contentEn: current?.contentEn?.trim() || fallback.contentEn,
+    contentTh: current?.contentTh?.trim() || fallback.contentTh,
+    headlineEn: current?.headlineEn?.trim() || fallback.headlineEn,
+    headlineTh: current?.headlineTh?.trim() || fallback.headlineTh,
+    id: current?.id ?? "",
+    name: "privacy-policy",
+    title: labels.privacyPolicy.title,
+  };
+}
+
+function buildDataDeletionCard(
+  homeSettings: HomeSettingRow[],
+  labels: ReturnType<typeof getLabels>,
+) {
+  const current = homeSettings.find((item) => item.name === "data-deletion");
+  const fallback = legalPageDefaults["data-deletion"];
+
+  return {
+    contentEn: current?.contentEn?.trim() || fallback.contentEn,
+    contentTh: current?.contentTh?.trim() || fallback.contentTh,
+    headlineEn: current?.headlineEn?.trim() || fallback.headlineEn,
+    headlineTh: current?.headlineTh?.trim() || fallback.headlineTh,
+    id: current?.id ?? "",
+    name: "data-deletion",
+    title: labels.dataDeletion.title,
+  };
+}
+
 function createFallbackHomeCard(
   name: string,
   title: string,
@@ -2427,6 +2561,7 @@ function getLabels(locale: Locale) {
         tabs: {
           about: "เกี่ยวกับเรา",
           faq: "FAQ",
+          privacyPolicy: "นโยบายความเป็นส่วนตัว",
           users: "ผู้ใช้งาน",
           homeContent: "เนื้อหาหน้าแรก",
           socialMedia: "โซเชียลมีเดีย",
@@ -2551,6 +2686,26 @@ function getLabels(locale: Locale) {
         social: {
           title: "โซเชียลมีเดีย",
         },
+        privacyPolicy: {
+          title: "นโยบายความเป็นส่วนตัว",
+          fields: {
+            contentEn: "เนื้อหานโยบายภาษาอังกฤษ (EN)",
+            contentTh: "เนื้อหานโยบายภาษาไทย (TH)",
+            headlineEn: "หัวข้อหน้าอังกฤษ (EN)",
+            headlineTh: "หัวข้อหน้าไทย (TH)",
+          },
+        },
+        legalPage: {
+          fields: {
+            contentEn: "เนื้อหาภาษาอังกฤษ (EN)",
+            contentTh: "เนื้อหาภาษาไทย (TH)",
+            headlineEn: "หัวข้อหน้าอังกฤษ (EN)",
+            headlineTh: "หัวข้อหน้าไทย (TH)",
+          },
+        },
+        dataDeletion: {
+          title: "คำแนะนำการลบข้อมูลผู้ใช้",
+        },
         faq: {
           add: "เพิ่ม FAQ",
           addTitle: "เพิ่ม FAQ",
@@ -2591,6 +2746,7 @@ function getLabels(locale: Locale) {
         tabs: {
           about: "About Us",
           faq: "FAQ",
+          privacyPolicy: "Privacy Policy",
           users: "Users",
           homeContent: "Home Content",
           socialMedia: "Social Media",
@@ -2714,6 +2870,26 @@ function getLabels(locale: Locale) {
         },
         social: {
           title: "Social Media",
+        },
+        privacyPolicy: {
+          title: "Privacy Policy",
+          fields: {
+            contentEn: "English policy content (EN)",
+            contentTh: "Thai policy content (TH)",
+            headlineEn: "English page heading (EN)",
+            headlineTh: "Thai page heading (TH)",
+          },
+        },
+        legalPage: {
+          fields: {
+            contentEn: "English content (EN)",
+            contentTh: "Thai content (TH)",
+            headlineEn: "English page heading (EN)",
+            headlineTh: "Thai page heading (TH)",
+          },
+        },
+        dataDeletion: {
+          title: "User Data Deletion Instructions",
         },
         faq: {
           add: "Add FAQ",

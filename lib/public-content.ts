@@ -27,6 +27,16 @@ export type AboutPageSetting = {
   updatedAt?: string;
 };
 
+export type PrivacyPolicySetting = {
+  id: string;
+  name: string;
+  headlineTh: string;
+  headlineEn: string;
+  contentTh: string | null;
+  contentEn: string | null;
+  isActive: boolean;
+};
+
 export type PublicContentItem = {
   id: string;
   rank: number;
@@ -55,6 +65,12 @@ type FetchListOptions = {
 
 const publicFetchBehavior = {
   next: { revalidate: 300 },
+};
+
+// Legal content must reflect an administrator's publication immediately. The API
+// already caches this resource and invalidates that cache after every edit.
+const legalPageFetchBehavior = {
+  cache: 'no-store' as const,
 };
 
 export const fetchPublicCategories = cache(async () => {
@@ -108,6 +124,26 @@ export const fetchAboutPageSetting = cache(async () => {
   );
 
   return response?.items[0] ?? null;
+});
+
+export const fetchPrivacyPolicySetting = cache(async () => {
+  const response = await fetchAdminList<PrivacyPolicySetting>(
+    "/home-section-settings",
+    { isActive: true, page: 1, pageSize: 100 },
+    legalPageFetchBehavior,
+  );
+
+  return response?.items.find((item) => item.name === "privacy-policy") ?? null;
+});
+
+export const fetchDataDeletionSetting = cache(async () => {
+  const response = await fetchAdminList<PrivacyPolicySetting>(
+    "/home-section-settings",
+    { isActive: true, page: 1, pageSize: 100 },
+    legalPageFetchBehavior,
+  );
+
+  return response?.items.find((item) => item.name === "data-deletion") ?? null;
 });
 
 export async function fetchPublicContentList(
