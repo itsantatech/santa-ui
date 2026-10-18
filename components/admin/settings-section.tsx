@@ -128,7 +128,7 @@ function getActiveSettingsTab(tab: string | undefined, canManageUsers: boolean) 
     return canManageUsers ? "users" : "home-content";
   }
 
-  if (tab === "home-content" || tab === "about" || tab === "social-media" || tab === "faq") {
+  if (tab === "home-content" || tab === "about" || tab === "privacy-policy" || tab === "social-media" || tab === "faq") {
     return tab;
   }
 

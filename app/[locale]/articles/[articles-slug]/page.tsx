@@ -4,11 +4,14 @@ import { PublicContentDetail } from "@/components/public-content";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
 import {
+  createContentExcerpt,
   fetchPublicChrome,
   fetchPublicContentBySlug,
   getLocalizedContent,
 } from "@/lib/public-content";
 import { isLocale, locales } from "@/lib/i18n";
+import { encodePathSegment } from "@/lib/paths";
+import { pageMetadata } from "@/lib/seo";
 
 type ArticleDetailPageProps = {
   params: Promise<{ "articles-slug": string; locale: string }>;
@@ -35,10 +38,17 @@ export async function generateMetadata({
         ? "บทความ"
         : "Article";
 
-  return {
+  const description = item
+    ? createContentExcerpt(locale === "th" ? item.contentTh : item.contentEn) || title
+    : title;
+
+  return pageMetadata({
     title,
-    description: title,
-  };
+    description,
+    locale,
+    path: `/articles/${encodePathSegment(slug)}`,
+    image: item?.imgUrl[0],
+  });
 }
 
 export default async function ArticleDetailPage({

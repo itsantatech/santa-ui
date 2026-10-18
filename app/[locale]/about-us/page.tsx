@@ -5,6 +5,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
 import { fetchAboutPageSetting, fetchPublicChrome } from "@/lib/public-content";
 import { isLocale, locales } from "@/lib/i18n";
+import { pageMetadata } from "@/lib/seo";
 
 type LocalePageProps = {
   params: Promise<{ locale: string }>;
@@ -23,10 +24,12 @@ export async function generateMetadata({
     return {};
   }
 
-  return {
+  return pageMetadata({
     title: locale === "th" ? "เกี่ยวกับเรา" : "About Us",
     description: locale === "th" ? "เกี่ยวกับเรา" : "About Us",
-  };
+    locale,
+    path: "/about-us",
+  });
 }
 
 export default async function AboutUsPage({ params }: LocalePageProps) {

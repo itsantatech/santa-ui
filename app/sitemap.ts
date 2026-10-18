@@ -18,6 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const rows = (response: { items: SlugRow[] } | null, prefix: string) => (response?.items ?? []).filter((item) => item.isActive).flatMap((item) => locales.map((locale) => ({ url: new URL(localizedSlugPath(locale, prefix, item.slug), siteUrl).toString(), lastModified: item.updatedAt ? new Date(item.updatedAt) : undefined })));
   return [
     ...locales.flatMap((locale) => staticPaths.map((path) => ({ url: new URL(`/${locale}${path}`, siteUrl).toString() }))),
+    ...locales.flatMap((locale) => ["/privacy-policy", "/data-deletion"].map((path) => ({ url: new URL(`/${locale}${path}`, siteUrl).toString() }))),
     ...rows(products, "/products"), ...rows(categories, "/products/categories"), ...rows(brands, "/products/brands"), ...rows(articles, "/articles"), ...rows(news, "/news-and-activities"),
   ];
 }
