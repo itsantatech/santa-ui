@@ -1582,14 +1582,20 @@ function UserModal({
   const [roleOptions, setRoleOptions] = useState<UserRoleOption[]>([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
   const initialRole = initialUser?.role ?? "";
-  const [form, setForm] = useState(() => ({
-    displayName: initialUser?.displayName ?? "",
-    email: initialUser?.email ?? "",
-    isActive: initialUser?.isActive ?? true,
-    password: "",
-    role: initialRole,
-    username: initialUser?.username ?? "",
-  }));
+  const [form, setForm] = useState(() => {
+    const { firstName, lastName } = splitDisplayName(initialUser?.displayName ?? "");
+
+    return {
+      email: initialUser?.email ?? "",
+      firstName,
+      isActive: initialUser?.isActive ?? true,
+      lastName,
+      password: "",
+      role: initialRole,
+      username: initialUser?.username ?? "",
+    };
+  });
+  const usernameError = getUsernameValidationMessage(form.username, locale);
 
   useEffect(() => {
     let isMounted = true;
@@ -1630,11 +1636,15 @@ function UserModal({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (usernameError) {
+      setError(usernameError);
+      return;
+    }
     setIsSaving(true);
     setError("");
 
     const payload = {
-      displayName: form.displayName,
+      displayName: [form.firstName.trim(), form.lastName.trim()].join(" "),
       email: form.email,
       isActive: form.isActive,
       password: form.password || undefined,
@@ -1682,18 +1692,33 @@ function UserModal({
         <form className="admin-product-form" onSubmit={handleSubmit}>
           <fieldset>
             <legend>{labels.user.formSection}</legend>
+            <div className="admin-product-form-grid">
+              <SettingsField
+                autoComplete="given-name"
+                label={labels.user.fields.firstName}
+                onChange={(value) => setForm((current) => ({ ...current, firstName: value }))}
+                required
+                value={form.firstName}
+              />
+              <SettingsField
+                autoComplete="family-name"
+                label={labels.user.fields.lastName}
+                onChange={(value) => setForm((current) => ({ ...current, lastName: value }))}
+                required
+                value={form.lastName}
+              />
+            </div>
             <SettingsField
-              label={labels.user.fields.displayName}
-              onChange={(value) => setForm((current) => ({ ...current, displayName: value }))}
-              required
-              value={form.displayName}
-            />
-            <SettingsField
+              autoComplete="username"
               label={labels.user.fields.username}
               onChange={(value) => setForm((current) => ({ ...current, username: value }))}
+              pattern="[a-z0-9._-]+"
+              placeholder={labels.user.usernameHint}
               required
+              title={labels.user.usernameHint}
               value={form.username}
             />
+            {usernameError ? <p className="admin-product-form-error">{usernameError}</p> : null}
             <SettingsField
               label={labels.user.fields.email}
               onChange={(value) => setForm((current) => ({ ...current, email: value }))}
@@ -1746,7 +1771,7 @@ function UserModal({
             </button>
             <button
               className="admin-product-add-button"
-              disabled={isSaving || isLoadingRoles || roleOptions.length === 0}
+              disabled={isSaving || isLoadingRoles || roleOptions.length === 0 || Boolean(usernameError)}
               type="submit"
             >
               {isSaving ? labels.common.saving : labels.common.save}
@@ -1756,6 +1781,29 @@ function UserModal({
       </div>
     </div>
   );
+}
+
+function splitDisplayName(displayName: string) {
+  const [firstName = "", ...lastNameParts] = displayName.trim().split(/\s+/);
+
+  return {
+    firstName,
+    lastName: lastNameParts.join(" "),
+  };
+}
+
+function getUsernameValidationMessage(username: string, locale: Locale) {
+  if (!username) {
+    return "";
+  }
+
+  if (!/^[a-z0-9._-]+$/.test(username)) {
+    return locale === "th"
+      ? "Username ใช้ได้เฉพาะ a-z, 0-9, ., _ และ - และห้ามเว้นวรรค"
+      : "Username may contain only lowercase a-z, 0-9, ., _ and -; no spaces.";
+  }
+
+  return "";
 }
 
 function DeleteUserModal({
@@ -2048,21 +2096,27 @@ function DeleteFaqModal({
 }
 
 function SettingsField({
+  autoComplete,
   className,
   label,
   maxLength,
   onChange,
+  pattern,
   placeholder,
   required = false,
+  title,
   type = "text",
   value,
 }: {
+  autoComplete?: string;
   className?: string;
   label: string;
   maxLength?: number;
   onChange: (value: string) => void;
+  pattern?: string;
   placeholder?: string;
   required?: boolean;
+  title?: string;
   type?: string;
   value: string;
 }) {
@@ -2073,10 +2127,13 @@ function SettingsField({
         {required ? <span className="admin-field-required" aria-hidden="true">*</span> : null}
       </span>
       <input
+        autoComplete={autoComplete}
         maxLength={maxLength}
         onChange={(event) => onChange(event.target.value)}
+        pattern={pattern}
         placeholder={placeholder}
         required={required}
+        title={title}
         type={type}
         value={value}
       />
@@ -2606,6 +2663,8 @@ function getLabels(locale: Locale) {
           error: "ไม่สามารถบันทึกข้อมูลผู้ใช้งานได้",
           fields: {
             displayName: "ชื่อ",
+            firstName: "ชื่อ",
+            lastName: "นามสกุล",
             email: "อีเมล",
             password: "รหัสผ่าน",
             role: "บทบาท",
@@ -2614,6 +2673,7 @@ function getLabels(locale: Locale) {
           formSection: "รายละเอียดผู้ใช้งาน",
           passwordHint: "กรอกเมื่อต้องการเปลี่ยนรหัสผ่าน",
           roleLoadError: "ไม่สามารถโหลดรายการบทบาทได้",
+          usernameHint: "a-z, 0-9, ., _ และ - เท่านั้น ห้ามเว้นวรรค",
         },
         home: {
           fields: {
@@ -2791,6 +2851,8 @@ function getLabels(locale: Locale) {
           error: "Unable to save user data",
           fields: {
             displayName: "Name",
+            firstName: "First name",
+            lastName: "Last name",
             email: "Email",
             password: "Password",
             role: "Role",
@@ -2799,6 +2861,7 @@ function getLabels(locale: Locale) {
           formSection: "User Details",
           passwordHint: "Leave blank to keep the current password",
           roleLoadError: "Unable to load roles",
+          usernameHint: "Lowercase a-z, 0-9, ., _ and - only; no spaces",
         },
         home: {
           fields: {
