@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   const password = String(form.get("password") ?? "");
   const locale = String(form.get("locale") ?? defaultLocale);
   const returnTo = safeReturnTo(String(form.get("returnTo") ?? ""), isLocale(locale) ? `/${locale}` : `/${defaultLocale}`);
-  if (!username || !password) return NextResponse.redirect(new URL(`/${isLocale(locale) ? locale : defaultLocale}/login?error=missing`, request.url));
+  if (!username || !password) return NextResponse.redirect(new URL(`/${isLocale(locale) ? locale : defaultLocale}/login?error=missing`, getBaseUrl(request.url)));
   const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET;
   const body = new URLSearchParams({ client_id: keycloakConfig.clientId, grant_type: "password", password, scope: "openid profile email", username });
   if (clientSecret) body.set("client_secret", clientSecret);
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   if (!tokenResponse?.ok) {
     const detail = tokenResponse ? await tokenResponse.json().catch(() => null) as { error?: string } | null : null;
     const error = getSafeLoginError(detail?.error);
-    return NextResponse.redirect(new URL(`/${isLocale(locale) ? locale : defaultLocale}/login?error=${error}`, request.url));
+    return NextResponse.redirect(new URL(`/${isLocale(locale) ? locale : defaultLocale}/login?error=${error}`, getBaseUrl(request.url)));
   }
   const tokens = await tokenResponse.json() as TokenResponse;
   const payload = decodeJwtPayload(tokens.access_token);
