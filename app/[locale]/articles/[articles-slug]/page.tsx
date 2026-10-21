@@ -75,7 +75,7 @@ export default async function ArticleDetailPage({
       <PublicContentDetail
         item={item}
         locale={locale}
-        mediaVariant="about"
+        mediaVariant="detail"
         sectionHref={`/${locale}/articles`}
         sectionLabel={locale === "th" ? "บทความ" : "Articles"}
       />
