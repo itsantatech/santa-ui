@@ -80,14 +80,25 @@ export function PublicContentList({
                   href={localizedSlugPath(locale, `/${type}`, item.slug)}
                 >
                   {item.imgUrl[0]?.trim() ? (
-                    <Image
-                      alt={getLocalizedContent(item, locale).topic}
-                      className="public-content-card-image"
-                      fill
-                      sizes="(max-width: 900px) 100vw, 33vw"
-                      src={item.imgUrl[0]}
-                      unoptimized
-                    />
+                    isVideoUrl(item.imgUrl[0]) ? (
+                      <video
+                        aria-label={getLocalizedContent(item, locale).topic}
+                        className="public-content-card-image"
+                        muted
+                        playsInline
+                        preload="metadata"
+                        src={item.imgUrl[0]}
+                      />
+                    ) : (
+                      <Image
+                        alt={getLocalizedContent(item, locale).topic}
+                        className="public-content-card-image"
+                        fill
+                        sizes="(max-width: 900px) 100vw, 33vw"
+                        src={item.imgUrl[0]}
+                        unoptimized
+                      />
+                    )
                   ) : (
                     <div className="public-content-card-placeholder">
                       <span>{sectionLabel}</span>
@@ -131,6 +142,10 @@ export function PublicContentList({
       </div>
     </section>
   );
+}
+
+function isVideoUrl(url: string) {
+  return /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(url);
 }
 
 export function PublicContentDetail({

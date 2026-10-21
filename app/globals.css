@@ -6227,8 +6227,10 @@ button.admin-table-page-link:disabled {
 
 .public-media-carousel {
   display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
+  width: 100%;
+  min-width: 0;
 }
 
 .public-media-carousel-about {
@@ -6236,9 +6238,10 @@ button.admin-table-page-link:disabled {
 }
 
 .public-media-carousel-thumbs {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
-  align-content: start;
+  order: 2;
 }
 
 .public-media-carousel-about .public-media-carousel-thumbs {
@@ -6284,13 +6287,15 @@ button.admin-table-page-link:disabled {
 .public-media-carousel-main {
   position: relative;
   width: 100%;
-  min-height: 460px;
+  height: clamp(360px, 50vw, 640px);
+  min-height: 360px;
   overflow: hidden;
   background: #f3f4f6;
   border-radius: 24px;
 }
 
 .public-media-carousel-main-about {
+  height: clamp(420px, 52vw, 680px);
   min-height: 520px;
 }
 
@@ -6306,7 +6311,9 @@ button.admin-table-page-link:disabled {
 }
 
 .public-media-carousel-main-video {
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  background: #111827;
 }
 
 .public-media-carousel-nav {
@@ -6341,6 +6348,28 @@ button.admin-table-page-link:disabled {
   width: 100%;
   height: 100%;
   background: #ffffff;
+}
+
+@media (max-width: 1200px) {
+  .public-media-carousel,
+  .public-media-carousel-about {
+    display: block;
+    width: 100%;
+  }
+
+  .public-media-carousel-main,
+  .public-media-carousel-main-about {
+    width: 100%;
+    height: clamp(300px, 56.25vw, 560px);
+    min-height: 300px;
+  }
+
+  .public-media-carousel-thumbs,
+  .public-media-carousel-about .public-media-carousel-thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
 }
 
 .home-hero {
@@ -7957,6 +7986,7 @@ button.admin-table-page-link:disabled {
 
   .public-media-carousel-main,
   .public-media-carousel-main-about {
+    height: 260px;
     min-height: 260px;
     border-radius: 18px;
   }
