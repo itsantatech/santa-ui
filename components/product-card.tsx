@@ -17,6 +17,7 @@ export type ProductCardData = {
   shortDescriptionTh: string;
   shortDescriptionEn: string;
   imgUrl: string[];
+  isActive: boolean;
   isPromotion?: boolean;
   price: number | null;
   discountedPrice: number | null;
