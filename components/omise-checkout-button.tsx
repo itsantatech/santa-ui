@@ -35,7 +35,7 @@ export function OmiseCheckoutButton({ locale, orderCode, paymentStatus, reservat
       const response = await fetch(`/api/payments/omise/orders/${encodeURIComponent(orderCode)}`, { cache: "no-store" });
       const payment = await response.json().catch(() => null) as PaymentResponse | null;
       if (payment?.paymentStatus === "PAID") { window.location.reload(); return; }
-      if (payment?.attempt?.status === "FAILED") { setQrCodeUrl(null); setFailureMessage(payment.attempt.failureMessage ?? (locale === "th" ? "ไม่สามารถชำระเงินได้ กรุณาลองอีกครั้ง" : "Payment was unsuccessful. Please try again.")); }
+      if (payment?.attempt?.status === "FAILED" && !qrCodeUrl) setFailureMessage(payment.attempt.failureMessage ?? (locale === "th" ? "ไม่สามารถชำระเงินได้ กรุณาลองอีกครั้ง" : "Payment was unsuccessful. Please try again."));
     }, 3000);
     return () => window.clearInterval(timer);
   }, [locale, orderCode, qrCodeUrl]);
