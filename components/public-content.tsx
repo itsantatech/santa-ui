@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ProductListPagination } from "@/components/product-list-pagination";
+import { ProductCard, type ProductCardData } from "@/components/product-card";
 import { PublicMediaCarousel } from "@/components/public-media-carousel";
 import {
   createContentExcerpt,
@@ -152,12 +153,14 @@ export function PublicContentDetail({
   item,
   locale,
   mediaVariant = "detail",
+  relatedProducts = [],
   sectionHref,
   sectionLabel,
 }: {
   item: PublicContentItem;
   locale: Locale;
   mediaVariant?: "about" | "detail";
+  relatedProducts?: ProductCardData[];
   sectionHref: string;
   sectionLabel: string;
 }) {
@@ -194,6 +197,14 @@ export function PublicContentDetail({
           ) : null}
           <article className="public-richtext" dangerouslySetInnerHTML={{ __html: localized.content }} />
         </div>
+        {relatedProducts.length > 0 ? (
+          <section className="products-page-results public-related-products" aria-labelledby="related-products-heading">
+            <h2 id="related-products-heading">{locale === "th" ? "สินค้าที่เกี่ยวข้อง" : "Related products"}</h2>
+            <div className="products-page-grid">
+              {relatedProducts.map((product) => <ProductCard key={product.sku} locale={locale} product={product} />)}
+            </div>
+          </section>
+        ) : null}
       </div>
     </section>
   );

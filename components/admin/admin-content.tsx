@@ -41,6 +41,7 @@ export function AdminContent({
           locale={locale}
           page={page}
           pageSize={productFilters?.pageSize}
+          search={productFilters?.search}
           tab={productFilters?.tab}
         />
       );

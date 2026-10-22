@@ -42,21 +42,23 @@ export async function CategoriesSection({
   locale,
   page,
   pageSize,
+  search,
   tab,
 }: {
   locale: Locale;
   page: number;
   pageSize?: number;
+  search?: string;
   tab?: string;
 }) {
   const activeTab: TabValue = tab === "sub-categories" ? "sub-categories" : "categories";
   const [categoriesResponse, subCategoriesResponse, categoryOptionsResponse] =
     await Promise.all([
       activeTab === "categories"
-        ? fetchAdminList<CategoryRow>("/categories", { page, pageSize })
+        ? fetchAdminList<CategoryRow>("/categories", { page, pageSize, search })
         : Promise.resolve(null),
       activeTab === "sub-categories"
-        ? fetchAdminList<SubCategoryRow>("/sub-categories", { page, pageSize })
+        ? fetchAdminList<SubCategoryRow>("/sub-categories", { page, pageSize, search })
         : Promise.resolve(null),
       fetchAdminList<CategoryRow>("/categories", { page: 1, pageSize: 100 }),
     ]);
@@ -75,6 +77,7 @@ export async function CategoriesSection({
       }
       locale={locale}
       page={page}
+      search={search}
       subCategories={subCategoriesResponse}
     />
   );

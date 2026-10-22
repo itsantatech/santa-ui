@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 
 type ProductFilterChip = {
   label: string;
@@ -18,7 +19,9 @@ type ProductFilterField = {
   label: string;
   options?: ProductFilterOption[];
   placeholder?: string;
+  searchable?: boolean;
   selected?: ProductFilterChip[];
+  showOptionCount?: boolean;
 };
 
 export type ProductFilterProps = {
@@ -111,7 +114,12 @@ export function ProductFilter({
         <div className="product-filter-grid">
           {fields.map((field) => (
             <div className="product-filter-field" key={field.label}>
-              <span className="product-filter-field-label">{field.label}</span>
+              <span className="product-filter-field-label">
+                {field.label}
+                {field.showOptionCount
+                  ? ` (${getAvailableOptions(field, selectedValues)?.length ?? 0})`
+                  : ""}
+              </span>
               <FilterSelect
                 availableOptions={getAvailableOptions(field, selectedValues)}
                 field={field}
@@ -219,6 +227,34 @@ function FilterSelect({
   selectedValue: string;
   selectedValues: Record<string, string>;
 }) {
+  const listId = useId();
+  const [searchValue, setSearchValue] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    left: number;
+    top: number;
+    width: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isSearchOpen || !inputRef.current) return;
+
+    const updatePosition = () => {
+      const rect = inputRef.current?.getBoundingClientRect();
+      if (rect) {
+        setDropdownPosition({ left: rect.left, top: rect.bottom + 6, width: rect.width });
+      }
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isSearchOpen]);
   if (field.options) {
     const parentValue = field.dependsOn ? selectedValues[field.dependsOn] : undefined;
     const isDisabled = Boolean(field.dependsOn && !parentValue) || !availableOptions?.length;
@@ -226,6 +262,58 @@ function FilterSelect({
       !parentValue && field.dependsOn
         ? (field.disabledPlaceholder ?? field.placeholder ?? "")
         : (field.placeholder ?? "");
+
+    if (field.searchable) {
+      const selectedOption = availableOptions?.find((option) => option.value === selectedValue);
+      const displayedValue = searchValue || selectedOption?.label || "";
+      const matchingOptions = (availableOptions ?? [])
+        .filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()))
+        .slice(0, 10);
+      return <div className="product-filter-select product-filter-select-dropdown">
+        <input
+          aria-label={field.label}
+          autoComplete="off"
+          disabled={isDisabled}
+          ref={inputRef}
+          onBlur={() => window.setTimeout(() => setIsSearchOpen(false), 120)}
+          onChange={(event) => {
+            const nextValue = event.target.value;
+            setSearchValue(nextValue);
+            setIsSearchOpen(true);
+            if (!nextValue) onChange("");
+            if (selectedOption && nextValue !== selectedOption.label) onChange("");
+            const match = availableOptions?.find((option) => option.label === nextValue);
+            if (match) {
+              onChange(match.value);
+            }
+          }}
+          onFocus={() => setIsSearchOpen(true)}
+          placeholder={placeholder}
+          type="search"
+          value={displayedValue}
+        />
+        {isSearchOpen && dropdownPosition && typeof document !== "undefined"
+          ? createPortal(
+              <div
+                className="product-filter-search-options"
+                id={listId}
+                role="listbox"
+                style={{
+                  left: dropdownPosition.left,
+                  position: "fixed",
+                  top: dropdownPosition.top,
+                  width: dropdownPosition.width,
+                  zIndex: 1000,
+                }}
+              >
+                {matchingOptions.map((option) => <button aria-selected={option.value === selectedValue} key={option.value} onClick={() => { onChange(option.value); setSearchValue(""); setIsSearchOpen(false); }} onMouseDown={(event) => event.preventDefault()} role="option" type="button">{option.label}</button>)}
+              </div>,
+              document.body,
+            )
+          : null}
+        {selectedValue ? <button aria-label={removeFilterLabel} className="product-filter-chip" onClick={() => onChange("")} type="button"><CloseIcon /></button> : null}
+      </div>;
+    }
 
     return (
       <div className="product-filter-select product-filter-select-dropdown">

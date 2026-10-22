@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { fetchAdminList, fetchSantaApiResource } from "@/lib/admin-api";
 import type { Locale } from "@/lib/i18n";
+import type { ProductCardData } from "@/components/product-card";
 
 export type FooterCategory = {
   code: string;
@@ -67,6 +68,12 @@ const publicFetchBehavior = {
   next: { revalidate: 300 },
 };
 
+// Detail pages must reflect a related-SKU change immediately after an editor
+// saves an article or news item. List pages may still use short revalidation.
+const publicContentDetailFetchBehavior = {
+  cache: "no-store" as const,
+};
+
 // Legal content must reflect an administrator's publication immediately. The API
 // already caches this resource and invalidates that cache after every edit.
 const legalPageFetchBehavior = {
@@ -79,7 +86,7 @@ export const fetchPublicCategories = cache(async () => {
     {
       isActive: true,
       page: 1,
-      pageSize: 100,
+      pageSize: 10_000,
     },
     publicFetchBehavior,
   );
@@ -161,6 +168,28 @@ export async function fetchPublicContentList(
       sortOrder: options.sortOrder,
     },
     publicFetchBehavior,
+  );
+}
+
+export async function fetchRelatedProducts(skus: string[]) {
+  const requestedSkus = new Set(
+    skus.map((sku) => sku.trim().toUpperCase()).filter(Boolean),
+  );
+  if (requestedSkus.size === 0) return [];
+
+  // Fetch each requested SKU directly. Loading every product first can time out
+  // on the production API and caused this section to render as empty.
+  const products = await Promise.all(
+    [...requestedSkus].map((sku) =>
+      fetchSantaApiResource<ProductCardData>(
+        `/products/${encodeURIComponent(sku)}`,
+        publicContentDetailFetchBehavior,
+      ),
+    ),
+  );
+
+  return products.filter(
+    (product): product is ProductCardData => Boolean(product?.isActive),
   );
 }
 
@@ -341,7 +370,10 @@ async function fetchPublicContentById(
   resource: PublicContentResource,
   id: string,
 ) {
-  return fetchSantaApiResource<PublicContentItem>(`/${resource}/${id}`, publicFetchBehavior);
+  return fetchSantaApiResource<PublicContentItem>(
+    `/${resource}/${id}`,
+    publicContentDetailFetchBehavior,
+  );
 }
 
 function escapeHtml(value: string) {
