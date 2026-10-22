@@ -215,6 +215,7 @@ export default async function ProductsPage({
                 options: brandOptions,
                 placeholder: locale === "th" ? "เลือกแบรนด์" : "Select brand",
                 searchable: true,
+                showAllOptions: true,
                 selected: selectedBrand ? [selectedBrand] : undefined,
               },
             ]}

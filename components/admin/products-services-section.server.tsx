@@ -81,12 +81,13 @@ export async function ProductsServicesSection({
   const dictionary = getDictionary(locale);
   const content = dictionary.adminSections["products-services"];
   const table = dictionary.adminProductTable;
-  const [response, categoryResponse, subCategoryResponse, brandResponse] =
+  const [response, categoryResponse, subCategoryResponse, brandResponse, activeBrandResponse] =
     await Promise.all([
       getProducts(page, filters),
       getFilterOptions("/categories"),
       getFilterOptions("/sub-categories"),
       getFilterOptions("/brands"),
+      getFilterOptions("/brands", true),
     ]);
   const rows = response?.items ?? [];
   const totalPages = response?.meta.totalPages ?? 1;
@@ -103,7 +104,7 @@ export async function ProductsServicesSection({
     subCategoryResponse?.items ?? [],
     locale,
   );
-  const brandOptions = toProductFilterOptions(brandResponse?.items ?? [], locale);
+  const brandOptions = toProductFilterOptions(activeBrandResponse?.items ?? [], locale);
   const productEditorCategoryOptions = toProductEditorOptions(
     categoryResponse?.items ?? [],
   );
@@ -164,6 +165,7 @@ export async function ProductsServicesSection({
         options: brandOptions,
         placeholder: isThaiLocale ? "เลือกแบรนด์" : "Select brand",
         searchable: true,
+        showAllOptions: true,
         showOptionCount: true,
         selected: selectedBrand ? [selectedBrand] : undefined,
       },
@@ -249,8 +251,10 @@ async function getProducts(
 
 async function getFilterOptions(
   resourcePath: string,
+  isActive?: boolean,
 ): Promise<ProductFilterListResponse | null> {
   return fetchAdminList<ProductRelation>(resourcePath, {
+    isActive,
     page: 1,
     // These lists back editor and filter controls. Fetch the complete set rather
     // than silently dropping options after the first page.
