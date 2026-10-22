@@ -13,6 +13,7 @@ type PaymentResponse = { paymentStatus?: string; attempt?: { status?: string; qr
 export function OmiseCheckoutButton({ locale, orderCode, paymentStatus, reservationExpiresAt, total }: { locale: "th" | "en"; orderCode: string; paymentStatus: string; reservationExpiresAt: string | null; total: number }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [isLoadingExistingPayment, setIsLoadingExistingPayment] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [failureMessage, setFailureMessage] = useState<string | null>(null);
   const [secondsRemaining, setSecondsRemaining] = useState(() => remainingSeconds(reservationExpiresAt));
@@ -38,6 +39,28 @@ export function OmiseCheckoutButton({ locale, orderCode, paymentStatus, reservat
     }, 3000);
     return () => window.clearInterval(timer);
   }, [locale, orderCode, qrCodeUrl]);
+  async function openPaymentModal() {
+    setIsOpen(true);
+    if (!unpaid || qrCodeUrl) return;
+    setIsLoadingExistingPayment(true);
+    try {
+      const response = await fetch(`/api/payments/omise/orders/${encodeURIComponent(orderCode)}`, { cache: "no-store" });
+      const payment = response.ok ? await response.json() as PaymentResponse : null;
+      if (payment?.paymentStatus === "PAID") {
+        window.location.reload();
+        return;
+      }
+      if (payment?.attempt?.status === "PENDING" && payment.attempt.qrCodeUrl) {
+        setQrCodeUrl(payment.attempt.qrCodeUrl);
+        return;
+      }
+      if (payment?.attempt?.status === "FAILED") {
+        setFailureMessage(payment.attempt.failureMessage ?? (locale === "th" ? "ไม่สามารถชำระเงินได้ กรุณาลองอีกครั้ง" : "Payment was unsuccessful. Please try again."));
+      }
+    } finally {
+      setIsLoadingExistingPayment(false);
+    }
+  }
 
   async function getPublicKey() {
     const response = await fetch("/api/payments/omise/config"); const config = await response.json() as { publicKey?: string; message?: string };
@@ -83,8 +106,8 @@ export function OmiseCheckoutButton({ locale, orderCode, paymentStatus, reservat
   if (!unpaid) return null;
   return <>
     {reservationExpiresAt && <p aria-live="polite" className={`payment-reservation ${reservationActive ? "" : "expired"}`}>{reservationActive ? (locale === "th" ? `กรุณาชำระเงินภายใน ${formatDuration(secondsRemaining)}` : `Complete payment within ${formatDuration(secondsRemaining)}`) : (locale === "th" ? "เวลาสำรองสินค้าได้หมดลงแล้ว" : "The payment reservation has expired.")}</p>}
-    <button className="cart-checkout-button" disabled={isPending || !reservationActive} onClick={() => setIsOpen(true)} type="button">{isPending ? (locale === "th" ? "กำลังเปิดระบบชำระเงิน..." : "Opening payment...") : locale === "th" ? "ชำระเงิน" : "Pay now"}</button>
-    {isOpen ? <div className="payment-modal-backdrop" onClick={() => !isPending && setIsOpen(false)} role="presentation"><section aria-modal="true" aria-labelledby="payment-title" className="payment-modal" onClick={(event) => event.stopPropagation()} role="dialog"><button aria-label="Close" className="payment-modal-close" disabled={isPending} onClick={() => setIsOpen(false)} type="button">×</button><span className="payment-modal-brand">Secure payment by Omise</span><h2 id="payment-title">{qrCodeUrl ? (locale === "th" ? "สแกนเพื่อชำระเงิน" : "Scan to pay") : (locale === "th" ? "เลือกวิธีชำระเงิน" : "Choose payment method")}</h2>{qrCodeUrl ? <><Image alt="PromptPay QR" className="payment-qr" height={280} src={qrCodeUrl} unoptimized width={280} /><p>{locale === "th" ? "สแกน PromptPay QR นี้ในแอปธนาคาร ระบบจะตรวจสอบการชำระเงินอัตโนมัติ" : "Scan this PromptPay QR code in your banking app. Payment will be confirmed automatically."}</p></> : <><p className="payment-modal-total">{locale === "th" ? "ยอดชำระ" : "Amount due"} <strong>{money(total, locale)}</strong></p>{failureMessage && <p className="payment-failure" role="alert">{failureMessage}</p>}<div className="payment-methods"><button disabled={isPending || !reservationActive} onClick={() => void openPayment("credit_card")} type="button">{locale === "th" ? "บัตรเครดิต / เดบิต" : "Credit / debit card"}</button><button disabled={isPending || !reservationActive} onClick={() => void openPayment("promptpay")} type="button">PromptPay QR</button></div></>}</section></div> : null}
+    <button className="cart-checkout-button" disabled={isPending || !reservationActive} onClick={() => void openPaymentModal()} type="button">{isPending ? (locale === "th" ? "กำลังเปิดระบบชำระเงิน..." : "Opening payment...") : locale === "th" ? "ชำระเงิน" : "Pay now"}</button>
+    {isOpen ? <div className="payment-modal-backdrop" onClick={() => !isPending && !isLoadingExistingPayment && setIsOpen(false)} role="presentation"><section aria-modal="true" aria-labelledby="payment-title" className="payment-modal" onClick={(event) => event.stopPropagation()} role="dialog"><button aria-label="Close" className="payment-modal-close" disabled={isPending || isLoadingExistingPayment} onClick={() => setIsOpen(false)} type="button">×</button><span className="payment-modal-brand">Secure payment by Omise</span><h2 id="payment-title">{qrCodeUrl ? (locale === "th" ? "สแกนเพื่อชำระเงิน" : "Scan to pay") : (locale === "th" ? "เลือกวิธีชำระเงิน" : "Choose payment method")}</h2>{qrCodeUrl ? <><Image alt="PromptPay QR" className="payment-qr" height={280} src={qrCodeUrl} unoptimized width={280} /><p>{locale === "th" ? "สแกน PromptPay QR นี้ในแอปธนาคาร ระบบจะตรวจสอบการชำระเงินอัตโนมัติ" : "Scan this PromptPay QR code in your banking app. Payment will be confirmed automatically."}</p></> : <><p className="payment-modal-total">{locale === "th" ? "ยอดชำระ" : "Amount due"} <strong>{money(total, locale)}</strong></p>{failureMessage && <p className="payment-failure" role="alert">{failureMessage}</p>}<div className="payment-methods"><button disabled={isPending || isLoadingExistingPayment || !reservationActive} onClick={() => void openPayment("credit_card")} type="button">{locale === "th" ? "บัตรเครดิต / เดบิต" : "Credit / debit card"}</button><button disabled={isPending || isLoadingExistingPayment || !reservationActive} onClick={() => void openPayment("promptpay")} type="button">PromptPay QR</button></div></>}</section></div> : null}
   </>;
 }
 function remainingSeconds(value: string | null) { return value ? Math.max(0, Math.ceil((new Date(value).getTime() - Date.now()) / 1000)) : 0; }
