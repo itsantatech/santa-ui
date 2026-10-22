@@ -21,6 +21,7 @@ type ProductFilterField = {
   placeholder?: string;
   searchable?: boolean;
   selected?: ProductFilterChip[];
+  showAllOptions?: boolean;
   showOptionCount?: boolean;
 };
 
@@ -267,8 +268,10 @@ function FilterSelect({
       const selectedOption = availableOptions?.find((option) => option.value === selectedValue);
       const displayedValue = searchValue || selectedOption?.label || "";
       const matchingOptions = (availableOptions ?? [])
-        .filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()))
-        .slice(0, 10);
+        .filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()));
+      const visibleOptions = field.showAllOptions
+        ? matchingOptions
+        : matchingOptions.slice(0, 10);
       return <div className="product-filter-select product-filter-select-dropdown">
         <input
           aria-label={field.label}
@@ -306,7 +309,7 @@ function FilterSelect({
                   zIndex: 1000,
                 }}
               >
-                {matchingOptions.map((option) => <button aria-selected={option.value === selectedValue} key={option.value} onClick={() => { onChange(option.value); setSearchValue(""); setIsSearchOpen(false); }} onMouseDown={(event) => event.preventDefault()} role="option" type="button">{option.label}</button>)}
+                {visibleOptions.map((option) => <button aria-selected={option.value === selectedValue} key={option.value} onClick={() => { onChange(option.value); setSearchValue(""); setIsSearchOpen(false); }} onMouseDown={(event) => event.preventDefault()} role="option" type="button">{option.label}</button>)}
               </div>,
               document.body,
             )

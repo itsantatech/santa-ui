@@ -268,6 +268,7 @@ export default async function CategoryDetailPage({
                 options: brandOptions,
                 placeholder: locale === "th" ? "เลือกแบรนด์" : "Select brand",
                 searchable: true,
+                showAllOptions: true,
                 selected: selectedBrand ? [selectedBrand] : undefined,
               },
             ]}
