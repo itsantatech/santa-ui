@@ -39,6 +39,18 @@ export function OmiseCheckoutButton({ locale, orderCode, paymentStatus, reservat
     }, 3000);
     return () => window.clearInterval(timer);
   }, [locale, orderCode, qrCodeUrl]);
+  useEffect(() => {
+    if (!unpaid || qrCodeUrl) return;
+    let cancelled = false;
+    void fetch(`/api/payments/omise/orders/${encodeURIComponent(orderCode)}`, { cache: "no-store" })
+      .then(async (response) => response.ok ? await response.json() as PaymentResponse : null)
+      .then((payment) => {
+        if (cancelled || payment?.attempt?.status !== "PENDING" || !payment.attempt.qrCodeUrl) return;
+        setQrCodeUrl(payment.attempt.qrCodeUrl);
+        setIsOpen(true);
+      });
+    return () => { cancelled = true; };
+  }, [orderCode, qrCodeUrl, unpaid]);
   async function openPaymentModal() {
     setIsOpen(true);
     if (!unpaid || qrCodeUrl) return;
@@ -95,9 +107,8 @@ export function OmiseCheckoutButton({ locale, orderCode, paymentStatus, reservat
       if (payment.authorizeUri) { window.location.assign(payment.authorizeUri); return; }
       if (payment.qrCodeUrl) { setQrCodeUrl(payment.qrCodeUrl); setIsPending(false); return; }
       if (method === "promptpay") {
-        const paymentStatusResponse = await fetch(`/api/payments/omise/orders/${encodeURIComponent(orderCode)}`, { cache: "no-store" });
-        const currentPayment = await paymentStatusResponse.json().catch(() => null) as PaymentResponse | null;
-        if (currentPayment?.attempt?.qrCodeUrl) { setQrCodeUrl(currentPayment.attempt.qrCodeUrl); setIsPending(false); return; }
+        const existingQrCodeUrl = await waitForPromptPayQr(orderCode);
+        if (existingQrCodeUrl) { setQrCodeUrl(existingQrCodeUrl); setIsPending(false); return; }
         throw new Error("PromptPay QR is unavailable. Please try again.");
       }
       window.location.reload();
@@ -113,4 +124,14 @@ export function OmiseCheckoutButton({ locale, orderCode, paymentStatus, reservat
 function remainingSeconds(value: string | null) { return value ? Math.max(0, Math.ceil((new Date(value).getTime() - Date.now()) / 1000)) : 0; }
 function formatDuration(seconds: number) { return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`; }
 function money(value: number, locale: "th" | "en") { return new Intl.NumberFormat(locale === "th" ? "th-TH" : "en-US", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(value); }
+async function waitForPromptPayQr(orderCode: string) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const response = await fetch(`/api/payments/omise/orders/${encodeURIComponent(orderCode)}`, { cache: "no-store" });
+    const payment = response.ok ? await response.json() as PaymentResponse : null;
+    if (payment?.attempt?.status === "PENDING" && payment.attempt.qrCodeUrl) return payment.attempt.qrCodeUrl;
+    if (payment?.attempt?.status === "FAILED") return null;
+    await new Promise((resolve) => window.setTimeout(resolve, 500));
+  }
+  return null;
+}
 function loadOmiseScript() { if (window.Omise || window.OmiseCard) return Promise.resolve(); return new Promise<void>((resolve, reject) => { const existing = document.querySelector<HTMLScriptElement>("script[data-omise-js]"); if (existing) { existing.addEventListener("load", () => resolve(), { once: true }); existing.addEventListener("error", () => reject(new Error("Unable to load Omise checkout.")), { once: true }); return; } const script = document.createElement("script"); script.src = "https://cdn.omise.co/omise.js"; script.async = true; script.dataset.omiseJs = "true"; script.onload = () => resolve(); script.onerror = () => reject(new Error("Unable to load Omise checkout.")); document.head.appendChild(script); }); }
