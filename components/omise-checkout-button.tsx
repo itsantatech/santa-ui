@@ -8,7 +8,7 @@ type PaymentMethod = "credit_card" | "promptpay";
 type OmiseCardApi = { configure: (options: { publicKey: string }) => void; open: (options: { amount: number; currency: string; defaultPaymentMethod: "credit_card"; onCreateTokenSuccess: (nonce: string) => void; onFormClosed?: () => void }) => void; };
 type OmiseApi = { setPublicKey: (publicKey: string) => void; createSource: (type: "promptpay", options: { amount: number; currency: string }, callback: (statusCode: number, response: { id?: string; message?: string }) => void) => void; };
 declare global { interface Window { OmiseCard?: OmiseCardApi; Omise?: OmiseApi; } }
-type PaymentResponse = { paymentStatus?: string; attempt?: { status?: string; failureMessage?: string | null } | null; };
+type PaymentResponse = { paymentStatus?: string; attempt?: { status?: string; qrCodeUrl?: string | null; failureMessage?: string | null } | null; };
 
 export function OmiseCheckoutButton({ locale, orderCode, paymentStatus, reservationExpiresAt, total }: { locale: "th" | "en"; orderCode: string; paymentStatus: string; reservationExpiresAt: string | null; total: number }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -71,6 +71,12 @@ export function OmiseCheckoutButton({ locale, orderCode, paymentStatus, reservat
       if (!response.ok) throw new Error(payment.message ?? payment.failureMessage ?? "Unable to create payment.");
       if (payment.authorizeUri) { window.location.assign(payment.authorizeUri); return; }
       if (payment.qrCodeUrl) { setQrCodeUrl(payment.qrCodeUrl); setIsPending(false); return; }
+      if (method === "promptpay") {
+        const paymentStatusResponse = await fetch(`/api/payments/omise/orders/${encodeURIComponent(orderCode)}`, { cache: "no-store" });
+        const currentPayment = await paymentStatusResponse.json().catch(() => null) as PaymentResponse | null;
+        if (currentPayment?.attempt?.qrCodeUrl) { setQrCodeUrl(currentPayment.attempt.qrCodeUrl); setIsPending(false); return; }
+        throw new Error("PromptPay QR is unavailable. Please try again.");
+      }
       window.location.reload();
     } catch (error) { setIsPending(false); showErrorToast(locale === "th" ? "สร้างรายการชำระเงินไม่สำเร็จ" : "Unable to create payment", error instanceof Error ? error.message : undefined); }
   }
