@@ -2,7 +2,7 @@
 
 import { type FormEvent, useEffect, useId, useState } from "react";
 
-export function AdminResourceSearch<Row extends { id?: string | number }>({
+export function AdminResourceSearch<Row>({
   endpoint,
   getKey,
   getLabel,
