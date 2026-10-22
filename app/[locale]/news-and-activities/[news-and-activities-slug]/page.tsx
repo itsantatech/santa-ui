@@ -7,6 +7,7 @@ import {
   createContentExcerpt,
   fetchPublicChrome,
   fetchPublicContentBySlug,
+  fetchRelatedProducts,
   getLocalizedContent,
 } from "@/lib/public-content";
 import { isLocale, locales } from "@/lib/i18n";
@@ -66,6 +67,7 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
   if (!item) {
     notFound();
   }
+  const relatedProducts = await fetchRelatedProducts(item.relatedSku);
 
   return (
     <main className="site-shell">
@@ -74,6 +76,7 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
         item={item}
         locale={locale}
         mediaVariant="about"
+        relatedProducts={relatedProducts}
         sectionHref={`/${locale}/news-and-activities`}
         sectionLabel={locale === "th" ? "ข่าวสารและกิจกรรม" : "News & Activities"}
       />

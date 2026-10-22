@@ -360,21 +360,25 @@ export function ProductToolbarActions({
   }, []);
 
   async function handleDownload(path: string, fallbackFilename: string) {
-    const response = await fetch(path, { cache: "no-store" });
+    try {
+      const response = await fetch(path, { cache: "no-store" });
 
-    if (!response.ok) {
+      if (!response.ok) {
+        showErrorToast(toastCopy.error, labels.error);
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = getDownloadFilename(response, fallbackFilename);
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+    } catch {
       showErrorToast(toastCopy.error, labels.error);
-      return;
     }
-
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = getDownloadFilename(response, fallbackFilename);
-    link.click();
-    URL.revokeObjectURL(url);
   }
 
   return (
@@ -3128,6 +3132,14 @@ function ProductFormModal({
             locale={locale}
             mediaInputRef={mediaInputRef}
             onChange={setForm}
+            onNameChange={(field, value) => setForm((current) => {
+              const previousGeneratedSlug = createProductSlug(current.nameEn || current.nameTh);
+              const next = { ...current, [field]: value };
+              if (!product && (!current.slug || current.slug === previousGeneratedSlug)) {
+                next.slug = createProductSlug(next.nameEn || next.nameTh);
+              }
+              return next;
+            })}
             onDatasheetSelected={handleDatasheetSelected}
             onMediaSelected={handleMediaSelected}
             subCategoryOptions={subCategoryOptions}
@@ -3167,6 +3179,7 @@ function ProductFormFields({
   locale,
   mediaInputRef,
   onChange,
+  onNameChange,
   onDatasheetSelected,
   onMediaSelected,
   subCategoryOptions,
@@ -3184,6 +3197,7 @@ function ProductFormFields({
   onChange: (
     updater: ProductFormValue | ((current: ProductFormValue) => ProductFormValue),
   ) => void;
+  onNameChange: (field: "nameTh" | "nameEn", value: string) => void;
   onDatasheetSelected: (files: FileList | null) => Promise<void>;
   onMediaSelected: (files: FileList | null) => Promise<void>;
   subCategoryOptions: ProductEditorOption[];
@@ -3195,8 +3209,8 @@ function ProductFormFields({
     <div className="admin-product-form-grid">
       <ControlledTextField label={labels.fields.rank} value={form.rank} type="number" onChange={(value) => onChange((current) => ({ ...current, rank: value }))} />
       <ControlledTextField label={labels.fields.slug} required value={form.slug} onChange={(value) => onChange((current) => ({ ...current, slug: value }))} />
-      <ControlledTextField label={labels.fields.nameTh} required value={form.nameTh} onChange={(value) => onChange((current) => ({ ...current, nameTh: value }))} />
-      <ControlledTextField label={labels.fields.nameEn} required value={form.nameEn} onChange={(value) => onChange((current) => ({ ...current, nameEn: value }))} />
+      <ControlledTextField label={labels.fields.nameTh} required value={form.nameTh} onChange={(value) => onNameChange("nameTh", value)} />
+      <ControlledTextField label={labels.fields.nameEn} required value={form.nameEn} onChange={(value) => onNameChange("nameEn", value)} />
       <ControlledTextField label={labels.fields.model} value={form.model} onChange={(value) => onChange((current) => ({ ...current, model: value }))} />
       <ControlledTextField label={labels.fields.price} value={form.price} type="number" onChange={(value) => onChange((current) => ({ ...current, price: value }))} />
       <ControlledTextField label={labels.fields.deliveryFee} value={form.deliveryFee} type="number" onChange={(value) => onChange((current) => ({ ...current, deliveryFee: value }))} />
@@ -4067,10 +4081,10 @@ function GoogleCategoryCombobox({
       }
     }
 
-    if (isOpen) {
+    if (isOpen && normalizedQuery) {
       const timer = window.setTimeout(
         () => void loadCategories(normalizedQuery),
-        normalizedQuery ? 250 : 0,
+        250,
       );
 
       return () => {
@@ -4114,7 +4128,7 @@ function GoogleCategoryCombobox({
               setQuery(event.target.value);
               setIsOpen(true);
             }}
-            onFocus={() => setIsOpen(true)}
+        onFocus={() => setIsOpen(Boolean(normalizedQuery))}
             placeholder={selectedLabel || searchPlaceholder}
             role="combobox"
             type="search"
@@ -4144,7 +4158,7 @@ function GoogleCategoryCombobox({
         ) : (
           <p className="admin-product-google-category-helper">{emptyLabel}</p>
         )}
-        {isOpen ? (
+        {isOpen && normalizedQuery ? (
           <div
             className="admin-product-multiselect-panel"
             id={`${inputId}-suggestions`}
@@ -4291,4 +4305,22 @@ function getNumberFromValue(value: string) {
   const numberValue = Number(value);
 
   return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function createProductSlug(value: string) {
+  // English is preferred. Thai characters are romanized deterministically so a
+  // newly created product always receives a URL-safe, editable starting value.
+  const thai = Object.fromEntries(
+    [
+      ["ก", "k"], ["ข", "kh"], ["ค", "kh"], ["ง", "ng"], ["จ", "ch"], ["ฉ", "ch"], ["ช", "ch"], ["ซ", "s"], ["ญ", "y"], ["ด", "d"], ["ต", "t"], ["ท", "th"], ["น", "n"], ["บ", "b"], ["ป", "p"], ["พ", "ph"], ["ฟ", "f"], ["ม", "m"], ["ย", "y"], ["ร", "r"], ["ล", "l"], ["ว", "w"], ["ส", "s"], ["ห", "h"], ["อ", "o"], ["ฮ", "h"], ["า", "a"], ["ำ", "am"], ["ิ", "i"], ["ี", "i"], ["ุ", "u"], ["ู", "u"], ["เ", "e"], ["แ", "ae"], ["โ", "o"], ["ใ", "ai"], ["ไ", "ai"],
+    ],
+  ) as Record<string, string>;
+  const romanized = Array.from(value.trim()).map((char) => thai[char] ?? char).join("");
+  return romanized
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-+/g, "-");
 }

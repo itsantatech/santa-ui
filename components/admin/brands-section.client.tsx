@@ -21,6 +21,7 @@ import { useAdminTableEditRequest } from "./admin-table-events";
 import type { Locale } from "@/lib/i18n";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { getTransactionToastCopy } from "@/lib/transaction-toast";
+import { createSafeSlug } from "@/lib/slug";
 
 type BrandRow = NonNullable<BrandListResponse>["items"][number];
 
@@ -48,6 +49,20 @@ type UploadedFileResponse = {
   signedUrl?: string;
   url?: string;
 };
+
+function updateBrandAutoSlug(
+  current: BrandFormState,
+  field: "nameTh" | "nameEn",
+  value: string,
+  isEditing: boolean,
+): BrandFormState {
+  const next = { ...current, [field]: value };
+  const previousGeneratedSlug = createSafeSlug(current.nameEn || current.nameTh);
+  if (!isEditing && (!current.slug || current.slug === previousGeneratedSlug)) {
+    next.slug = createSafeSlug(next.nameEn || next.nameTh);
+  }
+  return next;
+}
 
 export function BrandsSectionClient({
   initialResponse,
@@ -569,8 +584,8 @@ function BrandModal({
         <form className="admin-product-form" onSubmit={handleSubmit}>
           <fieldset>
             <legend>{labels.formSection}</legend>
-            <Field label={labels.fields.nameTh} required value={form.nameTh} onChange={(value) => setForm((current) => ({ ...current, nameTh: value }))} />
-            <Field label={labels.fields.nameEn} required value={form.nameEn} onChange={(value) => setForm((current) => ({ ...current, nameEn: value }))} />
+            <Field label={labels.fields.nameTh} required value={form.nameTh} onChange={(value) => setForm((current) => updateBrandAutoSlug(current, "nameTh", value, Boolean(initialRow)))} />
+            <Field label={labels.fields.nameEn} required value={form.nameEn} onChange={(value) => setForm((current) => updateBrandAutoSlug(current, "nameEn", value, Boolean(initialRow)))} />
             <Field label={labels.fields.slug} required value={form.slug} onChange={(value) => setForm((current) => ({ ...current, slug: value }))} />
             <Field label={labels.fields.rank} type="number" value={form.rank} onChange={(value) => setForm((current) => ({ ...current, rank: value }))} />
             <LogoUploadField

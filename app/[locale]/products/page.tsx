@@ -109,7 +109,7 @@ export default async function ProductsPage({
     fetchAdminList<FooterCategory>("/categories", {
       isActive: true,
       page: 1,
-      pageSize: 100,
+      pageSize: 10_000,
     }),
     fetchAdminList<FooterSocialContact>("/social-media-contacts", {
       isActive: true,
@@ -130,17 +130,17 @@ export default async function ProductsPage({
     fetchAdminList<ProductRelation>("/categories", {
       isActive: true,
       page: 1,
-      pageSize: 100,
+      pageSize: 10_000,
     }),
     fetchAdminList<ProductRelation>("/sub-categories", {
       isActive: true,
       page: 1,
-      pageSize: 100,
+      pageSize: 10_000,
     }),
     fetchAdminList<ProductRelation>("/brands", {
       isActive: true,
       page: 1,
-      pageSize: 100,
+      pageSize: 10_000,
     }),
   ]);
 
@@ -156,6 +156,9 @@ export default async function ProductsPage({
   const selectedCategory = findSelectedOption(categoryOptions, categoryCode);
   const selectedSubCategory = findSelectedOption(subCategoryOptions, subCategoryCode);
   const selectedBrand = findSelectedOption(brandOptions, brandCode);
+  const visibleSubCategoryCount = categoryCode
+    ? subCategoryOptions.filter((option) => option.parentValue === categoryCode).length
+    : 0;
 
   return (
     <main className="site-shell">
@@ -191,7 +194,7 @@ export default async function ProductsPage({
             fields={[
               {
                 id: "categoryCode",
-                label: locale === "th" ? "หมวดหมู่" : "Category",
+                label: `${locale === "th" ? "หมวดหมู่" : "Category"} (${categoriesResponse?.meta.totalItems ?? 0})`,
                 options: categoryOptions,
                 placeholder: locale === "th" ? "เลือกหมวดหมู่" : "Select category",
                 selected: selectedCategory ? [selectedCategory] : undefined,
@@ -201,16 +204,17 @@ export default async function ProductsPage({
                 dependsOn: "categoryCode",
                 disabledPlaceholder:
                   locale === "th" ? "เลือกหมวดหมู่ก่อน" : "Select category first",
-                label: locale === "th" ? "หมวดหมู่ย่อย" : "Sub-category",
+                label: `${locale === "th" ? "หมวดหมู่ย่อย" : "Sub-category"} (${visibleSubCategoryCount})`,
                 options: subCategoryOptions,
                 placeholder: locale === "th" ? "เลือกหมวดหมู่ย่อย" : "Select sub-category",
                 selected: selectedSubCategory ? [selectedSubCategory] : undefined,
               },
               {
                 id: "brandCode",
-                label: locale === "th" ? "แบรนด์" : "Brand",
+                label: `${locale === "th" ? "แบรนด์" : "Brand"} (${brandsResponse?.meta.totalItems ?? 0})`,
                 options: brandOptions,
                 placeholder: locale === "th" ? "เลือกแบรนด์" : "Select brand",
+                searchable: true,
                 selected: selectedBrand ? [selectedBrand] : undefined,
               },
             ]}
