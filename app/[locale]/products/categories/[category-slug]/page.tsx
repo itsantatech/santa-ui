@@ -133,7 +133,7 @@ export default async function CategoryDetailPage({
     fetchAdminList<FooterCategory>("/categories", {
       isActive: true,
       page: 1,
-      pageSize: 100,
+      pageSize: 10_000,
     }),
     fetchAdminList<FooterSocialContact>("/social-media-contacts", {
       isActive: true,
@@ -166,12 +166,12 @@ export default async function CategoryDetailPage({
     fetchAdminList<ProductRelation>("/sub-categories", {
       isActive: true,
       page: 1,
-      pageSize: 100,
+      pageSize: 10_000,
     }),
     fetchAdminList<ProductRelation>("/brands", {
       isActive: true,
       page: 1,
-      pageSize: 100,
+      pageSize: 10_000,
     }),
   ]);
 
@@ -257,16 +257,17 @@ export default async function CategoryDetailPage({
             fields={[
               {
                 id: "subCategoryCode",
-                label: locale === "th" ? "หมวดหมู่ย่อย" : "Sub-category",
+                label: `${locale === "th" ? "หมวดหมู่ย่อย" : "Sub-category"} (${subCategoryOptions.length})`,
                 options: subCategoryOptions,
                 placeholder: locale === "th" ? "เลือกหมวดหมู่ย่อย" : "Select sub-category",
                 selected: selectedSubCategory ? [selectedSubCategory] : undefined,
               },
               {
                 id: "brandCode",
-                label: locale === "th" ? "แบรนด์" : "Brand",
+                label: `${locale === "th" ? "แบรนด์" : "Brand"} (${brandOptions.length})`,
                 options: brandOptions,
                 placeholder: locale === "th" ? "เลือกแบรนด์" : "Select brand",
+                searchable: true,
                 selected: selectedBrand ? [selectedBrand] : undefined,
               },
             ]}

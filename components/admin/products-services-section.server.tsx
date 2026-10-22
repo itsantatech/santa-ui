@@ -143,6 +143,7 @@ export async function ProductsServicesSection({
         label: table.categories,
         options: categoryOptions,
         placeholder: isThaiLocale ? "เลือกหมวดหมู่" : "Select category",
+        showOptionCount: true,
         selected: selectedCategory ? [selectedCategory] : undefined,
       },
       {
@@ -154,6 +155,7 @@ export async function ProductsServicesSection({
         label: table.subCategories,
         options: subCategoryOptions,
         placeholder: isThaiLocale ? "เลือกหมวดหมู่ย่อย" : "Select sub-category",
+        showOptionCount: true,
         selected: selectedSubCategory ? [selectedSubCategory] : undefined,
       },
       {
@@ -161,6 +163,8 @@ export async function ProductsServicesSection({
         label: table.brands,
         options: brandOptions,
         placeholder: isThaiLocale ? "เลือกแบรนด์" : "Select brand",
+        searchable: true,
+        showOptionCount: true,
         selected: selectedBrand ? [selectedBrand] : undefined,
       },
       {
@@ -248,7 +252,9 @@ async function getFilterOptions(
 ): Promise<ProductFilterListResponse | null> {
   return fetchAdminList<ProductRelation>(resourcePath, {
     page: 1,
-    pageSize: 100,
+    // These lists back editor and filter controls. Fetch the complete set rather
+    // than silently dropping options after the first page.
+    pageSize: 10_000,
   });
 }
 

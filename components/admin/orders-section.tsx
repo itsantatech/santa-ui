@@ -6,6 +6,7 @@ import type { Locale } from "@/lib/i18n";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { getShippingTrackingUrl } from "@/lib/shipping-tracking";
 import { ClientTablePagination } from "./client-table-pagination";
+import { AdminResourceSearch } from "./admin-resource-search";
 
 type Carrier = "EMS" | "FLASH" | "KEX" | "OTHER";
 type StatusFilter = "ALL" | "PENDING" | "PAID" | "SHIPPING" | "CANCELLED";
@@ -17,15 +18,18 @@ export function OrdersSection({ locale }: { locale: Locale }) {
   const router = useRouter();
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [activeStatus, setActiveStatus] = useState<StatusFilter>("ALL");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [shippingOrder, setShippingOrder] = useState<AdminOrder | null>(null);
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: 20, totalItems: 0, totalPages: 1 });
   const labels = getLabels(locale);
   const detailsPath = (orderCode: string) => `/${locale}/orders/${encodeURIComponent(orderCode)}`;
-  const loadOrders = useCallback(async (page = 1, pageSize = 20) => {
+  const loadOrders = useCallback(async (page = 1, pageSize = 20, nextSearch = search) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/orders/admin?page=${page}&pageSize=${pageSize}`, { cache: "no-store" });
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (nextSearch.trim()) params.set("search", nextSearch.trim());
+      const response = await fetch(`/api/orders/admin?${params.toString()}`, { cache: "no-store" });
       const payload = await response.json() as { items?: AdminOrder[]; meta?: PaginationMeta; message?: string };
       if (!response.ok) throw new Error(payload.message ?? "Unable to load orders.");
       setOrders(payload.items ?? []);
@@ -33,12 +37,14 @@ export function OrdersSection({ locale }: { locale: Locale }) {
     } catch (error) {
       showErrorToast(locale === "th" ? "ไม่สามารถโหลดคำสั่งซื้อได้" : "Unable to load orders", error instanceof Error ? error.message : undefined);
     } finally { setLoading(false); }
-  }, [locale]);
+  }, [locale, search]);
   useEffect(() => { const timer = window.setTimeout(() => { void loadOrders(); }, 0); return () => window.clearTimeout(timer); }, [loadOrders]);
   const visibleOrders = useMemo(() => orders.filter((order) => activeStatus === "ALL" || getOrderBucket(order) === activeStatus), [activeStatus, orders]);
   async function downloadExport() {
     try {
-      const response = await fetch("/api/orders/admin/export", { cache: "no-store" });
+      const params = new URLSearchParams({ page: String(pagination.page), pageSize: String(pagination.pageSize) });
+      if (search.trim()) params.set("search", search.trim());
+      const response = await fetch(`/api/orders/admin/export?${params}`, { cache: "no-store" });
       if (!response.ok) throw new Error();
       const url = URL.createObjectURL(await response.blob()); const link = document.createElement("a");
       link.href = url; link.download = "orders-export.xlsx"; link.click(); URL.revokeObjectURL(url);
@@ -48,6 +54,7 @@ export function OrdersSection({ locale }: { locale: Locale }) {
   function onRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>, orderCode: string) { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openDetails(orderCode); } }
   return <div className="admin-section-panel">
     <div className="admin-orders-heading"><div><h1 id="admin-heading">{labels.title}</h1><p>{labels.description}</p></div><div className="admin-product-toolbar-actions"><button className="admin-product-secondary-button" onClick={() => void downloadExport()} type="button"><span className="material-symbols-outlined" aria-hidden="true">download</span>{labels.export}</button><button className="admin-product-secondary-button" onClick={() => void loadOrders(1, pagination.pageSize)} type="button">{labels.refresh}</button></div></div>
+    <AdminResourceSearch endpoint="/api/orders/admin" getKey={(order: AdminOrder) => order.orderCode} getLabel={(order: AdminOrder) => `${order.customerName} / ${order.customerEmail ?? "-"}`} locale={locale} onSearch={(value) => { setSearch(value); void loadOrders(1, pagination.pageSize, value); }} placeholder={locale === "th" ? "ค้นหาเลขคำสั่งซื้อ, ลูกค้า หรืออีเมล" : "Search order, customer, or email"} />
     <div className="admin-status-tabs" role="tablist" aria-label={labels.title}>{(["ALL", "PENDING", "PAID", "SHIPPING", "CANCELLED"] as StatusFilter[]).map((status) => <button aria-selected={activeStatus === status} className={activeStatus === status ? "active" : ""} key={status} onClick={() => setActiveStatus(status)} role="tab" type="button">{labels.status[status]} <span>{status === "ALL" ? pagination.totalItems : orders.filter((order) => getOrderBucket(order) === status).length}</span></button>)}</div>
     <div className="admin-table-shell"><div className="admin-table-scroll"><table className="admin-data-table admin-data-table-wide"><thead><tr><th>{labels.order}</th><th>{labels.customer}</th><th>{labels.total}</th><th>{labels.payment}</th><th>{labels.delivery}</th><th>{labels.tracking}</th><th>{labels.action}</th><th><span className="sr-only">{labels.view}</span></th></tr></thead><tbody>
       {visibleOrders.map((order) => <tr className="admin-order-row-link" key={order.orderCode} onClick={() => openDetails(order.orderCode)} onKeyDown={(event) => onRowKeyDown(event, order.orderCode)} role="link" tabIndex={0}>

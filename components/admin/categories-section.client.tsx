@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useMemo, useRef, useState } from "react";
 import { RichTextEditor } from "@/components/rich-text-editor";
+import { AdminResourceSearch } from "./admin-resource-search";
 import { getErrorMessage } from "@/lib/api-error";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { getTransactionToastCopy } from "@/lib/transaction-toast";
@@ -24,6 +25,7 @@ import type {
   SubCategoryListResponse,
 } from "./categories-section";
 import type { Locale } from "@/lib/i18n";
+import { createSafeSlug } from "@/lib/slug";
 
 type CategoryRow = NonNullable<CategoryListResponse>["items"][number];
 type SubCategoryRow = NonNullable<SubCategoryListResponse>["items"][number];
@@ -32,6 +34,8 @@ type CategoryOption = {
   nameTh: string;
   nameEn: string;
 };
+
+const CATEGORY_COVER_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 type TabValue = "categories" | "sub-categories";
 type Mode =
@@ -92,6 +96,20 @@ type UploadedFileResponse = {
   url?: string;
 };
 
+function updateAutoSlug<T extends { nameEn: string; nameTh: string; slug: string }>(
+  current: T,
+  field: "nameTh" | "nameEn",
+  value: string,
+  isEditing: boolean,
+): T {
+  const next = { ...current, [field]: value };
+  const previousGeneratedSlug = createSafeSlug(current.nameEn || current.nameTh);
+  if (!isEditing && (!current.slug || current.slug === previousGeneratedSlug)) {
+    next.slug = createSafeSlug(next.nameEn || next.nameTh);
+  }
+  return next;
+}
+
 const googleCategoryIconOptions = [
   "home_repair_service",
   "inventory_2",
@@ -126,6 +144,7 @@ export function CategoriesSectionClient({
   currentPageSize,
   locale,
   page,
+  search,
   subCategories,
 }: {
   activeTab: TabValue;
@@ -134,6 +153,7 @@ export function CategoriesSectionClient({
   currentPageSize: number;
   locale: Locale;
   page: number;
+  search?: string;
   subCategories: SubCategoryListResponse | null;
 }) {
   const labels = getLabels(locale);
@@ -362,6 +382,18 @@ export function CategoriesSectionClient({
           {activeTab === "categories" ? labels.addCategory : labels.addSubCategory}
         </button>
       </div>
+      <AdminResourceSearch
+        endpoint={activeTab === "categories" ? "/api/admin/categories" : "/api/admin/sub-categories"}
+        getKey={(row: CategoryRow | SubCategoryRow) => row.code}
+        getLabel={(row: CategoryRow | SubCategoryRow) => `${locale === "th" ? row.nameTh : row.nameEn} / ${row.code}`}
+        locale={locale}
+        placeholder={locale === "th" ? "ค้นหาชื่อไทย, อังกฤษ หรือ Category ID" : "Search Thai, English, or Category ID"}
+        onSearch={(value) => {
+          const params = new URLSearchParams({ section: "categories", tab: activeTab, page: "1" });
+          if (value.trim()) params.set("search", value.trim());
+          router.replace(`/${locale}/admin?${params.toString()}`);
+        }}
+      />
 
       {activeTab === "categories" ? (
         <AdminDataTable
@@ -374,7 +406,7 @@ export function CategoriesSectionClient({
             currentPageSize,
             totalPages: categories?.meta.totalPages ?? 1,
             getPageHref: (nextPage) =>
-              createCategoriesPageHref(locale, "categories", nextPage, currentPageSize),
+              createCategoriesPageHref(locale, "categories", nextPage, currentPageSize, search),
             previousLabel: labels.common.previousPage,
             nextLabel: labels.common.nextPage,
             rowsPerPageLabel: labels.common.rowsPerPage,
@@ -400,6 +432,7 @@ export function CategoriesSectionClient({
                 "sub-categories",
                 nextPage,
                 currentPageSize,
+                search,
               ),
             previousLabel: labels.common.previousPage,
             nextLabel: labels.common.nextPage,
@@ -615,6 +648,7 @@ function createCategoriesPageHref(
   tab: TabValue,
   page: number,
   pageSize: number,
+  search?: string,
 ) {
   const searchParams = new URLSearchParams({
     page: String(page),
@@ -622,6 +656,7 @@ function createCategoriesPageHref(
     section: "categories",
     tab,
   });
+  if (search) searchParams.set("search", search);
 
   return `/${locale}/admin?${searchParams.toString()}`;
 }
@@ -843,6 +878,56 @@ function CategoryModal({
         },
   );
   const [isUploadingIcon, setIsUploadingIcon] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleCoverSelected(file?: File) {
+    if (!file) return;
+
+    const invalidFileMessage =
+      locale === "th"
+        ? "กรุณาเลือกไฟล์รูปภาพ JPG, PNG หรือ WebP เท่านั้น"
+        : "Please choose a JPG, PNG, or WebP image file.";
+    const oversizeFileMessage =
+      locale === "th"
+        ? "ไฟล์รูปปกต้องมีขนาดไม่เกิน 10 MB"
+        : "Cover image files must not exceed 10 MB.";
+
+    if (!["image/jpeg", "image/png"].includes(file.type)) {
+      setError(invalidFileMessage);
+      showErrorToast(toastCopy.error, invalidFileMessage);
+      if (coverInputRef.current) coverInputRef.current.value = "";
+      return;
+    }
+
+    if (file.size > CATEGORY_COVER_MAX_FILE_SIZE_BYTES) {
+      setError(oversizeFileMessage);
+      showErrorToast(toastCopy.error, oversizeFileMessage);
+      if (coverInputRef.current) coverInputRef.current.value = "";
+      return;
+    }
+
+    setIsUploadingCover(true);
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("visibility", "public");
+      formData.append("folder", "categories/covers");
+      const response = await fetch("/api/admin/files/upload", { method: "POST", body: formData });
+      if (!response.ok) throw new Error("upload-failed");
+      const result = (await response.json()) as UploadedFileResponse;
+      const url = result.url ?? result.signedUrl;
+      if (!url) throw new Error("missing-upload-url");
+      setForm((current) => ({ ...current, coverImgUrl: url }));
+    } catch {
+      const message = labels.common.error;
+      setError(message);
+      showErrorToast(toastCopy.error, message);
+    } finally {
+      setIsUploadingCover(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -932,13 +1017,13 @@ function CategoryModal({
             <legend>{labels.category.formSection}</legend>
             <LabeledInput
               label={labels.category.fields.nameTh}
-              onChange={(value) => setForm((current) => ({ ...current, nameTh: value }))}
+              onChange={(value) => setForm((current) => updateAutoSlug(current, "nameTh", value, Boolean(initialRow)))}
               required
               value={form.nameTh}
             />
             <LabeledInput
               label={labels.category.fields.nameEn}
-              onChange={(value) => setForm((current) => ({ ...current, nameEn: value }))}
+              onChange={(value) => setForm((current) => updateAutoSlug(current, "nameEn", value, Boolean(initialRow)))}
               required
               value={form.nameEn}
             />
@@ -954,13 +1039,43 @@ function CategoryModal({
               type="number"
               value={form.rank}
             />
-            <LabeledInput
-              label={labels.category.fields.coverImgUrl}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, coverImgUrl: value }))
-              }
-              value={form.coverImgUrl}
-            />
+            <div className="admin-product-field">
+              <span>{labels.category.fields.coverImgUrl}</span>
+              <input
+                accept="image/jpeg,image/png"
+                className="admin-inventory-file-input"
+                disabled={isUploadingCover}
+                hidden
+                onChange={(event) => void handleCoverSelected(event.target.files?.[0])}
+                ref={coverInputRef}
+                type="file"
+              />
+              <button
+                className="admin-product-secondary-button admin-category-cover-upload-button"
+                disabled={isUploadingCover}
+                onClick={() => coverInputRef.current?.click()}
+                type="button"
+              >
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  upload_file
+                </span>
+                {isUploadingCover
+                  ? (locale === "th" ? "กำลังอัปโหลด..." : "Uploading...")
+                  : (locale === "th" ? "อัปโหลดรูปปก" : "Upload cover image")}
+              </button>
+              <p className="admin-upload-helper">
+                {locale === "th"
+                  ? "แนะนำสัดส่วน 1320 × 560 px รองรับ JPG และ PNG ขนาดไฟล์ไม่เกิน 10 MB"
+                  : "Recommended size: 1320 × 560 px. JPG and PNG only; maximum file size 10 MB."}
+              </p>
+            </div>
+            {form.coverImgUrl ? (
+              <img
+                alt={locale === "th" ? "ตัวอย่างรูปปก" : "Cover image preview"}
+                className="admin-product-image-preview"
+                src={form.coverImgUrl}
+              />
+            ) : null}
             <GoogleIconPicker
               currentIconUrl={form.iconImgUrl}
               label={labels.category.fields.iconImgUrl}
@@ -996,7 +1111,7 @@ function CategoryModal({
             <button className="admin-product-secondary-button" onClick={onClose} type="button">
               {labels.common.cancel}
             </button>
-            <button className="admin-product-add-button" disabled={isSaving || isUploadingIcon} type="submit">
+            <button className="admin-product-add-button" disabled={isSaving || isUploadingIcon || isUploadingCover} type="submit">
               {isSaving ? labels.common.saving : labels.common.save}
             </button>
           </div>
@@ -1128,13 +1243,13 @@ function SubCategoryModal({
             />
             <LabeledInput
               label={labels.subCategory.fields.nameTh}
-              onChange={(value) => setForm((current) => ({ ...current, nameTh: value }))}
+              onChange={(value) => setForm((current) => updateAutoSlug(current, "nameTh", value, Boolean(initialRow)))}
               required
               value={form.nameTh}
             />
             <LabeledInput
               label={labels.subCategory.fields.nameEn}
-              onChange={(value) => setForm((current) => ({ ...current, nameEn: value }))}
+              onChange={(value) => setForm((current) => updateAutoSlug(current, "nameEn", value, Boolean(initialRow)))}
               required
               value={form.nameEn}
             />
