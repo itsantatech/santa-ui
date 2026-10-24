@@ -81,15 +81,22 @@
   white-space: nowrap;
 }
 
-.admin-shipping-modal .admin-product-field {
-  display: block;
-  margin: 18px 0;
+.admin-shipping-modal {
+  width: min(560px, 100%);
 }
 
-.admin-shipping-modal select,
-.admin-shipping-modal input {
-  width: 100%;
-  margin-top: 7px;
+.admin-shipping-modal > .admin-product-field {
+  margin: 0 24px 18px;
+}
+
+.admin-shipping-modal > .admin-product-modal-header + .admin-product-field {
+  margin-top: 24px;
+}
+
+.admin-shipping-modal .admin-product-modal-actions {
+  margin: 6px 0 0;
+  padding: 18px 24px 24px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .customer-auth-page {
