@@ -197,6 +197,8 @@ export default async function ProductsPage({
                 label: `${locale === "th" ? "หมวดหมู่" : "Category"} (${categoriesResponse?.meta.totalItems ?? 0})`,
                 options: categoryOptions,
                 placeholder: locale === "th" ? "เลือกหมวดหมู่" : "Select category",
+                searchable: true,
+                showAllOptions: true,
                 selected: selectedCategory ? [selectedCategory] : undefined,
               },
               {
@@ -207,6 +209,8 @@ export default async function ProductsPage({
                 label: `${locale === "th" ? "หมวดหมู่ย่อย" : "Sub-category"} (${visibleSubCategoryCount})`,
                 options: subCategoryOptions,
                 placeholder: locale === "th" ? "เลือกหมวดหมู่ย่อย" : "Select sub-category",
+                searchable: true,
+                showAllOptions: true,
                 selected: selectedSubCategory ? [selectedSubCategory] : undefined,
               },
               {
