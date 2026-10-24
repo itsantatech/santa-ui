@@ -195,6 +195,8 @@ export async function ProductsServicesSection({
         <ProductToolbarActions
           brandOptions={productEditorBrandOptions}
           categoryOptions={productEditorCategoryOptions}
+          currentPage={currentPage}
+          currentPageSize={currentPageSize}
           labels={productUi}
           locale={locale}
           rows={rows}
