@@ -65,6 +65,10 @@ type ProductDetailRow = ProductCardData & {
   descriptionEn: string;
   datasheetUrl: string | null;
   model: string | null;
+  seoTitleTh: string;
+  seoTitleEn: string;
+  seoDescriptionTh: string;
+  seoDescriptionEn: string;
   isActive: boolean;
   isPromotion: boolean;
   categories: ProductRelation[];
@@ -87,13 +91,21 @@ export async function generateMetadata({
   }
 
   const product = await getProductDetail(productSlug);
-  const title = product
+  const fallbackTitle = product
     ? locale === "th"
       ? product.nameTh
       : product.nameEn
     : formatSlugLabel(productSlug);
+  const seoTitle = locale === "th" ? product?.seoTitleTh : product?.seoTitleEn;
+  const seoDescription =
+    locale === "th" ? product?.seoDescriptionTh : product?.seoDescriptionEn;
+  const title = seoTitle?.trim() || fallbackTitle;
 
-  const description = locale === "th" ? stripHtml(product?.shortDescriptionTh) || title : stripHtml(product?.shortDescriptionEn) || title;
+  const fallbackDescription =
+    locale === "th"
+      ? product?.shortDescriptionTh
+      : product?.shortDescriptionEn;
+  const description = stripHtml(seoDescription) || stripHtml(fallbackDescription) || title;
   const keywords = product?.tags
     .map((tag) => tag.keyword.trim())
     .filter(Boolean);
