@@ -61,6 +61,7 @@ export type ProductManagementRow = ProductSearchSuggestion & {
   categoryCods?: { code: string }[];
   subCategories: { code: string }[];
   brands: { code: string }[];
+  tags?: ProductTagOption[];
   createdAt: string;
   createdBy: string;
   deletedAt: string | null;
@@ -91,6 +92,11 @@ export type ProductEditorOption = {
   parentCode?: string;
 };
 
+type ProductTagOption = {
+  code: string;
+  keyword: string;
+};
+
 type ProductFormValue = {
   rank: string;
   nameTh: string;
@@ -118,6 +124,8 @@ type ProductFormValue = {
   categoryCodes: string[];
   subCategoryCodes: string[];
   brandCodes: string[];
+  tagCodes: string[];
+  tags: ProductTagOption[];
 };
 
 type ProductBatchAction = keyof ProductLabels["fields"];
@@ -167,6 +175,7 @@ type ProductLabels = {
     shortDescriptionTh: string;
     slug: string;
     subCategoryCodes: string;
+    tags: string;
   };
   noDatasheet: string;
   noFileChosen: string;
@@ -183,6 +192,8 @@ type ProductLabels = {
   searchPlaceholder: string;
   searchTooShort: string;
   template: string;
+  addTag: string;
+  tagSearchPlaceholder: string;
   inlineEdit: string;
   inlineEditDirty: string;
   inlineEditImageHelper: string;
@@ -3298,6 +3309,15 @@ function ProductFormFields({
         onChange={(values) => onChange((current) => ({ ...current, subCategoryCodes: values }))}
         searchPlaceholder={labels.search}
       />
+      <ProductTagField
+        addLabel={labels.addTag}
+        label={labels.fields.tags}
+        noResultsLabel={labels.noSuggestions}
+        onChange={(tagCodes) => onChange((current) => ({ ...current, tagCodes }))}
+        placeholder={labels.tagSearchPlaceholder}
+        initialTags={form.tags}
+        selectedTagCodes={form.tagCodes}
+      />
       <MultiSelectField
         label={labels.fields.brandCodes}
         options={brandOptions}
@@ -3997,6 +4017,111 @@ function MultiSelectField({
   );
 }
 
+function ProductTagField({
+  addLabel,
+  initialTags,
+  label,
+  noResultsLabel,
+  onChange,
+  placeholder,
+  selectedTagCodes,
+}: {
+  addLabel: string;
+  initialTags: ProductTagOption[];
+  label: string;
+  noResultsLabel: string;
+  onChange: (codes: string[]) => void;
+  placeholder: string;
+  selectedTagCodes: string[];
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [options, setOptions] = useState<ProductTagOption[]>(initialTags);
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim();
+  const inputId = `${label.replace(/\s+/g, "-").toLocaleLowerCase()}-tags-combobox`;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) setIsOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsOpen(false);
+    }
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !normalizedQuery) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/admin/tags?page=1&pageSize=10&search=${encodeURIComponent(normalizedQuery)}`, { cache: "no-store", signal: controller.signal });
+        if (!response.ok) return;
+        const data = (await response.json()) as { items?: ProductTagOption[] };
+        setOptions((current) => mergeTagOptions(current, data.items ?? []));
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) return;
+      }
+    }, 200);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [isOpen, normalizedQuery]);
+
+  const selectedTags = options.filter((tag) => selectedTagCodes.includes(tag.code));
+  const suggestions = options.filter((tag) => tag.keyword.toLocaleLowerCase().includes(normalizedQuery.toLocaleLowerCase()));
+  const hasExactMatch = suggestions.some((tag) => tag.keyword.toLocaleLowerCase() === normalizedQuery.toLocaleLowerCase());
+
+  function select(tag: ProductTagOption) {
+    if (!selectedTagCodes.includes(tag.code)) onChange([...selectedTagCodes, tag.code]);
+    setQuery("");
+    setIsOpen(false);
+  }
+
+  async function createTag() {
+    if (!normalizedQuery || isCreating) return;
+    setIsCreating(true);
+    try {
+      const response = await fetch("/api/admin/tags", { body: JSON.stringify({ keyword: normalizedQuery }), headers: { "content-type": "application/json" }, method: "POST" });
+      if (!response.ok) return;
+      const tag = (await response.json()) as ProductTagOption;
+      setOptions((current) => mergeTagOptions(current, [tag]));
+      select(tag);
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
+  return (
+    <label className="admin-product-form-field admin-product-form-field-wide">
+      <span>{label}</span>
+      <div className="admin-product-multiselect" ref={containerRef}>
+        <div className="admin-product-multiselect-combobox">
+          <span aria-hidden="true" className="material-symbols-outlined">search</span>
+          <input aria-autocomplete="list" aria-controls={`${inputId}-suggestions`} aria-expanded={isOpen} autoComplete="off" className="admin-product-multiselect-input" id={inputId} onBlur={() => window.setTimeout(() => setIsOpen(false), 120)} onChange={(event) => { setQuery(event.target.value); setIsOpen(true); }} onFocus={() => setIsOpen(true)} placeholder={placeholder} role="combobox" type="search" value={query} />
+          <span aria-hidden="true" className="material-symbols-outlined">arrow_drop_down</span>
+        </div>
+        {selectedTags.length > 0 ? <div className="admin-product-multiselect-tags">{selectedTags.map((tag) => <button className="admin-product-multiselect-tag" key={tag.code} onClick={() => onChange(selectedTagCodes.filter((code) => code !== tag.code))} type="button"><span>{tag.keyword}</span><span aria-hidden="true" className="material-symbols-outlined">close</span></button>)}</div> : null}
+        {isOpen && normalizedQuery ? <div className="admin-product-multiselect-panel" id={`${inputId}-suggestions`} role="listbox"><div className="admin-product-multiselect-options">
+          {suggestions.map((tag) => <button aria-selected={selectedTagCodes.includes(tag.code)} className="admin-product-multiselect-option" key={tag.code} onClick={() => select(tag)} onMouseDown={(event) => event.preventDefault()} role="option" type="button"><span>{tag.keyword}</span></button>)}
+          {!hasExactMatch ? <button className="admin-product-multiselect-option" disabled={isCreating} onClick={() => void createTag()} onMouseDown={(event) => event.preventDefault()} type="button"><span>{isCreating ? "…" : `${addLabel} “${normalizedQuery}”`}</span><span aria-hidden="true" className="material-symbols-outlined">add</span></button> : null}
+          {suggestions.length === 0 && hasExactMatch ? <p className="admin-product-multiselect-empty">{noResultsLabel}</p> : null}
+        </div></div> : null}
+      </div>
+    </label>
+  );
+}
+
+function mergeTagOptions(current: ProductTagOption[], next: ProductTagOption[]) {
+  return Array.from(new Map([...current, ...next].map((tag) => [tag.code, tag])).values());
+}
+
 function GoogleCategoryCombobox({
   emptyLabel,
   label,
@@ -4265,6 +4390,8 @@ function getInitialFormValue(product?: ProductManagementRow): ProductFormValue {
       .slice(0, 1)
       .map((subCategory) => subCategory.code),
     brandCodes: (product?.brands ?? []).slice(0, 1).map((brand) => brand.code),
+    tagCodes: (product?.tags ?? []).map((tag) => tag.code),
+    tags: product?.tags ?? [],
   };
 }
 
@@ -4296,6 +4423,7 @@ function getProductPayload(form: ProductFormValue) {
     categoryCodes: form.categoryCodes,
     subCategoryCodes: form.subCategoryCodes,
     brandCodes: form.brandCodes,
+    tagCodes: form.tagCodes,
   };
 }
 
