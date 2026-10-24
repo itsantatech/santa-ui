@@ -53,6 +53,11 @@ type ProductRelation = {
   imgUrl?: string | null;
 };
 
+type ProductTag = {
+  code: string;
+  keyword: string;
+};
+
 type ProductDetailRow = ProductCardData & {
   sku: string;
   rank: number;
@@ -65,6 +70,7 @@ type ProductDetailRow = ProductCardData & {
   categories: ProductRelation[];
   subCategories: ProductRelation[];
   brands: ProductRelation[];
+  tags: ProductTag[];
 };
 
 export function generateStaticParams() {
@@ -88,7 +94,10 @@ export async function generateMetadata({
     : formatSlugLabel(productSlug);
 
   const description = locale === "th" ? stripHtml(product?.shortDescriptionTh) || title : stripHtml(product?.shortDescriptionEn) || title;
-  return pageMetadata({ title, description, locale, path: `/products/${encodePathSegment(productSlug)}`, image: product?.imgUrl?.[0] });
+  const keywords = product?.tags
+    .map((tag) => tag.keyword.trim())
+    .filter(Boolean);
+  return pageMetadata({ title, description, keywords, locale, path: `/products/${encodePathSegment(productSlug)}`, image: product?.imgUrl?.[0] });
 }
 
 export default async function ProductDetailPage({
@@ -129,21 +138,9 @@ export default async function ProductDetailPage({
     }),
   ]);
 
-  const relatedCategoryCode =
-    product.categories[0]?.code || product.subCategories[0]?.categoryCode;
-  const relatedBrandCode = product.brands[0]?.code;
-  const relatedProductsResponse = await fetchAdminList<ProductDetailRow>("/products", {
-    brandCode: relatedCategoryCode ? undefined : relatedBrandCode,
-    categoryCode: relatedCategoryCode,
-    isActive: true,
-    page: 1,
-    pageSize: 11,
-  });
+  const relatedProducts = await getRelatedProducts(product.slug);
 
   const footerCategories = sortFooterCategories(categoriesResponse?.items ?? []);
-  const relatedProducts = (relatedProductsResponse?.items ?? [])
-    .filter((item) => item.slug.trim() !== product.slug.trim())
-    .slice(0, 10);
   const productName = locale === "th" ? product.nameTh : product.nameEn;
   const productShortDescription =
     locale === "th" ? product.shortDescriptionTh : product.shortDescriptionEn;
@@ -311,6 +308,16 @@ async function getProductDetail(slug: string) {
       (item) => item.slug.trim().toLowerCase() === normalizedSlug.toLowerCase(),
     ) ?? null
   );
+}
+
+async function getRelatedProducts(slug: string): Promise<ProductDetailRow[]> {
+  const normalizedSlug = decodeRouteSlug(slug).trim();
+  const response = await fetch(
+    `${santaApiBaseUrl}/products/${encodePathSegment(normalizedSlug)}/related`,
+    { cache: "no-store" },
+  );
+
+  return response.ok ? ((await response.json()) as ProductDetailRow[]) : [];
 }
 
 function decodeRouteSlug(value: string) {

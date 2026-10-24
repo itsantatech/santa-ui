@@ -15,6 +15,7 @@ const allowedResources = new Set([
   "news-and-activities",
   "social-media-contacts",
   "sub-categories",
+  "tags",
 ]);
 
 type ResourcePathRouteProps = {

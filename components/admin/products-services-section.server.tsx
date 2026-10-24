@@ -49,6 +49,7 @@ type ProductRow = {
   categories?: ProductRelation[];
   subCategories: ProductRelation[];
   brands: ProductRelation[];
+  tags?: { code: string; keyword: string }[];
   createdAt: string;
   createdBy: string;
   updatedAt: string;
@@ -311,6 +312,7 @@ function getProductAdminUiLabels(locale: Locale) {
         discountedPrice: "ราคาลด",
       },
       add: "เพิ่มสินค้าและบริการ",
+      addTag: "เพิ่มแท็ก",
       addTitle: "เพิ่มสินค้าและบริการ",
       cancel: "ยกเลิก",
       chooseFile: "เลือกไฟล์",
@@ -350,6 +352,7 @@ function getProductAdminUiLabels(locale: Locale) {
         shortDescriptionTh: "คำอธิบายสั้นภาษาไทย",
         slug: "Slug",
         subCategoryCodes: "หมวดหมู่ย่อย",
+        tags: "แท็ก",
       },
       googleCategoryEmpty: "ยังไม่ได้เลือก Google Product Category",
       googleCategoryLoading: "กำลังโหลดหมวดหมู่...",
@@ -368,6 +371,7 @@ function getProductAdminUiLabels(locale: Locale) {
       save: "บันทึก",
       saving: "กำลังบันทึก...",
       search: "ค้นหา",
+      tagSearchPlaceholder: "พิมพ์เพื่อค้นหาหรือเพิ่มแท็กใหม่",
       searchPlaceholder: "ค้นหาด้วย SKU, ชื่อ หรือรุ่น",
       searchTooShort: "พิมพ์อย่างน้อย 3 ตัวอักษร",
       template: "เทมเพลต",
@@ -391,6 +395,7 @@ function getProductAdminUiLabels(locale: Locale) {
         discountedPrice: "Discounted Price",
       },
       add: "Add product or service",
+      addTag: "Add tag",
       addTitle: "Add product or service",
       cancel: "Cancel",
       chooseFile: "Choose file",
@@ -430,6 +435,7 @@ function getProductAdminUiLabels(locale: Locale) {
         shortDescriptionTh: "Short description TH",
         slug: "Slug",
         subCategoryCodes: "Sub categories",
+        tags: "Tags",
       },
       googleCategoryEmpty: "No Google product category selected",
       googleCategoryLoading: "Loading categories...",
@@ -447,6 +453,7 @@ function getProductAdminUiLabels(locale: Locale) {
       save: "Save",
       saving: "Saving...",
       search: "Search",
+      tagSearchPlaceholder: "Type to search or add a new tag",
       searchPlaceholder: "Search by SKU, name, or model",
       searchTooShort: "Enter at least 3 characters",
       template: "Template",

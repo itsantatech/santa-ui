@@ -13,11 +13,12 @@ export function localizedAlternates(path: string, locale: Locale) {
   };
 }
 
-export function pageMetadata({ description, image, locale, path, title, type = "website" }: { description: string; image?: string | null; locale: Locale; path: string; title: string; type?: "article" | "website" }): Metadata {
+export function pageMetadata({ description, image, keywords, locale, path, title, type = "website" }: { description: string; image?: string | null; keywords?: string[]; locale: Locale; path: string; title: string; type?: "article" | "website" }): Metadata {
   const url = `/${locale}${path}`;
   return {
     title,
     description,
+    keywords,
     alternates: localizedAlternates(path, locale),
     openGraph: { title, description, url, type, locale: locale === "th" ? "th_TH" : "en_US", images: image ? [{ url: image, alt: title }] : undefined },
     twitter: { card: image ? "summary_large_image" : "summary", title, description, images: image ? [image] : undefined },
