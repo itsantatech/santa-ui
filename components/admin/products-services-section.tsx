@@ -319,12 +319,16 @@ const PRODUCT_INLINE_EDIT_STATE_EVENT = "admin-product:inline-edit-state";
 export function ProductToolbarActions({
   brandOptions,
   categoryOptions,
+  currentPage,
+  currentPageSize,
   labels,
   locale,
   subCategoryOptions,
 }: {
   brandOptions: ProductEditorOption[];
   categoryOptions: ProductEditorOption[];
+  currentPage: number;
+  currentPageSize: number;
   labels: ProductLabels;
   locale: "th" | "en";
   rows?: ProductManagementRow[];
@@ -335,6 +339,12 @@ export function ProductToolbarActions({
   const [isInlineEditMode, setIsInlineEditMode] = useState(false);
   const searchParams = useSearchParams();
   const toastCopy = getTransactionToastCopy(locale);
+  const exportSearchParams = new URLSearchParams(searchParams.toString());
+
+  // The table's default pagination is server-side and may not be in the URL.
+  // Send its effective values so the export matches the visible table page.
+  exportSearchParams.set("page", String(currentPage));
+  exportSearchParams.set("pageSize", String(currentPageSize));
 
   useEffect(() => {
     function handleInlineEditState(event: Event) {
@@ -397,7 +407,7 @@ export function ProductToolbarActions({
         className="admin-product-secondary-button"
         onClick={() =>
           void handleDownload(
-            `/api/admin/products/export?${searchParams.toString()}`,
+            `/api/admin/products/export?${exportSearchParams.toString()}`,
             "products-export.xlsx",
           )
         }

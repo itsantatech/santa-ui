@@ -3,9 +3,10 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ProductCard, type ProductCardData } from "@/components/product-card";
+import type { ProductCardData } from "@/components/product-card";
 import { ProductDetailActions } from "@/components/product-detail-actions";
 import { ProductDetailGallery } from "@/components/product-detail-gallery";
+import { ProductRelatedCarousel } from "@/components/product-related-carousel";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNavbar } from "@/components/site-navbar";
 import { SeoJsonLd } from "@/components/seo-json-ld";
@@ -136,13 +137,13 @@ export default async function ProductDetailPage({
     categoryCode: relatedCategoryCode,
     isActive: true,
     page: 1,
-    pageSize: 8,
+    pageSize: 11,
   });
 
   const footerCategories = sortFooterCategories(categoriesResponse?.items ?? []);
   const relatedProducts = (relatedProductsResponse?.items ?? [])
     .filter((item) => item.slug.trim() !== product.slug.trim())
-    .slice(0, 4);
+    .slice(0, 10);
   const productName = locale === "th" ? product.nameTh : product.nameEn;
   const productShortDescription =
     locale === "th" ? product.shortDescriptionTh : product.shortDescriptionEn;
@@ -269,15 +270,7 @@ export default async function ProductDetailPage({
           {relatedProducts.length > 0 ? (
             <section className="product-detail-related-section">
               <h2>{locale === "th" ? "สินค้าที่คุณอาจสนใจ" : "You may also like"}</h2>
-              <div className="products-page-grid product-detail-related-grid">
-                {relatedProducts.map((relatedProduct) => (
-                  <ProductCard
-                    key={relatedProduct.sku}
-                    locale={locale}
-                    product={relatedProduct}
-                  />
-                ))}
-              </div>
+              <ProductRelatedCarousel locale={locale} products={relatedProducts} />
             </section>
           ) : null}
         </div>

@@ -356,7 +356,9 @@ export default async function Home({ params }: HomeProps) {
     brandsResponse,
     socialContactsResponse,
     newsAndActivitiesResponse,
-    productsResponse,
+    newProductsResponse,
+    bestSellerProductsResponse,
+    promotionProductsResponse,
   ] = await Promise.all([
     fetchAdminList<HomeSettingRow>("/home-section-settings", {
       isActive: true,
@@ -385,6 +387,23 @@ export default async function Home({ params }: HomeProps) {
     }),
     fetchAdminList<ProductRow>("/products", {
       isActive: true,
+      isNewProduct: true,
+      page: 1,
+      pageSize: 100,
+      sortBy: "rank",
+      sortOrder: "desc",
+    }),
+    fetchAdminList<ProductRow>("/products", {
+      isActive: true,
+      isBestSeller: true,
+      page: 1,
+      pageSize: 100,
+      sortBy: "rank",
+      sortOrder: "desc",
+    }),
+    fetchAdminList<ProductRow>("/products", {
+      isActive: true,
+      isPromotion: true,
       page: 1,
       pageSize: 100,
       sortBy: "rank",
@@ -441,24 +460,30 @@ export default async function Home({ params }: HomeProps) {
     .sort(compareContentByLatest);
   const featuredNewsAndActivities = latestNewsAndActivities.slice(0, 2);
   const listedNewsAndActivities = latestNewsAndActivities.slice(2, 12);
-  const recommendedProducts = (productsResponse?.items ?? [])
-    .filter((item) => item.isActive)
+  const newProducts = (newProductsResponse?.items ?? [])
+    .filter((item) => item.isActive && item.isNewProduct)
+    .sort(compareProductsByRank);
+  const bestSellerProducts = (bestSellerProductsResponse?.items ?? [])
+    .filter((item) => item.isActive && item.isBestSeller)
+    .sort(compareProductsByRank);
+  const promotionProducts = (promotionProductsResponse?.items ?? [])
+    .filter((item) => item.isActive && item.isPromotion)
     .sort(compareProductsByRank);
   const recommendedProductTabs: RecommendedProductTab[] = [
     {
       key: "new-product",
       label: recommendedSectionContent.tabs.newProduct,
-      products: recommendedProducts.filter((item) => item.isNewProduct),
+      products: newProducts,
     },
     {
       key: "best-seller",
       label: recommendedSectionContent.tabs.bestSeller,
-      products: recommendedProducts.filter((item) => item.isBestSeller),
+      products: bestSellerProducts,
     },
     {
       key: "promotion",
       label: recommendedSectionContent.tabs.promotion,
-      products: recommendedProducts.filter((item) => item.isPromotion),
+      products: promotionProducts,
     },
   ];
 

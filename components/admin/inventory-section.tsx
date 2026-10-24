@@ -370,7 +370,7 @@ function getInventoryLabels(locale: Locale): InventoryLabels {
         deleteBodyTemplate: "ยืนยันการลบข้อมูลสต๊อคของ {sku}",
         deleteTitle: "ยืนยันการลบข้อมูลสต๊อค",
         download: "ดาวน์โหลด",
-        active: "ACTIVE",
+        active: "แสดง",
         activeToggle: "การแสดงผล",
         edit: "แก้ไข",
         editTitle: "แก้ไขข้อมูลสต๊อค",
@@ -390,7 +390,7 @@ function getInventoryLabels(locale: Locale): InventoryLabels {
         searchTooShort: "พิมพ์อย่างน้อย 3 ตัวอักษร",
         selectAll: "เลือกรายการทั้งหมด",
         selectRow: "เลือกรายการ",
-        inactive: "INACTIVE",
+        inactive: "ซ่อน",
         summary: {
           alert: "ดูรายการ",
           lowStock: "รายการสินค้าคงเหลือน้อย",

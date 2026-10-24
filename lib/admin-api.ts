@@ -16,6 +16,9 @@ type AdminListOptions = {
   page: number;
   pageSize?: number;
   isActive?: boolean;
+  isBestSeller?: boolean;
+  isNewProduct?: boolean;
+  isPromotion?: boolean;
   lowStockOnly?: boolean;
   search?: string;
   subCategoryCode?: string;
@@ -42,6 +45,9 @@ export async function fetchAdminList<Row>(
     brandCode,
     categoryCode,
     isActive,
+    isBestSeller,
+    isNewProduct,
+    isPromotion,
     lowStockOnly,
     page,
     pageSize = defaultPageSize,
@@ -57,6 +63,15 @@ export async function fetchAdminList<Row>(
   url.searchParams.set("pageSize", String(pageSize));
   if (isActive !== undefined) {
     url.searchParams.set("isActive", String(isActive));
+  }
+  if (isBestSeller !== undefined) {
+    url.searchParams.set("isBestSeller", String(isBestSeller));
+  }
+  if (isNewProduct !== undefined) {
+    url.searchParams.set("isNewProduct", String(isNewProduct));
+  }
+  if (isPromotion !== undefined) {
+    url.searchParams.set("isPromotion", String(isPromotion));
   }
   if (search) {
     url.searchParams.set("search", search);
