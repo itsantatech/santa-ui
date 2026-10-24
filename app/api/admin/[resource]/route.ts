@@ -16,6 +16,7 @@ const allowedResources = new Set([
   "quotation-requests",
   "social-media-contacts",
   "sub-categories",
+  "tags",
 ]);
 
 type ResourceRouteProps = {
