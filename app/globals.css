@@ -5798,6 +5798,77 @@ button.admin-table-page-link:disabled {
   margin-top: 0;
 }
 
+.product-detail-related-carousel {
+  position: relative;
+  overflow: hidden;
+  padding-inline: 24px;
+}
+
+.product-detail-related-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 54px) / 4);
+  gap: 18px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+}
+
+.product-detail-related-track::-webkit-scrollbar {
+  height: 8px;
+}
+
+.product-detail-related-track::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 999px;
+}
+
+.product-detail-related-track-item {
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.product-detail-related-track .product-card {
+  width: 100%;
+}
+
+.product-detail-related-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: #111111;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  box-shadow: 0 10px 24px rgb(15 23 42 / 10%);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.product-detail-related-nav:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.product-detail-related-nav .material-symbols-outlined {
+  font-size: 17px;
+}
+
+.product-detail-related-nav-left {
+  left: 0;
+}
+
+.product-detail-related-nav-right {
+  right: 0;
+}
+
 .quotation-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -7889,6 +7960,10 @@ button.admin-table-page-link:disabled {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .product-detail-related-track {
+    grid-auto-columns: calc((100% - 18px) / 2);
+  }
+
   .admin-product-heading-row {
     align-items: flex-start;
     flex-direction: column;
@@ -8724,6 +8799,19 @@ button.admin-table-page-link:disabled {
   .product-detail-related-grid {
     grid-template-columns: 1fr;
     gap: 18px;
+  }
+
+  .product-detail-related-carousel {
+    padding-inline: 20px;
+  }
+
+  .product-detail-related-track {
+    grid-auto-columns: 100%;
+  }
+
+  .product-detail-related-nav {
+    width: 38px;
+    height: 38px;
   }
 }
 
