@@ -171,9 +171,13 @@ export async function fetchPublicContentList(
   );
 }
 
-export async function fetchRelatedProducts(skus: string[]) {
+export async function fetchRelatedProducts(skus: unknown) {
+  const relatedSkus = Array.isArray(skus) ? skus : [];
   const requestedSkus = new Set(
-    skus.map((sku) => sku.trim().toUpperCase()).filter(Boolean),
+    relatedSkus
+      .filter((sku): sku is string => typeof sku === "string")
+      .map((sku) => sku.trim().toUpperCase())
+      .filter(Boolean),
   );
   if (requestedSkus.size === 0) return [];
 
