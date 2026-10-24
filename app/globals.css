@@ -82,21 +82,33 @@
 }
 
 .admin-shipping-modal {
-  width: min(560px, 100%);
+  width: min(620px, 100%) !important;
 }
 
-.admin-shipping-modal > .admin-product-field {
-  margin: 0 24px 18px;
+.admin-shipping-modal-content {
+  display: grid;
+  gap: 20px;
+  padding: 26px 28px 24px;
 }
 
-.admin-shipping-modal > .admin-product-modal-header + .admin-product-field {
-  margin-top: 24px;
+.admin-shipping-modal-content .admin-product-field {
+  min-width: 0;
 }
 
 .admin-shipping-modal .admin-product-modal-actions {
   margin: 6px 0 0;
-  padding: 18px 24px 24px;
+  padding: 18px 28px 24px;
   border-top: 1px solid #e2e8f0;
+}
+
+@media (max-width: 640px) {
+  .admin-shipping-modal-content {
+    padding: 22px 20px;
+  }
+
+  .admin-shipping-modal .admin-product-modal-actions {
+    padding: 16px 20px 20px;
+  }
 }
 
 .customer-auth-page {
