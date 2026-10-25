@@ -5168,21 +5168,28 @@ button.admin-table-page-link:disabled {
 }
 
 .products-sort-control {
-  position: relative;
-  display: grid;
+  display: flex;
+  align-items: center;
   gap: 8px;
-  min-width: 220px;
+  white-space: nowrap;
 }
 
-.products-sort-control span:first-child {
+.products-sort-control > span:first-child {
   color: #111111;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.3;
 }
 
-.products-sort-control select {
-  width: 100%;
+.products-sort-select {
+  position: relative;
+  display: block;
+  width: fit-content;
+}
+
+.products-sort-select select {
+  width: max-content;
+  min-width: 0;
   height: 38px;
   padding: 0 40px 0 14px;
   color: #111111;
@@ -5195,17 +5202,18 @@ button.admin-table-page-link:disabled {
   outline: none;
 }
 
-.products-sort-control select:focus {
+.products-sort-select select:focus {
   border-color: #f97316;
 }
 
 .products-sort-control-icon {
   position: absolute;
   right: 12px;
-  bottom: 8px;
+  top: 50%;
   color: #6b7280;
   font-size: 20px;
   pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .products-page-grid {
