@@ -60,21 +60,23 @@ export function ProductsPageControls({
 
       <label className="products-sort-control">
         <span>{sortLabel}</span>
-        <select
-          onChange={(event) => updateParams({ sort: event.target.value })}
-          value={currentSort}
-        >
-          {sortOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <span
-          className="material-symbols-outlined products-sort-control-icon"
-          aria-hidden="true"
-        >
-          expand_more
+        <span className="products-sort-select">
+          <select
+            onChange={(event) => updateParams({ sort: event.target.value })}
+            value={currentSort}
+          >
+            {sortOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <span
+            className="material-symbols-outlined products-sort-control-icon"
+            aria-hidden="true"
+          >
+            expand_more
+          </span>
         </span>
       </label>
     </div>
