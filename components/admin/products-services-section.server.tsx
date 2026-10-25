@@ -335,7 +335,7 @@ function getProductAdminUiLabels(locale: Locale) {
         discountedPrice: "ราคาลด",
         googleCategoryId: "Google Category ID",
         imgUrl: "รูปภาพ",
-        isActive: "แสดงผล",
+        isActive: "Active",
         isBestSeller: "สินค้าขายดี",
         isNewProduct: "สินค้าใหม่",
         isPromotion: "โปรโมชั่น",
