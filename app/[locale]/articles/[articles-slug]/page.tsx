@@ -18,6 +18,10 @@ type ArticleDetailPageProps = {
   params: Promise<{ "articles-slug": string; locale: string }>;
 };
 
+// Related products are deliberately fetched without caching so changes made by
+// editors appear immediately. This route must therefore render per request.
+export const dynamic = "force-dynamic";
+
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
