@@ -295,6 +295,14 @@ function FilterSelect({
           type="search"
           value={displayedValue}
         />
+        {!selectedValue ? (
+          <span
+            className="material-symbols-outlined product-filter-select-icon"
+            aria-hidden="true"
+          >
+            expand_more
+          </span>
+        ) : null}
         {isSearchOpen && dropdownPosition && typeof document !== "undefined"
           ? createPortal(
               <div

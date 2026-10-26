@@ -4588,24 +4588,6 @@ button.admin-table-page-link:disabled {
   overflow: visible;
 }
 
-.product-filter-select-dropdown:has(input)::after {
-  position: absolute;
-  z-index: 2;
-  top: 50%;
-  right: 14px;
-  color: #94a3b8;
-  font-size: 18px;
-  line-height: 1;
-  content: "⌄";
-  pointer-events: none;
-  transform: translateY(-56%);
-}
-
-/* A selected searchable filter exposes a clear button in this position. */
-.product-filter-select-dropdown:has(input):has(.product-filter-chip)::after {
-  display: none;
-}
-
 .product-filter-select-dropdown input::placeholder {
   color: #94a3b8;
 }
@@ -4667,10 +4649,14 @@ button.admin-table-page-link:disabled {
 }
 
 .product-filter-select-icon {
-  margin-left: auto;
-  color: #9ca3af;
-  font-size: 22px;
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  right: 12px;
+  color: #6b7280;
+  font-size: 20px;
   pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .product-filter-chip {
@@ -4790,6 +4776,7 @@ button.admin-table-page-link:disabled {
 }
 
 .product-filter-section-admin .product-filter-select-icon {
+  right: 6px;
   font-size: 18px;
 }
 
