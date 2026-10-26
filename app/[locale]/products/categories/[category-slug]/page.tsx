@@ -260,6 +260,8 @@ export default async function CategoryDetailPage({
                 label: `${locale === "th" ? "หมวดหมู่ย่อย" : "Sub-category"} (${subCategoryOptions.length})`,
                 options: subCategoryOptions,
                 placeholder: locale === "th" ? "เลือกหมวดหมู่ย่อย" : "Select sub-category",
+                searchable: true,
+                showAllOptions: true,
                 selected: selectedSubCategory ? [selectedSubCategory] : undefined,
               },
               {

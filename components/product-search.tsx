@@ -151,7 +151,7 @@ export function ProductSearch<
   function handleSearch() {
     if (onSearch) {
       onSearch(query.trim());
-    } else {
+    } else if (!embedded) {
       updateTable(query);
     }
     setIsOpen(false);
