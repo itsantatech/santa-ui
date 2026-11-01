@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { connection } from "next/server";
 import { ProductCard, type ProductCardData } from "@/components/product-card";
 import { ProductFilter, type ProductFilterOption } from "@/components/product-filter";
@@ -18,6 +18,7 @@ import { normalizeRichTextHtml } from "@/lib/public-content";
 type CategoryDetailPageProps = {
   params: Promise<{ "category-slug": string; locale: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
+  subCategorySlug?: string;
 };
 
 // This route reads request search parameters and resolves a dynamic category slug.
@@ -45,6 +46,7 @@ type ProductRelation = {
   categoryCode?: string;
   nameTh: string;
   nameEn: string;
+  slug: string;
 };
 
 type CategoryRow = FooterCategory & {
@@ -109,6 +111,7 @@ export async function generateMetadata({
 export default async function CategoryDetailPage({
   params,
   searchParams,
+  subCategorySlug,
 }: CategoryDetailPageProps) {
   await connection();
 
@@ -122,7 +125,7 @@ export default async function CategoryDetailPage({
   const page = getPositiveInteger(getSearchParam(resolvedSearchParams, "page")) ?? 1;
   const pageSize = getPositiveInteger(getSearchParam(resolvedSearchParams, "pageSize")) ?? 12;
   const search = getSearchParam(resolvedSearchParams, "search")?.trim() ?? "";
-  const subCategoryCode = getSearchParam(resolvedSearchParams, "subCategoryCode")?.trim() ?? "";
+  const legacySubCategoryCode = getSearchParam(resolvedSearchParams, "subCategoryCode")?.trim() ?? "";
   const brandCode = getSearchParam(resolvedSearchParams, "brandCode")?.trim() ?? "";
   const currentSort = normalizeSortKey(getSearchParam(resolvedSearchParams, "sort"));
   const sortQuery = getSortQuery(currentSort);
@@ -151,18 +154,7 @@ export default async function CategoryDetailPage({
       ? getLocalizedCategoryName(locale, category)
       : formatSlugLabel(categorySlug);
 
-  const [productsResponse, subCategoriesResponse, brandsResponse] = await Promise.all([
-    fetchAdminList<ProductRow>("/products", {
-      brandCode: brandCode || undefined,
-      categoryCode: category && category !== undefined ? category.code : undefined,
-      isActive: true,
-      page,
-      pageSize,
-      search: search || undefined,
-      sortBy: sortQuery.sortBy,
-      sortOrder: sortQuery.sortOrder,
-      subCategoryCode: subCategoryCode || undefined,
-    }),
+  const [subCategoriesResponse, brandsResponse] = await Promise.all([
     fetchAdminList<ProductRelation>("/sub-categories", {
       isActive: true,
       page: 1,
@@ -175,6 +167,65 @@ export default async function CategoryDetailPage({
     }),
   ]);
 
+  const subCategoryOptions = toProductFilterOptions(
+    (subCategoriesResponse?.items ?? []).filter(
+      (item) =>
+        category && category !== undefined
+          ? item.categoryCode?.trim() === category.code
+          : false,
+    ),
+    locale,
+  );
+  const selectedPathSubCategory = subCategorySlug
+    ? subCategoryOptions.find(
+        (option) =>
+          option.slug?.trim().toLowerCase() === subCategorySlug.trim().toLowerCase(),
+      )
+    : undefined;
+
+  if (subCategorySlug && !selectedPathSubCategory) {
+    notFound();
+  }
+
+  const subCategoryCode = selectedPathSubCategory?.value ?? legacySubCategoryCode;
+  const selectedSubCategory = findSelectedOption(subCategoryOptions, subCategoryCode);
+
+  if (!subCategorySlug && legacySubCategoryCode && selectedSubCategory?.slug) {
+    permanentRedirect(
+      createCategoryPageHref(
+        locale,
+        category?.slug ?? categorySlug,
+        selectedSubCategory.slug,
+        resolvedSearchParams,
+        page,
+      ),
+    );
+  }
+
+  if (subCategorySlug && legacySubCategoryCode) {
+    permanentRedirect(
+      createCategoryPageHref(
+        locale,
+        category?.slug ?? categorySlug,
+        selectedPathSubCategory?.slug,
+        resolvedSearchParams,
+        page,
+      ),
+    );
+  }
+
+  const productsResponse = await fetchAdminList<ProductRow>("/products", {
+    brandCode: brandCode || undefined,
+    categoryCode: category && category !== undefined ? category.code : undefined,
+    isActive: true,
+    page,
+    pageSize,
+    search: search || undefined,
+    sortBy: sortQuery.sortBy,
+    sortOrder: sortQuery.sortOrder,
+    subCategoryCode: subCategoryCode || undefined,
+  });
+
   const footerCategories = sortFooterCategories(footerCategoriesResponse?.items ?? []);
   const products = productsResponse?.items ?? [];
   const totalItems = productsResponse?.meta.totalItems ?? 0;
@@ -186,17 +237,7 @@ export default async function CategoryDetailPage({
       ? getLocalizedText(locale, category.descriptionTh, category.descriptionEn)
       : "";
   const filterStateKey = [category?.code ?? "", subCategoryCode, brandCode].join(":");
-  const subCategoryOptions = toProductFilterOptions(
-    (subCategoriesResponse?.items ?? []).filter(
-      (item) =>
-        category && category !== undefined
-          ? item.categoryCode?.trim() === category.code
-          : false,
-    ),
-    locale,
-  );
   const brandOptions = toProductFilterOptions(brandsResponse?.items ?? [], locale);
-  const selectedSubCategory = findSelectedOption(subCategoryOptions, subCategoryCode);
   const selectedBrand = findSelectedOption(brandOptions, brandCode);
 
   return (
@@ -275,6 +316,27 @@ export default async function CategoryDetailPage({
               },
             ]}
             locale={locale === "th" ? "th-TH" : "en-US"}
+            pathnameByFieldValue={{
+              defaultPathname: createCategoryPath(
+                locale,
+                category?.slug ?? categorySlug,
+              ),
+              fieldId: "subCategoryCode",
+              paths: Object.fromEntries(
+                subCategoryOptions.flatMap((option) =>
+                  option.slug
+                    ? [[
+                        option.value,
+                        createCategoryPath(
+                          locale,
+                          category?.slug ?? categorySlug,
+                          option.slug,
+                        ),
+                      ]]
+                    : [],
+                ),
+              ),
+            }}
             removeFilterLabel={locale === "th" ? "ลบตัวกรอง" : "Remove filter"}
             resultCount={totalItems}
             resultLabel={locale === "th" ? "ผลการค้นหาจำนวน" : "Search results"}
@@ -302,6 +364,7 @@ export default async function CategoryDetailPage({
               createCategoryPageHref(
                 locale,
                 category?.slug ?? categorySlug,
+                selectedSubCategory?.slug,
                 resolvedSearchParams,
                 nextPage,
               )
@@ -354,6 +417,7 @@ function toProductFilterOptions(
   return items.map((item) => ({
     label: locale === "th" ? item.nameTh : item.nameEn,
     parentValue: item.categoryCode,
+    slug: item.slug,
     value: item.code,
   }));
 }
@@ -369,13 +433,14 @@ function findSelectedOption(options: ProductFilterOption[], value: string) {
 function createCategoryPageHref(
   locale: Locale,
   categorySlug: string,
+  subCategorySlug: string | undefined,
   searchParams: Record<string, string | string[] | undefined>,
   page: number,
 ) {
   const nextSearchParams = new URLSearchParams();
 
   for (const [key, value] of Object.entries(searchParams)) {
-    if (key === "page" || key === "categoryCode") {
+    if (key === "page" || key === "categoryCode" || key === "subCategoryCode") {
       continue;
     }
 
@@ -389,9 +454,24 @@ function createCategoryPageHref(
     }
   }
 
-  nextSearchParams.set("page", String(page));
+  if (page > 1) {
+    nextSearchParams.set("page", String(page));
+  }
 
-  return `/${locale}/products/categories/${encodePathSegment(categorySlug)}?${nextSearchParams.toString()}`;
+  const query = nextSearchParams.toString();
+  const path = createCategoryPath(locale, categorySlug, subCategorySlug);
+
+  return query ? `${path}?${query}` : path;
+}
+
+function createCategoryPath(
+  locale: Locale,
+  categorySlug: string,
+  subCategorySlug?: string,
+) {
+  const basePath = `/${locale}/products/categories/${encodePathSegment(categorySlug)}`;
+
+  return subCategorySlug ? `${basePath}/${encodePathSegment(subCategorySlug)}` : basePath;
 }
 
 function getLocalizedCategoryName(locale: Locale, category: CategoryRow) {
