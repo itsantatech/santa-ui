@@ -7,6 +7,7 @@ import { useEffect, useId, useRef, useState, useTransition } from "react";
 type ProductFilterChip = {
   label: string;
   parentValue?: string;
+  slug?: string;
   value: string;
 };
 
@@ -32,6 +33,11 @@ export type ProductFilterProps = {
   title: string;
   fields: ProductFilterField[];
   locale: string;
+  pathnameByFieldValue?: {
+    defaultPathname: string;
+    fieldId: string;
+    paths: Record<string, string>;
+  };
   removeFilterLabel?: string;
   syncQueryParams?: boolean;
   variant?: "default" | "admin";
@@ -77,6 +83,7 @@ function getInitialFieldValues(fields: ProductFilterField[]) {
 export function ProductFilter({
   fields,
   locale,
+  pathnameByFieldValue,
   removeFilterLabel = "Remove filter",
   resultCount,
   resultLabel,
@@ -140,8 +147,15 @@ export function ProductFilter({
                     );
 
                     nextSearchParams.delete("page");
+                    if (pathnameByFieldValue) {
+                      nextSearchParams.delete(pathnameByFieldValue.fieldId);
+                    }
 
                     for (const [key, nextValue] of Object.entries(nextSelectedValues)) {
+                      if (key === pathnameByFieldValue?.fieldId) {
+                        continue;
+                      }
+
                       if (nextValue) {
                         nextSearchParams.set(key, nextValue);
                       } else {
@@ -150,7 +164,13 @@ export function ProductFilter({
                     }
 
                     startTransition(() => {
-                      router.replace(`${pathname}?${nextSearchParams.toString()}`);
+                      const nextPathname = pathnameByFieldValue
+                        ? (pathnameByFieldValue.paths[
+                            nextSelectedValues[pathnameByFieldValue.fieldId]
+                          ] ?? pathnameByFieldValue.defaultPathname)
+                        : pathname;
+                      const query = nextSearchParams.toString();
+                      router.replace(query ? `${nextPathname}?${query}` : nextPathname);
                     });
                   }
                 }}
