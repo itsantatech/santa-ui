@@ -5,6 +5,7 @@ import { fetchAdminList, createSantaApiUrl } from "@/lib/admin-api";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import {
   AdminDataTable,
+  AdminStatusBadge,
   type AdminDataTableContextAction,
   type AdminDataTableColumn,
 } from "./admin-data-table";
@@ -151,6 +152,18 @@ export async function InventorySection({
       className: "admin-table-number-fit-column",
       width: "88px",
       render: (row) => row.lowStockThreshold,
+    },
+    {
+      key: "isActive",
+      header: labels.columns.status,
+      className: "admin-table-status-column",
+      width: "126px",
+      render: (row) => (
+        <AdminStatusBadge
+          label={row.isActive ? labels.active : labels.inactive}
+          tone={row.isActive ? "active" : "inactive"}
+        />
+      ),
     },
     {
       key: "actions",
@@ -309,6 +322,7 @@ export type InventoryLabels = {
     nameTh: string;
     sku: string;
     stockQuantity: string;
+    status: string;
     subCategory: string;
   };
   delete: string;
@@ -364,6 +378,7 @@ function getInventoryLabels(locale: Locale): InventoryLabels {
           nameTh: "ชื่อภาษาไทย",
           sku: "SKU",
           stockQuantity: "ยอดสินค้าคงคลัง",
+          status: "สถานะ",
           subCategory: "หมวดหมู่ย่อย",
         },
         delete: "ลบ",
@@ -417,6 +432,7 @@ function getInventoryLabels(locale: Locale): InventoryLabels {
           nameTh: "Thai Name",
           sku: "SKU",
           stockQuantity: "Stock Quantity",
+          status: "Status",
           subCategory: "Sub Category",
         },
         delete: "Delete",
