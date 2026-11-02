@@ -401,6 +401,7 @@ function InventoryFormModal({
   const [lowStockThreshold, setLowStockThreshold] = useState(
     String(inventory?.lowStockThreshold ?? 0),
   );
+  const [isActive, setIsActive] = useState(inventory?.isActive ?? true);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -422,6 +423,7 @@ function InventoryFormModal({
         method: inventory ? "PATCH" : "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          isActive,
           lowStockThreshold: Number(lowStockThreshold || 0),
           productSku: inventory?.productSku ?? selectedProduct?.sku,
           stockQuantity: Number(stockQuantity || 0),
@@ -478,6 +480,14 @@ function InventoryFormModal({
               <input min="0" onChange={(event) => setLowStockThreshold(event.target.value)} type="number" value={lowStockThreshold} />
             </label>
           </div>
+          <label className="admin-product-checkbox-field">
+            <input
+              checked={isActive}
+              onChange={(event) => setIsActive(event.target.checked)}
+              type="checkbox"
+            />
+            <span>{labels.activeToggle}</span>
+          </label>
           {error ? <p className="admin-product-form-error">{error}</p> : null}
           <div className="admin-product-modal-actions">
             <button className="admin-product-secondary-button" onClick={onClose} type="button">{labels.cancel}</button>
