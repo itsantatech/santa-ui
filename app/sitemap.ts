@@ -5,10 +5,41 @@ import { localizedSlugPath } from "@/lib/paths";
 
 type SlugRow = { slug: string; updatedAt?: string; isActive: boolean };
 const locales = ["th", "en"] as const;
+const sitemapPageSize = 1000;
+
+async function fetchAllActiveProducts(): Promise<{ items: SlugRow[] } | null> {
+  const firstPage = await fetchAdminList<SlugRow>("/products/sitemap", {
+    page: 1,
+    pageSize: sitemapPageSize,
+  });
+
+  if (!firstPage) {
+    return null;
+  }
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.meta.totalPages - 1 }, (_, index) =>
+      fetchAdminList<SlugRow>("/products/sitemap", {
+        page: index + 2,
+        pageSize: sitemapPageSize,
+      }),
+    ),
+  );
+
+  const completedPages = remainingPages.filter(
+    (page): page is NonNullable<typeof page> => page !== null,
+  );
+
+  if (completedPages.length !== remainingPages.length) {
+    throw new Error("Unable to fetch every product page for the sitemap.");
+  }
+
+  return { items: [firstPage, ...completedPages].flatMap((page) => page.items) };
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [products, categories, brands, articles, news] = await Promise.all([
-    fetchAdminList<SlugRow>("/products", { isActive: true, page: 1, pageSize: 1000 }),
+    fetchAllActiveProducts(),
     fetchAdminList<SlugRow>("/categories", { isActive: true, page: 1, pageSize: 1000 }),
     fetchAdminList<SlugRow>("/brands", { isActive: true, page: 1, pageSize: 1000 }),
     fetchAdminList<SlugRow>("/articles", { isActive: true, page: 1, pageSize: 1000 }),
