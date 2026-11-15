@@ -6,7 +6,9 @@ export const siteUrl = new URL(
 );
 
 export function localizedAlternates(path: string, locale: Locale) {
-  const localizedPath = path.replace(/^\/(th|en)(?=\/|$)/, "");
+  const localizedPath = path
+    .replace(/^\/(th|en)(?=\/|$)/, "")
+    .replace(/^\/$/, "");
   return {
     canonical: `/${locale}${localizedPath}`,
     languages: { th: `/th${localizedPath}`, en: `/en${localizedPath}` },
@@ -14,7 +16,8 @@ export function localizedAlternates(path: string, locale: Locale) {
 }
 
 export function pageMetadata({ description, image, keywords, locale, path, title, type = "website" }: { description: string; image?: string | null; keywords?: string[]; locale: Locale; path: string; title: string; type?: "article" | "website" }): Metadata {
-  const url = `/${locale}${path}`;
+  const normalizedPath = path.replace(/^\/$/, "");
+  const url = `/${locale}${normalizedPath}`;
   return {
     title,
     description,
