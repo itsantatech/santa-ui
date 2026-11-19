@@ -72,14 +72,14 @@ export async function InventorySection({
   ]);
   const rows = response?.items ?? [];
   const currentPageSize = response?.meta.pageSize ?? filters?.pageSize ?? 50;
-  const lowStockHref = createInventoryHref(locale, {
-    lowStockOnly: true,
+  const allStockHref = createInventoryHref(locale, {
+    lowStockOnly: false,
     page: 1,
     pageSize: currentPageSize,
     search: filters?.search,
   });
-  const clearLowStockHref = createInventoryHref(locale, {
-    lowStockOnly: false,
+  const lowStockHref = createInventoryHref(locale, {
+    lowStockOnly: true,
     page: 1,
     pageSize: currentPageSize,
     search: filters?.search,
@@ -189,13 +189,15 @@ export async function InventorySection({
           <SummaryCard
             title={labels.summary.totalStock}
             value={summary?.totalStockQuantity ?? 0}
+            helper={labels.summary.viewItems}
+            helperHref={allStockHref}
           />
           <SummaryCard
             accent
             title={labels.summary.lowStock}
             value={summary?.lowStockCount ?? 0}
-            helper={filters?.lowStockOnly ? labels.summary.showAll : labels.summary.alert}
-            helperHref={filters?.lowStockOnly ? clearLowStockHref : lowStockHref}
+            helper={labels.summary.viewItems}
+            helperHref={lowStockHref}
           />
         </div>
       </div>
@@ -351,10 +353,9 @@ export type InventoryLabels = {
   selectRow: string;
   inactive: string;
   summary: {
-    alert: string;
     lowStock: string;
-    showAll: string;
     totalStock: string;
+    viewItems: string;
   };
   template: string;
   upload: string;
@@ -407,10 +408,9 @@ function getInventoryLabels(locale: Locale): InventoryLabels {
         selectRow: "เลือกรายการ",
         inactive: "Inactive",
         summary: {
-          alert: "ดูรายการ",
           lowStock: "รายการสินค้าคงเหลือน้อย",
-          showAll: "แสดงทั้งหมด",
           totalStock: "สินค้าคงคลังทั้งหมด",
+          viewItems: "แสดงรายการ",
         },
         template: "เทมเพลต",
         upload: "อัปโหลด",
@@ -461,10 +461,9 @@ function getInventoryLabels(locale: Locale): InventoryLabels {
         selectRow: "Select row",
         inactive: "Inactive",
         summary: {
-          alert: "View",
           lowStock: "Low stock items",
-          showAll: "Show all",
           totalStock: "Total inventory",
+          viewItems: "View items",
         },
         template: "Template",
         upload: "Upload",
