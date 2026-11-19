@@ -13,7 +13,11 @@ const keycloakBaseUrl =
 const appBaseUrl =
   process.env.APP_BASE_URL ??
   process.env.NEXT_PUBLIC_APP_BASE_URL ??
-  "http://localhost:3000";
+  // The public site sits behind Cloudflare and a proxy that can expose the
+  // container's localhost host name to the application.
+  (process.env.NODE_ENV === "production"
+    ? "https://santatechnology.com"
+    : undefined);
 const keycloakRealm = process.env.KEYCLOAK_REALM ?? "santa-web";
 const keycloakClientId = process.env.KEYCLOAK_CLIENT_ID ?? "santa-ui";
 
@@ -47,12 +51,24 @@ type KeycloakTokenPayload = {
   resource_access?: Record<string, { roles?: string[] } | undefined>;
 };
 
-export function getBaseUrl(requestUrl: string) {
+export function getBaseUrl(request: Request | string) {
   if (appBaseUrl) {
     return appBaseUrl.replace(/\/$/, "");
   }
 
-  const url = new URL(requestUrl);
+  if (typeof request !== "string") {
+    const forwardedHost = request.headers.get("x-forwarded-host");
+    const forwardedProtocol = request.headers.get("x-forwarded-proto");
+
+    if (forwardedHost) {
+      return `${forwardedProtocol?.split(",")[0]?.trim() || "https"}://${forwardedHost.split(",")[0]?.trim()}`;
+    }
+
+    const url = new URL(request.url);
+    return `${url.protocol}//${url.host}`;
+  }
+
+  const url = new URL(request);
   return `${url.protocol}//${url.host}`;
 }
 
