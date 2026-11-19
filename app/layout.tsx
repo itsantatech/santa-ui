@@ -30,15 +30,14 @@ export default function RootLayout({
         <AppToastHost />
       </body>
       <Script
-        src="https://www.googletagmanager.com/gtag/js?id=G-HRYC0DPTXM"
-        strategy="afterInteractive"
+        src="https://www.googletagmanager.com/gtm.js?id=GTM-KBQ8JQ9"
+        strategy="beforeInteractive"
       />
-      <Script id="google-analytics" strategy="afterInteractive">
+      <Script id="google-tag-manager" strategy="beforeInteractive">
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', 'G-HRYC0DPTXM');
         `}
       </Script>
     </html>

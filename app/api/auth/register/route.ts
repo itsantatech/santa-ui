@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { proxySantaApiRequest } from "@/lib/admin-api-proxy";
+import { getBaseUrl } from "@/lib/auth/keycloak";
 
 export async function POST(request: NextRequest) {
   const form = await request.formData();
@@ -25,6 +26,9 @@ export async function POST(request: NextRequest) {
   const response = await proxySantaApiRequest(registrationRequest, "/customer-auth/register", {
     requireAuth: false,
   });
-  const suffix = response.ok ? "?registered=1" : "?register=error";
-  return NextResponse.redirect(new URL(`/${locale}/login${suffix}`, request.url));
+  const redirectTo = response.ok
+    ? `/${locale}`
+    : `/${locale}/register?register=error`;
+
+  return NextResponse.redirect(new URL(redirectTo, getBaseUrl(request)), 303);
 }
